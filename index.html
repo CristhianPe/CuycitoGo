@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CuycitoGO - Tienda & Portal de Clientes</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cuycito: {
+                            black: '#0a0a0a',
+                            card: '#121212',
+                            red: '#dc2626',
+                            redHover: '#b91c1c',
+                            gold: '#eab308',
+                            goldHover: '#ca8a04',
+                            gray: '#1f2937'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <header class="bg-[#121212] border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="showView('storeView')">
+                    <div class="w-10 h-10 bg-gradient-to-tr from-cuycito-red to-cuycito-gold rounded-xl flex items-center justify-center text-black font-extrabold text-xl shadow-lg glow-red">🐹</div>
+                    <div>
+                        <span class="text-2xl font-black tracking-wider text-white">Cuycito<span class="text-cuycito-gold">GO</span></span>
+                        <span class="block text-[10px] text-gray-400 -mt-1 tracking-widest font-semibold uppercase">Streaming & Digital Store</span>
+                    </div>
+                </div>
+
+                <nav class="hidden md:flex items-center gap-6">
+                    <button onclick="showView('storeView')" class="text-gray-300 hover:text-cuycito-gold font-semibold transition flex items-center gap-2"><i class="fa-solid fa-store text-cuycito-gold"></i> Tienda</button>
+                    <button onclick="checkAuthAndShowProfile()" class="text-gray-300 hover:text-cuycito-gold font-semibold transition flex items-center gap-2"><i class="fa-solid fa-circle-user text-cuycito-red"></i> Mi Cuenta</button>
+                </nav>
+
+                <div class="flex items-center gap-3">
+                    <div id="loggedOutButtons" class="flex gap-2">
+                        <button onclick="showView('loginView')" class="bg-cuycito-red hover:bg-cuycito-redHover text-white text-sm font-bold px-4 py-2 rounded-lg transition glow-red flex items-center gap-2"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</button>
+                    </div>
+                    <div id="loggedInButtons" class="hidden flex items-center gap-3">
+                        <span id="navUserName" class="text-sm font-bold text-cuycito-gold hidden sm:inline">Hola, Cliente</span>
+                        <button onclick="logoutClient()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-3 py-2 rounded-lg transition border border-gray-700"><i class="fa-solid fa-power-off text-cuycito-red"></i> Salir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <section id="storeView" class="view-section">
+            <div class="bg-gradient-to-r from-red-950/40 via-[#121212] to-amber-950/40 border border-red-900/30 rounded-2xl p-6 md:p-8 mb-8 flex flex-col md:flex-row items-center justify-between gap-6 glow-red">
+                <div class="space-y-2 text-center md:text-left">
+                    <span class="bg-cuycito-red/20 text-cuycito-red text-xs font-extrabold px-3 py-1 rounded-full border border-cuycito-red/40 uppercase tracking-widest">🔥 Precios de Oferta Actualizados</span>
+                    <h1 class="text-2xl md:text-4xl font-black text-white">Arma tu combo de Streaming <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-cuycito-gold to-yellow-200">Añade al Carrito y Solicita por WhatsApp</span></h1>
+                </div>
+                <div class="flex-shrink-0">
+                    <button onclick="showView('loginView')" class="bg-gradient-to-r from-cuycito-gold to-amber-600 hover:from-amber-500 hover:to-cuycito-gold text-black font-extrabold px-5 py-3 rounded-xl transition shadow-lg glow-gold text-xs flex items-center gap-2"><i class="fa-solid fa-key"></i> Acceso a Clientes VIP</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <div class="lg:col-span-8 space-y-6">
+                    <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                        <button class="bg-cuycito-red text-white text-xs font-bold px-4 py-2 rounded-full whitespace-nowrap">Todos los Servicios</button>
+                    </div>
+
+                    <div id="catalogContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="col-span-full py-10 text-center text-gray-500 flex flex-col items-center">
+                            <i class="fa-solid fa-spinner fa-spin text-3xl mb-3 text-cuycito-gold"></i>
+                            <p>Cargando catálogo desde la nube...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="lg:col-span-4 sticky top-28 bg-[#121212] border border-gray-800 rounded-3xl p-6 shadow-2xl glow-gold">
+                    <div class="flex items-center justify-between pb-4 border-b border-gray-800 mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 bg-cuycito-gold/20 text-cuycito-gold rounded-xl flex items-center justify-center text-lg border border-cuycito-gold/30"><i class="fa-solid fa-cart-shopping"></i></div>
+                            <div>
+                                <h2 class="text-base font-black text-white">Tu Carrito</h2>
+                                <p class="text-[10px] text-gray-400">Resumen de tu pedido</p>
+                            </div>
+                        </div>
+                        <span id="cartBadge" class="bg-cuycito-red text-white text-xs font-black px-2.5 py-0.5 rounded-full">0</span>
+                    </div>
+
+                    <div id="cartItemsContainer" class="space-y-3 max-h-72 overflow-y-auto cart-scroll pr-1 mb-6">
+                        <div id="emptyCartMessage" class="text-center py-8 text-gray-500 space-y-2">
+                            <i class="fa-solid fa-basket-shopping text-3xl opacity-30"></i>
+                            <p class="text-xs">Aún no has agregado ningún servicio.</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-gray-800 space-y-3">
+                        <div class="flex justify-between text-xs text-gray-400"><span>Subtotal</span><span id="cartSubtotal" class="font-bold text-gray-200">S/ 0.00</span></div>
+                        <div class="flex justify-between text-xs text-gray-400"><span>Garantía & Soporte 24/7</span><span class="text-emerald-400 font-bold">GRATIS</span></div>
+                        <div class="flex justify-between text-base font-black text-white pt-2 border-t border-gray-800/60"><span>Monto Total:</span><span id="cartTotal" class="text-cuycito-gold">S/ 0.00</span></div>
+                        <div class="pt-2"><label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">Tu Nombre (Para la orden):</label><input type="text" id="customerNameInput" placeholder="Ej. Juan Pérez" class="w-full bg-[#0a0a0a] border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cuycito-gold transition"></div>
+                        <button onclick="sendWhatsAppOrder()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm py-3.5 rounded-xl transition shadow-lg flex items-center justify-center gap-2 mt-2"><i class="fa-brands fa-whatsapp text-lg"></i> Pedir por WhatsApp</button>
+                        <button onclick="clearCart()" class="w-full text-[11px] text-gray-500 hover:text-cuycito-red transition text-center block pt-1"><i class="fa-solid fa-trash-can"></i> Vaciar Carrito</button>
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+        <section id="loginView" class="view-section hidden max-w-md mx-auto py-12">
+            <div class="bg-[#121212] border border-gray-800 rounded-3xl p-8 shadow-2xl glow-red">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 bg-cuycito-red/20 text-cuycito-gold rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-cuycito-red/40 glow-gold">🐹</div>
+                    <h2 class="text-2xl font-black text-white">Portal de Clientes</h2>
+                    <p class="text-xs text-gray-400 mt-1">Ingresa con tu número y contraseña.</p>
+                </div>
+
+                <form id="clientLoginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-300 mb-2 uppercase">Número de Celular</label>
+                        <div class="relative"><span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-500"><i class="fa-solid fa-mobile-screen"></i></span><input type="text" id="loginPhone" required placeholder="Ej. 999888777" class="w-full bg-[#0a0a0a] border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-cuycito-gold transition"></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-300 mb-2 uppercase">Contraseña</label>
+                        <div class="relative"><span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-500"><i class="fa-solid fa-lock"></i></span><input type="password" id="loginPass" required placeholder="••••••••" class="w-full bg-[#0a0a0a] border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-cuycito-gold transition"></div>
+                    </div>
+                    <p id="loginErrorMsg" class="text-cuycito-red text-xs font-bold hidden text-center">Número o contraseña incorrectos.</p>
+                    <button type="submit" id="btnSubmitLogin" class="w-full bg-gradient-to-r from-cuycito-red to-red-700 hover:from-red-600 hover:to-cuycito-red text-white font-extrabold py-3.5 rounded-xl transition shadow-lg glow-red text-sm flex items-center justify-center gap-2"><i class="fa-solid fa-right-to-bracket"></i> Entrar a Mi Panel</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="profileView" class="view-section hidden space-y-8">
+            <div class="bg-[#121212] border border-gray-800 rounded-2xl p-6 md:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 glow-gold">
+                <div class="flex items-center gap-4 text-center sm:text-left">
+                    <div class="w-20 h-20 bg-gradient-to-tr from-cuycito-red to-cuycito-gold rounded-full flex items-center justify-center text-black font-black text-3xl border-4 border-[#0a0a0a]"><span id="profileAvatar">C</span></div>
+                    <div>
+                        <span class="bg-cuycito-gold/20 text-cuycito-gold text-[10px] font-black px-3 py-1 rounded-full border border-cuycito-gold/40 uppercase">Suscripción Activa</span>
+                        <h2 id="profileNameDisplay" class="text-xl md:text-2xl font-black text-white mt-1">Cargando...</h2>
+                        <p class="text-xs text-gray-400 mt-1"><i class="fa-brands fa-whatsapp text-emerald-400"></i> <span id="profilePhoneDisplay"></span> | Correo: <span id="profileEmailDisplay"></span></p>
+                    </div>
+                </div>
+                <div>
+                    <button onclick="document.getElementById('editProfileModal').classList.remove('hidden')" class="bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition border border-gray-700"><i class="fa-solid fa-pen-to-square"></i> Actualizar Datos</button>
+                </div>
+            </div>
+
+            <div class="bg-[#121212] border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
+                <div class="p-4 border-b border-gray-800 bg-[#0a0a0a]"><h3 class="text-sm font-black text-cuycito-gold uppercase tracking-widest"><i class="fa-solid fa-ticket"></i> Mis Servicios Contratados</h3></div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-gray-300">
+                        <thead class="bg-black text-gray-400 uppercase tracking-widest font-bold border-b border-gray-800">
+                            <tr><th class="p-4">Plataforma</th><th class="p-4">Tus Credenciales</th><th class="p-4 text-center">Vencimiento</th><th class="p-4 text-center">Estado</th></tr>
+                        </thead>
+                        <tbody id="clientServicesBody" class="divide-y divide-gray-800">
+                            <tr><td colspan="4" class="p-6 text-center"><i class="fa-solid fa-spinner fa-spin text-cuycito-gold text-2xl"></i></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="editProfileModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-cuycito-dark border border-cuycito-gold rounded-xl p-6 w-full max-w-sm space-y-4 shadow-[0_0_30px_rgba(234,179,8,0.2)]">
+            <h3 class="text-lg font-black text-cuycito-gold uppercase border-b border-gray-800 pb-2"><i class="fa-solid fa-user-pen"></i> Actualizar Datos</h3>
+            <p class="text-xs text-gray-400">Tu número es tu usuario y no puede cambiarse. Puedes actualizar tu correo y contraseña.</p>
+            <form onsubmit="updateClientData(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Número (Usuario)</label>
+                    <input type="text" id="updatePhone" readonly class="w-full bg-gray-900 border border-gray-800 rounded p-2 text-gray-500 outline-none cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-white mb-1 uppercase">Nuevo Correo (Opcional)</label>
+                    <input type="email" id="updateEmail" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-white mb-1 uppercase">Nueva Contraseña</label>
+                    <input type="text" id="updatePass" required class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="document.getElementById('editProfileModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-4 py-2 rounded">Cancelar</button>
+                    <button type="submit" class="bg-cuycito-gold text-black font-black text-xs px-4 py-2 rounded">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/store.js"></script>
+</body>
+</html>

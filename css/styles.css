@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: #0a0a0a;
+    color: #f3f4f6;
+}
+
+/* Efectos de Iluminación Neón */
+.glow-red { box-shadow: 0 0 15px rgba(220, 38, 38, 0.3); }
+.glow-gold { box-shadow: 0 0 15px rgba(234, 179, 8, 0.25); }
+
+/* Scrollbars - Dashboard */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #0a0a0a; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #850000; border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #ffb703; }
+
+/* Scrollbars - Carrito de Compras */
+.cart-scroll::-webkit-scrollbar { width: 4px; }
+.cart-scroll::-webkit-scrollbar-track { background: transparent; }
+.cart-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+
+/* Ocultar flechas en los inputs numéricos */
+input[type="number"]::-webkit-inner-spin-button, 
+input[type="number"]::-webkit-outer-spin-button { 
+    -webkit-appearance: none; 
+    margin: 0; 
+}
