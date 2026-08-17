@@ -317,15 +317,35 @@ window.openRechargeModal = async () => {
     window.resetRechargeModal();
     modal.classList.remove('hidden');
 
-    // Cargar QR y datos personalizados desde Firestore
+    // 1. Cargar QR inmediatamente desde caché local
+    const cachedQr = localStorage.getItem("paymentQrUrl");
+    const cachedTag = localStorage.getItem("lemonTag");
+    const qrImg = document.getElementById('manualQrImage');
+    const orderQr = document.getElementById('orderQrImage');
+    const lemonTagEl = document.getElementById('lemonTagDisplay');
+
+    if (cachedQr) {
+        if (qrImg) qrImg.src = cachedQr;
+        if (orderQr) orderQr.src = cachedQr;
+    }
+    if (cachedTag && lemonTagEl) {
+        lemonTagEl.innerText = cachedTag;
+    }
+
+    // 2. Cargar QR y datos personalizados desde Firestore
     try {
         const docSnap = await getDoc(doc(db, "settings", "general"));
         if (docSnap.exists()) {
             const data = docSnap.data();
-            const qrImg = document.getElementById('manualQrImage');
-            const lemonTagEl = document.getElementById('lemonTagDisplay');
-            if (qrImg && data.paymentQrUrl) qrImg.src = data.paymentQrUrl;
-            if (lemonTagEl && data.lemonTag) lemonTagEl.innerText = data.lemonTag;
+            if (data.paymentQrUrl) {
+                if (qrImg) qrImg.src = data.paymentQrUrl;
+                if (orderQr) orderQr.src = data.paymentQrUrl;
+                localStorage.setItem("paymentQrUrl", data.paymentQrUrl);
+            }
+            if (data.lemonTag) {
+                if (lemonTagEl) lemonTagEl.innerText = data.lemonTag;
+                localStorage.setItem("lemonTag", data.lemonTag);
+            }
         }
     } catch(e) {}
     
@@ -464,7 +484,7 @@ window.generateRechargeOrder = async () => {
             body: JSON.stringify({
                 userId: currentClientUser.id,
                 amount: amount,
-                currency: 'USD',
+                currency: 'PEN',
                 userInfo: {
                     name: currentClientUser.name,
                     nickname: currentClientUser.nickname || currentClientUser.name,
@@ -481,11 +501,15 @@ window.generateRechargeOrder = async () => {
         const order = data.order;
         activeRechargeOrderId = order.id;
 
-        // 2. Mostrar datos generados con céntimos únicos en la UI
-        document.getElementById('orderExactAmountDisplay').innerText = `$ ${order.exactAmount.toFixed(2)}`;
-        document.getElementById('lemonTagDisplay').innerText = order.lemonTag || '$cuycitogo';
-        document.getElementById('lemonAliasDisplay').innerText = order.lemonAlias || 'cuycitogo.lemon';
-        document.getElementById('lemonCVUDisplay').innerText = order.lemonCVU || '0000123400005678901234';
+        // 2. Mostrar datos generados con céntimos únicos en Soles (S/)
+        document.getElementById('orderExactAmountDisplay').innerText = `S/ ${order.exactAmount.toFixed(2)}`;
+        document.getElementById('lemonTagDisplay').innerText = order.lemonTag || '$cmancocambillo';
+        
+        const cachedQr = localStorage.getItem("paymentQrUrl");
+        if (cachedQr) {
+            const orderQr = document.getElementById('orderQrImage');
+            if (orderQr) orderQr.src = cachedQr;
+        }
 
         if (step1) step1.classList.add('hidden');
         if (step2) step2.classList.remove('hidden');
@@ -513,19 +537,23 @@ window.generateRechargeOrder = async () => {
                 baseAmount: Math.floor(amount),
                 cents: randomCents,
                 exactAmount: exactAmount,
-                currency: 'USD',
+                currency: 'PEN',
                 status: 'pending',
                 paymentMethod: 'Lemon Cash',
-                lemonTag: '$cuycitogo',
-                lemonAlias: 'cuycitogo.lemon',
-                lemonCVU: '0000123400005678901234',
+                lemonTag: '$cmancocambillo',
                 createdAt: new Date().toISOString(),
                 expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
             };
 
             await setDoc(doc(db, "recharge_orders", orderId), orderData);
 
-            document.getElementById('orderExactAmountDisplay').innerText = `$ ${exactAmount.toFixed(2)}`;
+            document.getElementById('orderExactAmountDisplay').innerText = `S/ ${exactAmount.toFixed(2)}`;
+            const cachedQr = localStorage.getItem("paymentQrUrl");
+            if (cachedQr) {
+                const orderQr = document.getElementById('orderQrImage');
+                if (orderQr) orderQr.src = cachedQr;
+            }
+
             if (step1) step1.classList.add('hidden');
             if (step2) step2.classList.remove('hidden');
             startCountdownTimer(new Date(Date.now() + 30 * 60 * 1000));
@@ -564,12 +592,10 @@ function startRechargeStatusPolling(orderId) {
 
     rechargePollingInterval = setInterval(async () => {
         try {
-            // Consultar a Firestore o API
             const ordersSnap = await getDocs(collection(db, "recharge_orders"));
             ordersSnap.forEach(d => {
                 const data = d.data();
                 if (data.id === orderId && data.status === 'completed') {
-                    // ¡Acreditación detectada!
                     clearInterval(rechargePollingInterval);
                     if (rechargeCountdownInterval) clearInterval(rechargeCountdownInterval);
 
@@ -579,7 +605,7 @@ function startRechargeStatusPolling(orderId) {
 
                     if (waitingBox) waitingBox.classList.add('hidden');
                     if (successBox) successBox.classList.remove('hidden');
-                    if (details) details.innerText = `Se han acreditado $${(data.exactAmount || data.baseAmount).toFixed(2)} USD a tu saldo.`;
+                    if (details) details.innerText = `Se han acreditado S/ ${(data.exactAmount || data.baseAmount).toFixed(2)} a tu saldo VIP.`;
 
                     // Refrescar saldo del usuario
                     refreshUserDataFromFirestore();
@@ -592,9 +618,9 @@ function startRechargeStatusPolling(orderId) {
 }
 
 window.copyExactAmount = () => {
-    const text = document.getElementById('orderExactAmountDisplay')?.innerText.replace('$', '').trim();
+    const text = document.getElementById('orderExactAmountDisplay')?.innerText.replace('S/', '').replace('$', '').trim();
     if (text) {
-        navigator.clipboard.writeText(text).then(() => alert(`📋 ¡Monto exacto copiado: $${text}!`));
+        navigator.clipboard.writeText(text).then(() => alert(`📋 ¡Monto exacto copiado: S/ ${text}!`));
     }
 };
 

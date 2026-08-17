@@ -2383,18 +2383,35 @@ window.filterRechargesHistory = () => {
 // ==========================================
 window.loadPaymentQRSettings = async () => {
     try {
+        // Cargar primero de localStorage si existe para render inmediato
+        const cachedQr = localStorage.getItem("paymentQrUrl");
+        const cachedTag = localStorage.getItem("lemonTag");
+        if (cachedQr) {
+            const preview = document.getElementById('dashboardQrPreview');
+            const qrInput = document.getElementById('settingQrUrlInput');
+            if (preview) preview.src = cachedQr;
+            if (qrInput) qrInput.value = cachedQr;
+        }
+        if (cachedTag) {
+            const lemonTagInput = document.getElementById('settingLemonTagInput');
+            if (lemonTagInput) lemonTagInput.value = cachedTag;
+        }
+
         const docSnap = await getDoc(doc(db, "settings", "general"));
         if (docSnap.exists()) {
             const data = docSnap.data();
             const qrInput = document.getElementById('settingQrUrlInput');
             const preview = document.getElementById('dashboardQrPreview');
-            const lemonInput = document.getElementById('settingLemonTagInput');
-            const phoneInput = document.getElementById('settingWhatsappPhoneInput');
+            const lemonTagInput = document.getElementById('settingLemonTagInput');
+            const whatsappInput = document.getElementById('settingWhatsappPhoneInput');
 
             if (qrInput && data.paymentQrUrl) qrInput.value = data.paymentQrUrl;
             if (preview && data.paymentQrUrl) preview.src = data.paymentQrUrl;
-            if (lemonInput && data.lemonTag) lemonInput.value = data.lemonTag;
-            if (phoneInput && data.whatsappPhone) phoneInput.value = data.whatsappPhone;
+            if (lemonTagInput && data.lemonTag) lemonTagInput.value = data.lemonTag;
+            if (whatsappInput && data.whatsappPhone) whatsappInput.value = data.whatsappPhone;
+
+            if (data.paymentQrUrl) localStorage.setItem("paymentQrUrl", data.paymentQrUrl);
+            if (data.lemonTag) localStorage.setItem("lemonTag", data.lemonTag);
         }
     } catch (e) {
         console.error("Error al cargar configuración de QR:", e);
@@ -2428,6 +2445,9 @@ window.savePaymentQRSettings = async () => {
             whatsappPhone: whatsappPhone,
             updatedAt: new Date().toISOString()
         }, { merge: true });
+
+        if (qrUrl) localStorage.setItem("paymentQrUrl", qrUrl);
+        if (lemonTag) localStorage.setItem("lemonTag", lemonTag);
 
         const preview = document.getElementById('dashboardQrPreview');
         if (preview && qrUrl) preview.src = qrUrl;

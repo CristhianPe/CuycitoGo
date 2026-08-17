@@ -495,31 +495,31 @@
                 <!-- PASO 1 AUTO -->
                 <div id="rechargeStep1" class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-300 mb-1.5">1. Selecciona o ingresa el monto a recargar ($ USD)</label>
+                        <label class="block text-xs font-bold text-gray-300 mb-1.5">1. Selecciona o ingresa el monto a recargar (S/ Soles)</label>
                         <div class="grid grid-cols-4 gap-2 mb-3">
-                            <button type="button" onclick="window.selectPresetAmount(5)" class="bg-black hover:bg-emerald-950/60 border border-gray-700 hover:border-emerald-400 text-white font-bold text-xs py-2 rounded-xl transition">
-                                $5 USD
-                            </button>
                             <button type="button" onclick="window.selectPresetAmount(10)" class="bg-black hover:bg-emerald-950/60 border border-gray-700 hover:border-emerald-400 text-white font-bold text-xs py-2 rounded-xl transition">
-                                $10 USD
+                                S/ 10
                             </button>
                             <button type="button" onclick="window.selectPresetAmount(20)" class="bg-black hover:bg-emerald-950/60 border border-gray-700 hover:border-emerald-400 text-white font-bold text-xs py-2 rounded-xl transition">
-                                $20 USD
+                                S/ 20
                             </button>
                             <button type="button" onclick="window.selectPresetAmount(50)" class="bg-black hover:bg-emerald-950/60 border border-gray-700 hover:border-emerald-400 text-white font-bold text-xs py-2 rounded-xl transition">
-                                $50 USD
+                                S/ 50
+                            </button>
+                            <button type="button" onclick="window.selectPresetAmount(100)" class="bg-black hover:bg-emerald-950/60 border border-gray-700 hover:border-emerald-400 text-white font-bold text-xs py-2 rounded-xl transition">
+                                S/ 100
                             </button>
                         </div>
                         <div class="relative">
-                            <span class="absolute left-3.5 top-3 text-emerald-400 font-bold text-sm">$</span>
-                            <input type="number" id="customRechargeAmount" min="1" step="1" value="10" placeholder="Otro monto (ej. 15)" class="w-full bg-black border border-gray-700 rounded-xl py-2.5 pl-8 pr-4 text-white font-black text-sm outline-none focus:border-emerald-400">
+                            <span class="absolute left-3.5 top-3 text-emerald-400 font-bold text-sm">S/</span>
+                            <input type="number" id="customRechargeAmount" min="1" step="1" value="10" placeholder="Otro monto (ej. 30)" class="w-full bg-black border border-gray-700 rounded-xl py-2.5 pl-9 pr-4 text-white font-black text-sm outline-none focus:border-emerald-400">
                         </div>
                     </div>
 
                     <div class="bg-emerald-950/30 border border-emerald-500/40 rounded-2xl p-3 text-xs text-emerald-300 space-y-1">
                         <p class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-circle-info text-emerald-400"></i> Robot IMAP de Lemon Cash Activo</p>
                         <p class="text-[11px] text-gray-300 leading-relaxed">
-                            El sistema generará una orden con <strong>céntimos únicos</strong> (ej. $10.43). Al transferir desde tu app Lemon Cash a <strong>$cmancocambillo</strong>, el robot detecta el correo y acredita tu saldo <strong>en menos de 60 segundos</strong>.
+                            El sistema generará una orden con <strong>céntimos únicos</strong> (ej. S/ 10.43). Al transferir desde tu app Lemon Cash a <strong>$cmancocambillo</strong>, el robot detecta el correo y acredita tu saldo <strong>en menos de 60 segundos</strong>.
                         </p>
                     </div>
 
@@ -531,12 +531,12 @@
                     </div>
                 </div>
 
-                <!-- PASO 2 AUTO (ORDEN CON CÉNTIMOS) -->
+                <!-- PASO 2 AUTO (ORDEN CON CÉNTIMOS Y QR) -->
                 <div id="rechargeStep2" class="hidden space-y-4">
                     <div class="bg-gradient-to-r from-emerald-950/60 to-black border-2 border-emerald-400 rounded-2xl p-4 text-center space-y-1 shadow-lg">
                         <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-extrabold block">Transfiere este monto exacto:</span>
                         <div class="flex items-center justify-center gap-2">
-                            <span id="orderExactAmountDisplay" class="text-3xl sm:text-4xl font-black text-white glow-gold">$ 0.00</span>
+                            <span id="orderExactAmountDisplay" class="text-3xl sm:text-4xl font-black text-white glow-gold">S/ 0.00</span>
                             <button onclick="window.copyExactAmount()" class="bg-emerald-500 hover:bg-emerald-400 text-black p-2 rounded-lg text-xs font-black transition shadow" title="Copiar monto exacto">
                                 <i class="fa-regular fa-copy"></i> Copiar
                             </button>
@@ -544,8 +544,15 @@
                         <p class="text-[11px] text-amber-300 font-bold mt-1">⚠️ IMPORTANTE: Envía con los céntimos exactos para acreditación instantánea.</p>
                     </div>
 
-                    <!-- Datos Lemon Cash -->
+                    <!-- Código QR y Datos Lemon Cash -->
                     <div class="bg-black/80 border border-emerald-500/30 rounded-2xl p-4 space-y-3 text-xs">
+                        
+                        <!-- Contenedor de Imagen QR -->
+                        <div id="orderQrBox" class="w-40 h-40 mx-auto bg-white p-2 rounded-2xl border-2 border-emerald-400 flex flex-col items-center justify-center shadow-lg">
+                            <img id="orderQrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://wa.me/51991735344?text=Recarga%20CuycitoGO" alt="QR Lemon Cash / Yape" class="w-32 h-32 object-contain rounded-lg">
+                            <span class="text-[8px] text-black font-black uppercase tracking-wider mt-0.5">Escanea para transferir</span>
+                        </div>
+
                         <div class="flex items-center justify-between bg-emerald-950/40 border border-emerald-500/50 p-3 rounded-xl">
                             <div>
                                 <span class="text-emerald-400 text-[10px] uppercase font-black block tracking-wider"><i class="fa-solid fa-tag mr-1"></i> $lemontag de Destino</span>
@@ -556,7 +563,7 @@
                             </button>
                         </div>
                         <p class="text-[10px] text-gray-400 text-center">
-                            Abre Lemon Cash ➔ Presiona <strong>Enviar</strong> ➔ Escribe <strong>$cmancocambillo</strong> ➔ Transfiere el monto exacto.
+                            Abre Lemon Cash ➔ Escanea el QR o escribe <strong>$cmancocambillo</strong> ➔ Transfiere el monto exacto con céntimos.
                         </p>
                     </div>
 
@@ -610,7 +617,7 @@
                     <label class="block text-xs font-bold text-gray-300 mb-1.5">Monto transferido:</label>
                     <div class="relative">
                         <span class="absolute left-3.5 top-3 text-cuycito-gold font-bold text-sm">S/</span>
-                        <input type="number" id="manualRechargeAmountInput" min="1" step="0.5" value="10" placeholder="Monto (ej. 20.00)" class="w-full bg-black border border-gray-700 rounded-xl py-2.5 pl-9 pr-4 text-white font-black text-sm outline-none focus:border-cuycito-gold">
+                        <input type="number" id="manualRechargeAmountInput" min="1" step="0.5" value="10" placeholder="Monto en Soles (ej. 20.00)" class="w-full bg-black border border-gray-700 rounded-xl py-2.5 pl-9 pr-4 text-white font-black text-sm outline-none focus:border-cuycito-gold">
                     </div>
                 </div>
 
