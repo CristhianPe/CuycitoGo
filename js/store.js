@@ -320,19 +320,33 @@ function renderProducts(filtered) {
                 </div>
 
                 <!-- Contenido Informativo -->
-                <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
+                <div class="p-5 flex-1 flex flex-col justify-between space-y-3">
                     <div>
                         <h3 class="text-base font-black text-white group-hover:text-cuycito-gold transition line-clamp-1">
                             ${p.title}
                         </h3>
-                        <p class="text-xs text-gray-400 mt-1.5 line-clamp-2 leading-relaxed">
-                            ${p.description || 'Entrega inmediata con garantía 100% durante todo tu mes.'}
+
+                        <!-- Badges de Cuenta Compartida / Perfil Privado -->
+                        <div class="flex items-center gap-1.5 my-2 flex-wrap text-[10px] font-bold">
+                            <span class="bg-black/90 border border-gray-800 text-sky-400 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                                <i class="fa-solid fa-users"></i> Cuenta Compartida
+                            </span>
+                            <span class="bg-black/90 border border-gray-800 text-emerald-400 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                                <i class="fa-solid fa-lock"></i> PIN Privado
+                            </span>
+                            <span class="bg-black/90 border border-gray-800 text-gray-300 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                                <i class="fa-solid fa-tv"></i> 1 Pantalla
+                            </span>
+                        </div>
+
+                        <p class="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                            ${p.description || 'Perfil personal privado con PIN propio. Entrega inmediata con garantía 100% durante todo tu mes.'}
                         </p>
                     </div>
 
                     <div class="pt-3 border-t border-gray-800/80 space-y-2">
                         <div class="flex items-center justify-between">
-                            <span class="text-[9px] uppercase tracking-wider text-gray-500 block font-bold">Precio Online</span>
+                            <span class="text-[9px] uppercase tracking-wider text-gray-500 block font-bold">Precio en Soles</span>
                             ${stockBadge}
                         </div>
                         <div class="flex items-center justify-between">

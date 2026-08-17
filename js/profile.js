@@ -28,6 +28,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
         currentClientUser = JSON.parse(savedClient);
         updateProfileUI();
+        window.loadClientPaymentQR();
         await loadClientSubscriptions();
         await refreshUserDataFromFirestore();
     } catch (e) {
@@ -311,28 +312,29 @@ function renderClientSubscriptions(subs) {
 // ==========================================
 // 3. RECARGA DUAL: LEMON CASH & MANUAL QR
 // ==========================================
-window.openRechargeModal = async () => {
-    const modal = document.getElementById('rechargeModal');
-    if (!modal) return;
-    window.resetRechargeModal();
-    modal.classList.remove('hidden');
-
-    // 1. Cargar QR inmediatamente desde caché local
+window.loadClientPaymentQR = async () => {
     const cachedQr = localStorage.getItem("paymentQrUrl");
     const cachedTag = localStorage.getItem("lemonTag");
+    const cachedPhone = localStorage.getItem("whatsappPhone");
+    
     const qrImg = document.getElementById('manualQrImage');
     const orderQr = document.getElementById('orderQrImage');
     const lemonTagEl = document.getElementById('lemonTagDisplay');
+    const manualTagEl = document.getElementById('manualLemonTagDisplay');
+    const manualPhoneEl = document.getElementById('manualWhatsappDisplay');
 
     if (cachedQr) {
         if (qrImg) qrImg.src = cachedQr;
         if (orderQr) orderQr.src = cachedQr;
     }
-    if (cachedTag && lemonTagEl) {
-        lemonTagEl.innerText = cachedTag;
+    if (cachedTag) {
+        if (lemonTagEl) lemonTagEl.innerText = cachedTag;
+        if (manualTagEl) manualTagEl.innerText = cachedTag;
+    }
+    if (cachedPhone && manualPhoneEl) {
+        manualPhoneEl.innerText = cachedPhone;
     }
 
-    // 2. Cargar QR y datos personalizados desde Firestore
     try {
         const docSnap = await getDoc(doc(db, "settings", "general"));
         if (docSnap.exists()) {
@@ -344,10 +346,27 @@ window.openRechargeModal = async () => {
             }
             if (data.lemonTag) {
                 if (lemonTagEl) lemonTagEl.innerText = data.lemonTag;
+                if (manualTagEl) manualTagEl.innerText = data.lemonTag;
                 localStorage.setItem("lemonTag", data.lemonTag);
             }
+            if (data.whatsappPhone) {
+                if (manualPhoneEl) manualPhoneEl.innerText = data.whatsappPhone;
+                localStorage.setItem("whatsappPhone", data.whatsappPhone);
+            }
         }
-    } catch(e) {}
+    } catch(e) {
+        console.error("Error al cargar QR en cliente:", e);
+    }
+};
+
+window.openRechargeModal = async () => {
+    const modal = document.getElementById('rechargeModal');
+    if (!modal) return;
+    window.resetRechargeModal();
+    modal.classList.remove('hidden');
+
+    // Cargar QR y datos personalizados inmediatamente
+    await window.loadClientPaymentQR();
     
     // Verificar si el servidor y robot IMAP están en línea
     await window.checkServerStatus();
@@ -386,6 +405,9 @@ window.setRechargeUIMode = (mode) => {
     const manualCont = document.getElementById('rechargeManualContainer');
     const btnAuto = document.getElementById('btnModeAuto');
     const btnManual = document.getElementById('btnModeManual');
+
+    // Asegurar carga de QR al cambiar de pestaña
+    window.loadClientPaymentQR();
 
     if (mode === 'AUTO') {
         if (autoCont) autoCont.classList.remove('hidden');

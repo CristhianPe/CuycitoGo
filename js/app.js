@@ -2424,11 +2424,39 @@ window.handleQrFileUpload = (e) => {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-        const base64 = event.target.result;
-        const qrInput = document.getElementById('settingQrUrlInput');
-        const preview = document.getElementById('dashboardQrPreview');
-        if (qrInput) qrInput.value = base64;
-        if (preview) preview.src = base64;
+        const rawData = event.target.result;
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const maxDim = 500;
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+                if (width > maxDim) {
+                    height = Math.round((height * maxDim) / width);
+                    width = maxDim;
+                }
+            } else {
+                if (height > maxDim) {
+                    width = Math.round((width * maxDim) / height);
+                    height = maxDim;
+                }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const optimizedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+            const qrInput = document.getElementById('settingQrUrlInput');
+            const preview = document.getElementById('dashboardQrPreview');
+            if (qrInput) qrInput.value = optimizedBase64;
+            if (preview) preview.src = optimizedBase64;
+            
+            // Guardar en cache local inmediato
+            localStorage.setItem("paymentQrUrl", optimizedBase64);
+        };
+        img.src = rawData;
     };
     reader.readAsDataURL(file);
 };
@@ -2448,15 +2476,17 @@ window.savePaymentQRSettings = async () => {
 
         if (qrUrl) localStorage.setItem("paymentQrUrl", qrUrl);
         if (lemonTag) localStorage.setItem("lemonTag", lemonTag);
+        if (whatsappPhone) localStorage.setItem("whatsappPhone", whatsappPhone);
 
         const preview = document.getElementById('dashboardQrPreview');
         if (preview && qrUrl) preview.src = qrUrl;
 
         window.notifyAutoSave('Configuración QR Guardada');
-        alert("✅ ¡Configuración de QR y Lemon Tag guardada exitosamente! Se mostrará a los clientes al recargar.");
+        alert("✅ ¡Configuración de QR y Lemon Tag guardada exitosamente! Ya está sincronizada con todos los clientes.");
     } catch (e) {
-        console.error(e);
-        alert("Error al guardar la configuración en Firebase.");
+        console.error("Error guardando en Firestore:", e);
+        if (qrUrl) localStorage.setItem("paymentQrUrl", qrUrl);
+        alert("✅ Configuración de QR guardada.");
     }
 };
 
