@@ -104,13 +104,24 @@
                     </div>
                 </div>
 
-                <!-- Botones de Acción de Perfil -->
-                <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                    <button onclick="window.openEditProfileModal()" class="w-full sm:w-auto bg-black hover:bg-gray-900 border border-cuycito-gold/50 hover:border-cuycito-gold text-cuycito-gold font-extrabold text-xs px-5 py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
-                        <i class="fa-solid fa-user-pen"></i> Modificar Nickname & Clave
+                <!-- Botones de Acción de Perfil & Saldo VIP -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+                    <!-- Tarjeta de Saldo VIP -->
+                    <div class="flex items-center justify-between sm:justify-start gap-4 bg-black/80 border border-cuycito-gold/40 rounded-2xl px-4 py-2.5 shadow-lg">
+                        <div>
+                            <span class="text-[9px] uppercase font-extrabold text-gray-400 block tracking-wider"><i class="fa-solid fa-wallet text-cuycito-gold mr-1"></i> Mi Saldo VIP</span>
+                            <span id="profileBalanceDisplay" class="text-xl font-black text-cuycito-gold glow-gold">$ 0.00</span>
+                        </div>
+                        <button onclick="window.openRechargeModal()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5 glow-gold">
+                            <i class="fa-solid fa-bolt text-yellow-300"></i> Recargar
+                        </button>
+                    </div>
+
+                    <button onclick="window.openEditProfileModal()" class="bg-black hover:bg-gray-900 border border-cuycito-gold/50 hover:border-cuycito-gold text-cuycito-gold font-extrabold text-xs px-4 py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-user-pen"></i> Modificar Nickname
                     </button>
-                    <a href="index.html" class="w-full sm:w-auto bg-cuycito-red hover:bg-cuycito-redHover text-white font-extrabold text-xs px-5 py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg glow-red">
-                        <i class="fa-solid fa-cart-plus"></i> Comprar Más Cuentas
+                    <a href="index.html" class="bg-cuycito-red hover:bg-cuycito-redHover text-white font-extrabold text-xs px-4 py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg glow-red">
+                        <i class="fa-solid fa-cart-plus"></i> Comprar Cuentas
                     </a>
                 </div>
             </div>
@@ -270,6 +281,142 @@
     <footer class="py-6 border-t border-gray-800 text-center text-xs text-gray-500">
         <p>© CuycitoGO • Tu tienda confiable de Cuentas Premium y Streaming</p>
     </footer>
+
+    <!-- MODAL DE RECARGA AUTOMÁTICA LEMON CASH -->
+    <div id="rechargeModal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-cuycito-dark border-2 border-emerald-500/70 rounded-3xl p-6 sm:p-7 w-full max-w-lg space-y-4 shadow-[0_0_40px_rgba(16,185,129,0.3)] max-h-[92vh] overflow-y-auto custom-scrollbar">
+            
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-500/50 flex items-center justify-center text-xl text-emerald-400">
+                        🍋
+                    </div>
+                    <div>
+                        <h3 class="text-base font-black text-white uppercase flex items-center gap-1.5">
+                            Recarga Automática <span class="text-emerald-400 font-extrabold">Lemon Cash</span>
+                        </h3>
+                        <p class="text-[10px] text-gray-400">Acreditación instantánea mediante lectura inteligente de transferencias.</p>
+                    </div>
+                </div>
+                <button onclick="window.closeRechargeModal()" class="text-gray-500 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- PASO 1: SELECCIÓN DE MONTO -->
+            <div id="rechargeStep1" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1.5">1. Selecciona o ingresa el monto a recargar ($ USD)</label>
+                    <div class="grid grid-cols-4 gap-2 mb-3">
+                        <button type="button" onclick="window.selectPresetAmount(5)" class="bg-black hover:bg-emerald-950/60 border border-gray-700 hover:border-emerald-400 text-white font-bold text-xs py-2 rounded-xl transition">
+                            $5 USD
+                        </button>
+                        <button type="button" onclick="window.selectPresetAmount(10)" class="bg-black hover:bg-emerald-950/60 border border-gray-700 hover:border-emerald-400 text-white font-bold text-xs py-2 rounded-xl transition">
+                            $10 USD
+                        </button>
+                        <button type="button" onclick="window.selectPresetAmount(20)" class="bg-black hover:bg-emerald-950/60 border border-gray-700 hover:border-emerald-400 text-white font-bold text-xs py-2 rounded-xl transition">
+                            $20 USD
+                        </button>
+                        <button type="button" onclick="window.selectPresetAmount(50)" class="bg-black hover:bg-emerald-950/60 border border-gray-700 hover:border-emerald-400 text-white font-bold text-xs py-2 rounded-xl transition">
+                            $50 USD
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute left-3.5 top-3 text-emerald-400 font-bold text-sm">$</span>
+                        <input type="number" id="customRechargeAmount" min="1" step="1" value="10" placeholder="Otro monto (ej. 15)" class="w-full bg-black border border-gray-700 rounded-xl py-2.5 pl-8 pr-4 text-white font-black text-sm outline-none focus:border-emerald-400">
+                    </div>
+                </div>
+
+                <div class="bg-emerald-950/30 border border-emerald-500/40 rounded-2xl p-3 text-xs text-emerald-300 space-y-1">
+                    <p class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-circle-info text-emerald-400"></i> ¿Cómo funciona?</p>
+                    <p class="text-[11px] text-gray-300 leading-relaxed">
+                        El sistema generará una orden con <strong>céntimos únicos</strong> (ej. $10.43). Al transferir el monto exacto desde tu app Lemon Cash, nuestro robot IMAP detectará el comprobante por correo y acreditará tu saldo <strong>en menos de 60 segundos</strong>.
+                    </p>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="window.closeRechargeModal()" class="bg-gray-800 text-gray-400 hover:text-white text-xs px-4 py-2.5 rounded-xl transition">Cancelar</button>
+                    <button type="button" onclick="window.generateRechargeOrder()" class="bg-emerald-600 hover:bg-emerald-500 text-black font-black text-xs px-6 py-2.5 rounded-xl transition shadow glow-gold flex items-center gap-2">
+                        <span>Generar Orden de Pago</span> <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PASO 2: ORDEN GENERADA CON CÉNTIMOS ÚNICOS & DATOS DE TRANSFERENCIA -->
+            <div id="rechargeStep2" class="hidden space-y-4">
+                
+                <!-- Caja de Monto Exacto con Céntimos Únicos -->
+                <div class="bg-gradient-to-r from-emerald-950/60 to-black border-2 border-emerald-400 rounded-2xl p-4 text-center space-y-1 shadow-lg">
+                    <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-extrabold block">Transfiere este monto exacto:</span>
+                    <div class="flex items-center justify-center gap-2">
+                        <span id="orderExactAmountDisplay" class="text-3xl sm:text-4xl font-black text-white glow-gold">$ 0.00</span>
+                        <button onclick="window.copyExactAmount()" class="bg-emerald-500 hover:bg-emerald-400 text-black p-2 rounded-lg text-xs font-black transition shadow" title="Copiar monto exacto">
+                            <i class="fa-regular fa-copy"></i> Copiar
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-amber-300 font-bold mt-1">⚠️ IMPORTANTE: No olvides incluir los céntimos para que se acredite automáticamente.</p>
+                </div>
+
+                <!-- Datos de Lemon Cash -->
+                <div class="bg-black/70 border border-gray-800 rounded-2xl p-4 space-y-3 text-xs">
+                    <div class="flex items-center justify-between border-b border-gray-800/80 pb-2">
+                        <div>
+                            <span class="text-gray-500 text-[10px] uppercase font-bold block">$lemontag</span>
+                            <strong id="lemonTagDisplay" class="text-white text-sm font-mono font-bold">$cuycitogo</strong>
+                        </div>
+                        <button onclick="window.copyTextElement('lemonTagDisplay')" class="text-emerald-400 hover:text-emerald-300 font-bold text-xs flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> Copiar Tag
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-between border-b border-gray-800/80 pb-2">
+                        <div>
+                            <span class="text-gray-500 text-[10px] uppercase font-bold block">Alias Lemon Cash</span>
+                            <strong id="lemonAliasDisplay" class="text-white text-xs font-mono">cuycitogo.lemon</strong>
+                        </div>
+                        <button onclick="window.copyTextElement('lemonAliasDisplay')" class="text-emerald-400 hover:text-emerald-300 font-bold text-xs flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> Copiar
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-gray-500 text-[10px] uppercase font-bold block">CVU</span>
+                            <strong id="lemonCVUDisplay" class="text-white text-[11px] font-mono">0000123400005678901234</strong>
+                        </div>
+                        <button onclick="window.copyTextElement('lemonCVUDisplay')" class="text-emerald-400 hover:text-emerald-300 font-bold text-xs flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> Copiar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Estado de Espera & Polling -->
+                <div id="rechargeWaitingBox" class="bg-black/40 border border-gray-800 rounded-2xl p-3.5 text-center space-y-2">
+                    <div class="flex items-center justify-center gap-2 text-xs text-yellow-400 font-bold">
+                        <i class="fa-solid fa-spinner fa-spin text-sm"></i>
+                        <span>Esperando transferencia de Lemon Cash...</span>
+                    </div>
+                    <p class="text-[10px] text-gray-500">Esta orden vence en: <strong id="orderCountdownTimer" class="text-white font-mono">30:00</strong></p>
+                </div>
+
+                <!-- Estado de Acreditación Exitosa (Oculto inicialmente) -->
+                <div id="rechargeSuccessBox" class="hidden bg-emerald-950/60 border border-emerald-400 rounded-2xl p-4 text-center space-y-2">
+                    <div class="text-3xl text-emerald-400"><i class="fa-solid fa-circle-check animate-bounce"></i></div>
+                    <h4 class="text-base font-black text-white">¡Saldo Acreditado Exitosamente!</h4>
+                    <p id="rechargeSuccessDetails" class="text-xs text-emerald-300">Se han acreditado $10.42 a tu cuenta VIP.</p>
+                </div>
+
+                <div class="flex justify-between items-center pt-2">
+                    <button type="button" onclick="window.resetRechargeModal()" class="text-gray-500 hover:text-white text-xs">
+                        <i class="fa-solid fa-arrow-left"></i> Cambiar monto
+                    </button>
+                    <button type="button" onclick="window.closeRechargeModal()" class="bg-gray-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl hover:bg-gray-700 transition">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script type="module" src="js/profile.js"></script>
 </body>

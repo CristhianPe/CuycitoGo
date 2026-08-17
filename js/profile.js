@@ -4,7 +4,14 @@ import { db, collection, getDocs, doc, setDoc } from "./firebase-config.js";
 let currentClientUser = null;
 let clientSubscriptions = [];
 let allMasterAccounts = [];
+let activeRechargeOrderId = null;
+let rechargePollingInterval = null;
+let rechargeCountdownInterval = null;
+
 const CENTRAL_WHATSAPP_PHONE = "51991735344";
+const BACKEND_API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:5000' 
+    : 'http://localhost:5000'; // Ajustable según host de backend
 
 // ==========================================
 // 1. INICIALIZACIÓN Y VALIDACIÓN DE SESIÓN
@@ -22,33 +29,57 @@ document.addEventListener("DOMContentLoaded", async () => {
         currentClientUser = JSON.parse(savedClient);
         updateProfileUI();
         await loadClientSubscriptions();
+        await refreshUserDataFromFirestore();
     } catch (e) {
         console.error("Error al procesar sesión:", e);
         window.location.replace("login-cliente.html");
     }
 });
 
+// Sincroniza los datos más recientes del usuario desde Firestore (saldo, nickname, etc.)
+async function refreshUserDataFromFirestore() {
+    if (!currentClientUser || !currentClientUser.id) return;
+    try {
+        const usersSnap = await getDocs(collection(db, "users"));
+        usersSnap.forEach(d => {
+            if (d.id === currentClientUser.id || d.data().phone === currentClientUser.phone) {
+                currentClientUser = { id: d.id, ...d.data() };
+                localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+                updateProfileUI();
+            }
+        });
+    } catch (e) {
+        console.error("Error refrescando usuario desde Firestore:", e);
+    }
+}
+
 // Actualiza los elementos del perfil en el DOM
 function updateProfileUI() {
     if (!currentClientUser) return;
 
-    // En primera instancia, el nickname es exactamente igual a su nombre si no ha sido personalizado
     const nickname = currentClientUser.nickname || currentClientUser.name;
     const realName = currentClientUser.name;
     const phone = currentClientUser.phone;
     const email = currentClientUser.email || "Sin correo registrado";
+    const balance = parseFloat(currentClientUser.balance || 0).toFixed(2);
 
-    const navNick = document.getElementById('navClientNickname');
+    const navNick = document.getElementById('navNicknameDisplay') || document.getElementById('navClientNickname');
+    const navPhone = document.getElementById('navPhoneDisplay');
     const headerNick = document.getElementById('headerNickname') || document.getElementById('profileNicknameDisplay');
     const headerReal = document.getElementById('headerRealName') || document.getElementById('profileRealNameDisplay');
     const headerPhone = document.getElementById('headerPhone') || document.getElementById('profilePhoneDisplay');
     const headerMail = document.getElementById('headerEmail') || document.getElementById('profileEmailDisplay');
+    const balanceDisplay = document.getElementById('profileBalanceDisplay');
+    const avatar = document.getElementById('profileAvatar');
 
     if (navNick) navNick.innerText = `@${nickname}`;
+    if (navPhone) navPhone.innerText = phone;
     if (headerNick) headerNick.innerText = `@${nickname}`;
     if (headerReal) headerReal.innerText = realName;
     if (headerPhone) headerPhone.innerText = phone;
     if (headerMail) headerMail.innerText = email;
+    if (balanceDisplay) balanceDisplay.innerText = `$ ${balance}`;
+    if (avatar && nickname) avatar.innerText = nickname.charAt(0).toUpperCase();
 
     // Rellenar modal de edición
     const editReal = document.getElementById('editRealName');
@@ -78,55 +109,46 @@ async function loadClientSubscriptions() {
         allMasterAccounts = [];
         masterSnap.forEach(d => allMasterAccounts.push(d.data()));
 
+        const clientNameNorm = (currentClientUser.name || '').trim().toLowerCase();
+        
         clientSubscriptions = [];
-        const clientNameNorm = currentClientUser.name.trim().toLowerCase();
-
         subSnap.forEach(d => {
-            const sub = d.data();
-            if (sub.person && sub.person.trim().toLowerCase() === clientNameNorm) {
-                // Verificar si pertenece a una cuenta matriz (raíz)
-                const master = allMasterAccounts.find(m => (m.profiles || []).includes(sub.id) || (m.email && sub.email && m.email.trim().toLowerCase() === sub.email.trim().toLowerCase()));
-                if (master) {
-                    sub.masterAccountLinked = master;
-                }
-                clientSubscriptions.push(sub);
+            const data = d.data();
+            if (data.person && data.person.trim().toLowerCase() === clientNameNorm) {
+                clientSubscriptions.push(data);
             }
         });
 
-        // Ordenamos: primero las vigentes más próximas a vencer, luego vencidas
-        clientSubscriptions.sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
+        renderClientSubscriptions(clientSubscriptions);
+        updateMetrics(clientSubscriptions);
 
-        updateMetrics();
-        window.filterServicesList();
-    } catch (error) {
-        console.error("Error al cargar suscripciones:", error);
-        container.innerHTML = `
-            <div class="col-span-full py-12 text-center text-red-400 space-y-2">
-                <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
-                <p class="font-bold">Error de conexión al cargar tus servicios.</p>
-                <button onclick="location.reload()" class="text-xs text-cuycito-gold underline">Reintentar</button>
-            </div>
-        `;
+    } catch (e) {
+        console.error("Error al cargar suscripciones del cliente:", e);
+        if (container) {
+            container.innerHTML = `
+                <div class="col-span-full text-center text-red-400 py-10 bg-[#121212] rounded-3xl border border-red-500/30 p-6">
+                    <i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i>
+                    <p class="font-bold text-sm">No pudimos conectar con la base de datos de tus servicios.</p>
+                </div>
+            `;
+        }
     }
 }
 
-// Calcula días restantes
-function calculateDaysRemaining(endDateStr) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const end = new Date(endDateStr);
-    return Math.ceil((end - today) / 86400000);
-}
+// Actualizar métricas del dashboard cliente
+function updateMetrics(subs) {
+    const totalEl = document.getElementById('metricTotal');
+    const activeEl = document.getElementById('metricActive');
+    const expiringEl = document.getElementById('metricExpiring');
+    const expiredEl = document.getElementById('metricExpired');
 
-// Actualiza las tarjetas de estadísticas
-function updateMetrics() {
-    let total = clientSubscriptions.length;
+    const total = subs.length;
     let active = 0;
     let expiring = 0;
     let expired = 0;
 
-    clientSubscriptions.forEach(sub => {
-        const days = calculateDaysRemaining(sub.endDate);
+    subs.forEach(s => {
+        const days = getDaysRemaining(s.endDate);
         if (days < 0) {
             expired++;
         } else if (days <= 3) {
@@ -137,49 +159,25 @@ function updateMetrics() {
         }
     });
 
-    const mTotal = document.getElementById('metricTotal');
-    const mActive = document.getElementById('metricActive');
-    const mExpiring = document.getElementById('metricExpiring');
-    const mExpired = document.getElementById('metricExpired');
-
-    if (mTotal) mTotal.innerText = total;
-    if (mActive) mActive.innerText = active;
-    if (mExpiring) mExpiring.innerText = expiring;
-    if (mExpired) mExpired.innerText = expired;
+    if (totalEl) totalEl.innerText = total;
+    if (activeEl) activeEl.innerText = active;
+    if (expiringEl) expiringEl.innerText = expiring;
+    if (expiredEl) expiredEl.innerText = expired;
 }
 
-// Renderiza y filtra la lista de servicios
-window.filterServicesList = () => {
+// Renderizado de las tarjetas de servicios comprados
+function renderClientSubscriptions(subs) {
     const container = document.getElementById('servicesContainer');
     if (!container) return;
 
-    const searchTerm = (document.getElementById('searchServiceInput')?.value || '').toLowerCase().trim();
-    const statusFilter = document.getElementById('statusServiceFilter')?.value || 'ALL';
-
-    const filtered = clientSubscriptions.filter(sub => {
-        const days = calculateDaysRemaining(sub.endDate);
-        const isExpired = days < 0;
-        const isExpiring = days >= 0 && days <= 3;
-        const isActive = days >= 0;
-
-        const matchSearch = (sub.service || '').toLowerCase().includes(searchTerm) || 
-                            (sub.email || '').toLowerCase().includes(searchTerm);
-
-        let matchStatus = true;
-        if (statusFilter === 'ACTIVE') matchStatus = isActive;
-        if (statusFilter === 'EXPIRING') matchStatus = isExpiring;
-        if (statusFilter === 'EXPIRED') matchStatus = isExpired;
-
-        return matchSearch && matchStatus;
-    });
-
-    if (filtered.length === 0) {
+    if (subs.length === 0) {
         container.innerHTML = `
-            <div class="col-span-full py-16 text-center text-gray-500 space-y-3 bg-black/40 rounded-2xl border border-gray-800/60 p-8">
-                <i class="fa-solid fa-box-open text-4xl text-gray-600"></i>
-                <p class="text-sm font-semibold text-gray-400">No se encontraron servicios contratados con esos criterios.</p>
-                <a href="index.html" class="inline-flex items-center gap-2 bg-cuycito-gold hover:bg-cuycito-goldHover text-black text-xs font-black px-4 py-2.5 rounded-xl transition shadow">
-                    <i class="fa-solid fa-cart-shopping"></i> Explorar Catálogo de Tienda
+            <div class="col-span-full py-16 text-center text-gray-500 space-y-3 bg-[#121212] rounded-3xl border border-gray-800 p-8">
+                <i class="fa-solid fa-tv text-4xl text-gray-600"></i>
+                <p class="text-sm font-semibold text-gray-400">Aún no tienes servicios activos vinculados a este usuario.</p>
+                <p class="text-xs text-gray-500 max-w-sm mx-auto">Explora nuestro catálogo en la tienda y adquiere tus pantallas privadas con activación inmediata.</p>
+                <a href="index.html" class="inline-block bg-cuycito-gold text-black font-extrabold text-xs px-5 py-2.5 rounded-xl transition shadow glow-gold mt-2">
+                    <i class="fa-solid fa-store mr-1.5"></i> Explorar Tienda de Cuentas
                 </a>
             </div>
         `;
@@ -187,189 +185,317 @@ window.filterServicesList = () => {
     }
 
     let html = '';
-    filtered.forEach(sub => {
-        const days = calculateDaysRemaining(sub.endDate);
-        
-        let statusBadge = '';
-        let statusBorder = 'border-gray-800';
+    subs.forEach(sub => {
+        const days = getDaysRemaining(sub.endDate);
+        const isExpired = days < 0;
+        const isExpiring = days <= 3 && !isExpired;
 
-        if (days < 0) {
-            statusBadge = `<span class="bg-red-950/60 text-red-400 border border-cuycito-red/50 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase flex items-center gap-1.5"><i class="fa-solid fa-circle-xmark"></i> Vencido hace ${Math.abs(days)}d</span>`;
-            statusBorder = 'border-red-900/40';
-        } else if (days <= 3) {
-            statusBadge = `<span class="bg-amber-950/60 text-cuycito-gold border border-cuycito-gold/50 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase flex items-center gap-1.5 animate-pulse"><i class="fa-solid fa-triangle-exclamation"></i> Por Vencer (${days === 0 ? 'Vence HOY' : days + ' días'})</span>`;
-            statusBorder = 'border-amber-700/50 glow-border-gold';
+        let statusBadge = '';
+        let borderClass = 'border-gray-800';
+
+        if (isExpired) {
+            statusBadge = `<span class="bg-red-950/80 text-red-400 border border-cuycito-red/50 text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1"><i class="fa-solid fa-circle-xmark"></i> Vencido</span>`;
+            borderClass = 'border-red-950/60';
+        } else if (isExpiring) {
+            statusBadge = `<span class="bg-amber-950/80 text-cuycito-gold border border-cuycito-gold/50 text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 animate-pulse"><i class="fa-solid fa-triangle-exclamation"></i> Por Vencer (${days} d)</span>`;
+            borderClass = 'border-cuycito-gold/50';
         } else {
-            statusBadge = `<span class="bg-emerald-950/60 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase flex items-center gap-1.5"><i class="fa-solid fa-circle-check"></i> Activo (${days} días)</span>`;
-            statusBorder = 'border-gray-800 hover:border-cuycito-gold/40';
+            statusBadge = `<span class="bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> Activo (${days} d)</span>`;
+            borderClass = 'border-gray-800 hover:border-emerald-500/40';
         }
 
         // ==========================================
-        // LÓGICA DE VISIBILIDAD DE CREDENCIALES
-        // Solo mostrar los campos (Correo y Contraseña) si la cuenta matriz / suscripción tiene activada su visibilidad
+        // POLÍTICA DE VISIBILIDAD DE CREDENCIALES
         // ==========================================
-        let canShowCredentials = false;
-        if (sub.masterAccountLinked) {
-            canShowCredentials = !!sub.masterAccountLinked.showCredentialsToClient && !sub.hidePassword;
-        } else {
-            canShowCredentials = !!sub.showCredentials && !sub.hidePassword;
+        let shouldShowCreds = true;
+
+        if (sub.hidePassword === true) {
+            shouldShowCreds = false;
+        }
+
+        const linkedMaster = allMasterAccounts.find(m => 
+            (m.service || '').toLowerCase() === (sub.service || '').toLowerCase() &&
+            m.profiles && m.profiles.includes(sub.id)
+        );
+
+        if (linkedMaster) {
+            if (linkedMaster.showCredentialsToClient === false || linkedMaster.hidePasswordFromClient === true) {
+                shouldShowCreds = false;
+            }
         }
 
         let credentialsBlockHTML = '';
-        if (canShowCredentials) {
-            // MOSTRAR CAMPOS DE CORREO Y CONTRASEÑA
+        if (shouldShowCreds && (sub.email || sub.pass)) {
             credentialsBlockHTML = `
-            <div class="bg-[#0a0a0a] border border-gray-800/90 rounded-xl p-3.5 space-y-2 text-xs font-mono">
-                <div class="flex items-center justify-between gap-2 border-b border-gray-800/60 pb-2">
-                    <div class="truncate">
-                        <span class="text-[10px] text-gray-500 uppercase block font-sans font-bold">Correo / Usuario</span>
-                        <span class="text-gray-200 font-bold truncate block">${sub.email || '<span class="text-gray-600 font-sans italic">Sin usuario asignado</span>'}</span>
+                <div class="bg-black/60 border border-gray-800/90 rounded-2xl p-3.5 space-y-2 font-mono text-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Correo:</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-white font-bold truncate max-w-[170px] select-all">${sub.email || 'Sin correo'}</span>
+                            <button onclick="window.copyText('${sub.email || ''}')" class="text-gray-400 hover:text-cuycito-gold p-1 transition" title="Copiar correo"><i class="fa-regular fa-copy text-xs"></i></button>
+                        </div>
                     </div>
-                    ${sub.email ? `
-                    <button onclick="window.copyToClipboard('${sub.email}', 'Correo copiado')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white p-1.5 px-2.5 rounded-lg text-[10px] transition flex items-center gap-1 flex-shrink-0" title="Copiar Correo">
-                        <i class="fa-regular fa-copy"></i>
-                    </button>` : ''}
-                </div>
 
-                <div class="flex items-center justify-between gap-2 border-b border-gray-800/60 pb-2">
-                    <div class="truncate">
-                        <span class="text-[10px] text-gray-500 uppercase block font-sans font-bold">Contraseña</span>
-                        <span class="text-cuycito-gold font-black tracking-wider block">${sub.pass || '<span class="text-gray-600 font-sans italic">Sin clave</span>'}</span>
+                    <div class="flex items-center justify-between pt-1 border-t border-gray-800/60">
+                        <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Contraseña:</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-cuycito-gold font-black select-all">${sub.pass || '••••••••'}</span>
+                            <button onclick="window.copyText('${sub.pass || ''}')" class="text-gray-400 hover:text-cuycito-gold p-1 transition" title="Copiar contraseña"><i class="fa-regular fa-copy text-xs"></i></button>
+                        </div>
                     </div>
-                    ${sub.pass ? `
-                    <button onclick="window.copyToClipboard('${sub.pass}', 'Contraseña copiada')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white p-1.5 px-2.5 rounded-lg text-[10px] transition flex items-center gap-1 flex-shrink-0" title="Copiar Contraseña">
-                        <i class="fa-regular fa-copy"></i>
-                    </button>` : ''}
-                </div>
 
-                <div class="flex items-center justify-between gap-2">
-                    <div>
-                        <span class="text-[10px] text-gray-500 uppercase block font-sans font-bold">PIN / Perfil Asignado</span>
-                        <span class="text-emerald-400 font-bold block">${sub.pin || 'General / Sin PIN'}</span>
-                    </div>
+                    ${sub.pin ? `
+                    <div class="flex items-center justify-between pt-1 border-t border-gray-800/60">
+                        <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">PIN / Perfil:</span>
+                        <span class="text-emerald-400 font-black">${sub.pin}</span>
+                    </div>` : ''}
                 </div>
-            </div>
             `;
         } else {
-            // NO MOSTRAR CAMPOS DE CORREO NI CONTRASEÑA (SOLO MOSTRAR QUE ESTÁ ACTIVO)
             credentialsBlockHTML = `
-            <div class="bg-[#0a0a0a] border border-gray-800/90 rounded-xl p-3.5 space-y-2.5 text-xs font-sans">
-                <div class="flex items-center justify-between gap-2 p-2 bg-emerald-950/40 border border-emerald-500/30 rounded-lg">
-                    <div class="flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span class="text-emerald-400 font-black text-xs">Servicio Activo & Garantizado</span>
+                <div class="bg-emerald-950/20 border border-emerald-500/30 rounded-2xl p-3 text-center space-y-1">
+                    <div class="flex items-center justify-center gap-1.5 text-emerald-400 text-xs font-bold">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>Servicio Activo & Garantizado</span>
                     </div>
-                    <span class="text-[10px] text-gray-400 font-mono font-bold">${days < 0 ? 'Expirado' : days + ' días restantes'}</span>
+                    <p class="text-[10px] text-gray-400">Tu acceso directo se encuentra sincronizado con nuestro servidor.</p>
                 </div>
-
-                ${sub.pin ? `
-                <div class="flex items-center justify-between gap-2 px-1 pt-1 font-mono">
-                    <span class="text-[11px] text-gray-400">PIN / Perfil:</span>
-                    <span class="text-cuycito-gold font-bold">${sub.pin}</span>
-                </div>` : ''}
-
-                <div class="text-[11px] text-gray-400 leading-relaxed px-1 pt-1 flex items-center gap-1.5">
-                    <i class="fa-solid fa-shield-halved text-cuycito-gold"></i>
-                    <span>Acceso gestionado por administración. Soporte 24/7 disponible.</span>
-                </div>
-            </div>
             `;
         }
 
         html += `
-        <div class="bg-[#141414] ${statusBorder} rounded-2xl p-5 shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 relative group">
+        <div class="bg-[#121212] border ${borderClass} rounded-3xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between shadow-xl relative group">
             
-            <!-- Cabecera de la Tarjeta -->
-            <div class="flex items-start justify-between gap-3">
-                <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-xl bg-black border border-cuycito-gold/40 text-cuycito-gold flex items-center justify-center text-xl font-bold glow-gold flex-shrink-0">
-                        <i class="fa-solid fa-tv"></i>
-                    </div>
+            <div class="space-y-4">
+                <div class="flex items-start justify-between gap-2">
                     <div>
-                        <h3 class="text-base font-black text-white group-hover:text-cuycito-gold transition">${sub.service}</h3>
-                        <p class="text-[11px] text-gray-400">Vence: <strong class="text-white font-mono">${sub.endDate}</strong></p>
+                        <span class="text-[10px] text-cuycito-gold uppercase font-bold tracking-widest block">Suscripción VIP</span>
+                        <h3 class="text-lg font-black text-white group-hover:text-cuycito-gold transition">${sub.service}</h3>
                     </div>
+                    ${statusBadge}
                 </div>
-                ${statusBadge}
+
+                ${credentialsBlockHTML}
+
+                <div class="text-[11px] text-gray-400 font-mono flex items-center justify-between pt-1">
+                    <span>Fecha Vencimiento:</span>
+                    <strong class="${isExpired ? 'text-red-400' : 'text-white'}">${sub.endDate}</strong>
+                </div>
             </div>
 
-            <!-- Bloque de Estado / Credenciales -->
-            ${credentialsBlockHTML}
-
-            <!-- Botones de Acción -->
-            <div class="pt-2 flex items-center justify-between gap-2 border-t border-gray-800/60">
-                <button onclick="window.copyFullAccessCard('${sub.id}')" class="text-gray-400 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition">
-                    <i class="fa-solid fa-clipboard-list text-cuycito-gold"></i> Copiar Info
-                </button>
-
-                <button onclick="window.requestRenewalWhatsApp('${sub.service}', '${sub.endDate}', '${sub.email || ''}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition flex items-center gap-2 shadow glow-gold">
-                    <i class="fa-brands fa-whatsapp text-sm"></i> ${days <= 3 ? 'Renovar Ahora' : 'Soporte / Renovar'}
+            <div class="pt-4 mt-4 border-t border-gray-800 flex items-center justify-between gap-2">
+                <button onclick="window.requestRenewalWhatsApp('${sub.service}', '${sub.endDate}')" class="w-full bg-gradient-to-r from-cuycito-red to-cuycito-redHover hover:from-cuycito-redHover hover:to-cuycito-gold text-white font-extrabold text-xs py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-2 shadow glow-red">
+                    <i class="fa-brands fa-whatsapp text-sm"></i>
+                    <span>Renovar Servicio</span>
                 </button>
             </div>
         </div>`;
     });
 
     container.innerHTML = html;
-};
+}
 
 // ==========================================
-// 3. UTILIDADES: COPIAR Y WHATSAPP (+51 991735344)
+// 3. RECARGA AUTOMÁTICA CON LEMON CASH
 // ==========================================
-window.copyToClipboard = (text, successMsg = "¡Copiado!") => {
-    navigator.clipboard.writeText(text).then(() => {
-        alert(`📋 ${successMsg}: ${text}`);
-    }).catch(() => {
-        prompt("Copia este texto:", text);
-    });
+window.openRechargeModal = () => {
+    const modal = document.getElementById('rechargeModal');
+    if (!modal) return;
+    window.resetRechargeModal();
+    modal.classList.remove('hidden');
 };
 
-window.copyFullAccessCard = (subId) => {
-    const sub = clientSubscriptions.find(s => s.id === subId);
-    if (!sub) return;
+window.closeRechargeModal = () => {
+    const modal = document.getElementById('rechargeModal');
+    if (modal) modal.classList.add('hidden');
+    if (rechargePollingInterval) clearInterval(rechargePollingInterval);
+    if (rechargeCountdownInterval) clearInterval(rechargeCountdownInterval);
+};
 
-    const nickname = currentClientUser.nickname || currentClientUser.name;
-    let canShow = false;
-    if (sub.masterAccountLinked) {
-        canShow = !!sub.masterAccountLinked.showCredentialsToClient && !sub.hidePassword;
-    } else {
-        canShow = !!sub.showCredentials && !sub.hidePassword;
+window.resetRechargeModal = () => {
+    const step1 = document.getElementById('rechargeStep1');
+    const step2 = document.getElementById('rechargeStep2');
+    const waitingBox = document.getElementById('rechargeWaitingBox');
+    const successBox = document.getElementById('rechargeSuccessBox');
+
+    if (step1) step1.classList.remove('hidden');
+    if (step2) step2.classList.add('hidden');
+    if (waitingBox) waitingBox.classList.remove('hidden');
+    if (successBox) successBox.classList.add('hidden');
+
+    if (rechargePollingInterval) clearInterval(rechargePollingInterval);
+    if (rechargeCountdownInterval) clearInterval(rechargeCountdownInterval);
+};
+
+window.selectPresetAmount = (val) => {
+    const input = document.getElementById('customRechargeAmount');
+    if (input) input.value = val;
+};
+
+window.generateRechargeOrder = async () => {
+    if (!currentClientUser) return alert("Sesión inválida.");
+    const input = document.getElementById('customRechargeAmount');
+    const amount = parseFloat(input?.value) || 0;
+
+    if (amount <= 0) return alert("Por favor ingresa un monto válido mayor a 0.");
+
+    const step1 = document.getElementById('rechargeStep1');
+    const step2 = document.getElementById('rechargeStep2');
+
+    try {
+        // 1. Llamar al backend API de recargas
+        const response = await fetch(`${BACKEND_API_BASE}/api/recharges/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: currentClientUser.id,
+                amount: amount,
+                currency: 'USD',
+                userInfo: {
+                    name: currentClientUser.name,
+                    nickname: currentClientUser.nickname || currentClientUser.name,
+                    phone: currentClientUser.phone
+                }
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || "No se pudo generar la orden de recarga en el servidor.");
+        }
+
+        const order = data.order;
+        activeRechargeOrderId = order.id;
+
+        // 2. Mostrar datos generados con céntimos únicos en la UI
+        document.getElementById('orderExactAmountDisplay').innerText = `$ ${order.exactAmount.toFixed(2)}`;
+        document.getElementById('lemonTagDisplay').innerText = order.lemonTag || '$cuycitogo';
+        document.getElementById('lemonAliasDisplay').innerText = order.lemonAlias || 'cuycitogo.lemon';
+        document.getElementById('lemonCVUDisplay').innerText = order.lemonCVU || '0000123400005678901234';
+
+        if (step1) step1.classList.add('hidden');
+        if (step2) step2.classList.remove('hidden');
+
+        // 3. Iniciar temporizador de cuenta regresiva (30 minutos)
+        startCountdownTimer(new Date(order.expiresAt));
+
+        // 4. Iniciar verificación periódica (polling) del estado de la orden
+        startRechargeStatusPolling(order.id);
+
+    } catch (err) {
+        console.error("Error al crear orden de recarga:", err);
+        
+        // Fallback en caso de que el backend API esté iniciando: generar orden en Firestore directamente
+        try {
+            const randomCents = Math.floor(Math.random() * 90) + 10;
+            const exactAmount = parseFloat(`${Math.floor(amount)}.${randomCents}`);
+            const orderId = `rec_${Date.now()}_local`;
+            activeRechargeOrderId = orderId;
+
+            const orderData = {
+                id: orderId,
+                userId: currentClientUser.id,
+                userName: currentClientUser.name,
+                baseAmount: Math.floor(amount),
+                cents: randomCents,
+                exactAmount: exactAmount,
+                currency: 'USD',
+                status: 'pending',
+                paymentMethod: 'Lemon Cash',
+                lemonTag: '$cuycitogo',
+                lemonAlias: 'cuycitogo.lemon',
+                lemonCVU: '0000123400005678901234',
+                createdAt: new Date().toISOString(),
+                expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+            };
+
+            await setDoc(doc(db, "recharge_orders", orderId), orderData);
+
+            document.getElementById('orderExactAmountDisplay').innerText = `$ ${exactAmount.toFixed(2)}`;
+            if (step1) step1.classList.add('hidden');
+            if (step2) step2.classList.remove('hidden');
+            startCountdownTimer(new Date(Date.now() + 30 * 60 * 1000));
+            startRechargeStatusPolling(orderId);
+        } catch (e2) {
+            alert("No se pudo conectar con el servicio de recargas. Por favor verifica que el backend esté activo.");
+        }
+    }
+};
+
+function startCountdownTimer(expirationDate) {
+    if (rechargeCountdownInterval) clearInterval(rechargeCountdownInterval);
+    const timerDisplay = document.getElementById('orderCountdownTimer');
+
+    function update() {
+        const now = new Date();
+        const diff = expirationDate - now;
+        if (diff <= 0) {
+            if (timerDisplay) timerDisplay.innerText = "Expirada";
+            clearInterval(rechargeCountdownInterval);
+            return;
+        }
+        const mins = Math.floor(diff / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        if (timerDisplay) {
+            timerDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
     }
 
-    let msg = '';
-    if (canShow) {
-        msg = `🐹 *CUYCITOGO - DETALLE DE TU SERVICIO* 🐹\n\n👤 *Cliente:* ${nickname}\n🎬 *Plataforma:* ${sub.service}\n📧 *Correo:* ${sub.email || '-'}\n🔐 *Contraseña:* ${sub.pass || '-'}\n🔢 *PIN/Perfil:* ${sub.pin || '-'}\n📆 *Fecha de Vencimiento:* ${sub.endDate}\n\n¡Gracias por confiar en CuycitoGO! 🙌`;
-    } else {
-        msg = `🐹 *CUYCITOGO - DETALLE DE TU SERVICIO* 🐹\n\n👤 *Cliente:* ${nickname}\n🎬 *Plataforma:* ${sub.service}\n🟢 *Estado:* Servicio Activo y Garantizado\n🔢 *PIN/Perfil:* ${sub.pin || '-'}\n📆 *Fecha de Vencimiento:* ${sub.endDate}\n\n¡Gracias por confiar en CuycitoGO! 🙌`;
+    update();
+    rechargeCountdownInterval = setInterval(update, 1000);
+}
+
+function startRechargeStatusPolling(orderId) {
+    if (rechargePollingInterval) clearInterval(rechargePollingInterval);
+
+    rechargePollingInterval = setInterval(async () => {
+        try {
+            // Consultar a Firestore o API
+            const ordersSnap = await getDocs(collection(db, "recharge_orders"));
+            ordersSnap.forEach(d => {
+                const data = d.data();
+                if (data.id === orderId && data.status === 'completed') {
+                    // ¡Acreditación detectada!
+                    clearInterval(rechargePollingInterval);
+                    if (rechargeCountdownInterval) clearInterval(rechargeCountdownInterval);
+
+                    const waitingBox = document.getElementById('rechargeWaitingBox');
+                    const successBox = document.getElementById('rechargeSuccessBox');
+                    const details = document.getElementById('rechargeSuccessDetails');
+
+                    if (waitingBox) waitingBox.classList.add('hidden');
+                    if (successBox) successBox.classList.remove('hidden');
+                    if (details) details.innerText = `Se han acreditado $${(data.exactAmount || data.baseAmount).toFixed(2)} USD a tu saldo.`;
+
+                    // Refrescar saldo del usuario
+                    refreshUserDataFromFirestore();
+                }
+            });
+        } catch (e) {
+            console.error("Error consultando estado de recarga:", e);
+        }
+    }, 4000);
+}
+
+window.copyExactAmount = () => {
+    const text = document.getElementById('orderExactAmountDisplay')?.innerText.replace('$', '').trim();
+    if (text) {
+        navigator.clipboard.writeText(text).then(() => alert(`📋 ¡Monto exacto copiado: $${text}!`));
     }
-
-    navigator.clipboard.writeText(msg).then(() => {
-        alert("📋 ¡La información de tu servicio ha sido copiada al portapapeles!");
-    }).catch(() => {
-        prompt("Copia la información de tu servicio:", msg);
-    });
 };
 
-window.requestRenewalWhatsApp = (serviceName, endDate, email) => {
-    const nickname = currentClientUser.nickname || currentClientUser.name;
-    const msg = `¡Hola CuycitoGO! 🐹👋\nSoy *${nickname}* (Usuario: ${currentClientUser.phone}).\nQuiero consultar o renovar mi servicio de *${serviceName}* (Vence: ${endDate}).\n¿Me indican las opciones de renovación y datos para pago? ¡Muchas gracias!`;
-
-    window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
-};
-
-window.requestCredentialHelpWhatsApp = (serviceName, email) => {
-    const nickname = currentClientUser.nickname || currentClientUser.name;
-    const msg = `¡Hola CuycitoGO! 🐹👋\nSoy *${nickname}* (Usuario: ${currentClientUser.phone}).\nNecesito asistencia para acceder a mi servicio de *${serviceName}*. ¿Podrían asistirme para el ingreso? ¡Muchas gracias!`;
-
-    window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
+window.copyTextElement = (elId) => {
+    const text = document.getElementById(elId)?.innerText.trim();
+    if (text) {
+        navigator.clipboard.writeText(text).then(() => alert(`📋 ¡Copiado: ${text}!`));
+    }
 };
 
 // ==========================================
-// 4. EDICIÓN DE NICKNAME Y PERFIL
+// 4. EDICIÓN DE PERFIL & WHATSAPP
 // ==========================================
 window.openEditProfileModal = () => {
     const modal = document.getElementById('editProfileModal');
-    const alertBox = document.getElementById('editProfileAlert');
-    if (alertBox) alertBox.classList.add('hidden');
     if (modal) modal.classList.remove('hidden');
 };
 
@@ -378,64 +504,52 @@ window.closeEditProfileModal = () => {
     if (modal) modal.classList.add('hidden');
 };
 
-const editForm = document.getElementById('editProfileForm');
-if (editForm) {
-    editForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const newNickname = document.getElementById('editNickname').value.trim();
-        const newEmail = document.getElementById('editEmail').value.trim();
-        const newPass = document.getElementById('editPass').value.trim();
-        const btn = document.getElementById('btnSaveProfile');
-        const alertBox = document.getElementById('editProfileAlert');
+window.saveProfileChanges = async () => {
+    if (!currentClientUser) return;
 
-        if (!newNickname || !newPass) {
-            alert("El Nickname y la Contraseña son obligatorios.");
-            return;
-        }
+    const newNick = document.getElementById('editNickname')?.value.trim();
+    const newMail = document.getElementById('editEmail')?.value.trim();
+    const newPass = document.getElementById('editPass')?.value.trim();
 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+    if (!newPass) return alert("La contraseña no puede estar vacía.");
 
-        currentClientUser.nickname = newNickname;
-        currentClientUser.email = newEmail;
-        currentClientUser.pass = newPass;
+    currentClientUser.nickname = newNick || currentClientUser.name;
+    currentClientUser.email = newMail;
+    currentClientUser.pass = newPass;
 
-        try {
-            await setDoc(doc(db, "users", currentClientUser.id), currentClientUser);
-            localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
-            
-            updateProfileUI();
-            
-            if (alertBox) {
-                alertBox.className = 'p-3 rounded-xl text-xs text-center font-bold bg-emerald-950/60 border border-emerald-500 text-emerald-400';
-                alertBox.innerText = '✅ ¡Tus datos y Nickname fueron actualizados exitosamente!';
-                alertBox.classList.remove('hidden');
-            }
-
-            setTimeout(() => {
-                window.closeEditProfileModal();
-                btn.disabled = false;
-                btn.innerHTML = 'Guardar Cambios';
-            }, 1000);
-        } catch(err) {
-            console.error("Error al actualizar perfil:", err);
-            if (alertBox) {
-                alertBox.className = 'p-3 rounded-xl text-xs text-center font-bold bg-red-950/60 border border-red-500 text-red-400';
-                alertBox.innerText = '❌ Ocurrió un error al guardar los cambios en la nube.';
-                alertBox.classList.remove('hidden');
-            }
-            btn.disabled = false;
-            btn.innerHTML = 'Guardar Cambios';
-        }
-    });
-}
-
-// ==========================================
-// 5. CERRAR SESIÓN
-// ==========================================
-window.logoutClient = () => {
-    if (confirm("¿Deseas cerrar tu sesión?")) {
-        localStorage.removeItem("cuycitoClient");
-        window.location.replace('index.html');
+    try {
+        await setDoc(doc(db, "users", currentClientUser.id), currentClientUser);
+        localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+        updateProfileUI();
+        window.closeEditProfileModal();
+        alert("✨ ¡Perfil actualizado correctamente!");
+    } catch (e) {
+        alert("Error al actualizar perfil en Firebase.");
     }
 };
+
+window.copyText = (text) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        alert(`📋 ¡Copiado: ${text}!`);
+    });
+};
+
+window.requestRenewalWhatsApp = (serviceName, endDate) => {
+    const nick = currentClientUser.nickname || currentClientUser.name;
+    const msg = `¡Hola CuycitoGO! 🐹👋\nSoy *${nick}* (${currentClientUser.name}). Deseo renovar mi servicio de *${serviceName}* que vence el *${endDate}*.\n¿Me brindan los datos de pago? ¡Muchas gracias! 🙌`;
+    window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
+};
+
+window.logoutClient = () => {
+    localStorage.removeItem("cuycitoClient");
+    window.location.replace("login-cliente.html");
+};
+
+function getDaysRemaining(endDateStr) {
+    if (!endDateStr) return 0;
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const end = new Date(endDateStr);
+    return Math.ceil((end - today) / 86400000);
+}

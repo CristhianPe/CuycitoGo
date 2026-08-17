@@ -1,6 +1,6 @@
 # 🐹 CuycitoGO - Ecosistema de Gestión de Streaming & Tienda Digital
 
-Bienvenido a **CuycitoGO**, una plataforma integral diseñada para la venta, control financiero, administración de cuentas raíz y gestión de perfiles de servicios de streaming (Netflix, Spotify, Disney+, Max, Prime Video, etc.) con portal exclusivo de clientes, notas/post-its en tiempo real, creador de combos de ofertas y tienda pública sincronizada con Firebase.
+Bienvenido a **CuycitoGO**, una plataforma integral diseñada para la venta, control financiero, administración de cuentas raíz, catálogo web con combos de oferta, notas/post-its en tiempo real, portal exclusivo de clientes y **sistema automatizado de recargas de saldo mediante lectura de correos Lemon Cash con IMAP**.
 
 ---
 
@@ -9,105 +9,132 @@ Bienvenido a **CuycitoGO**, una plataforma integral diseñada para la venta, con
 ```mermaid
 flowchart TD
     subgraph ADMIN["👨‍💼 PANEL ADMINISTRADOR (dashboard.html)"]
-        A1["⚡ Operación Rápida (Venta/Compra)"]
+        A1["⚡ Operación Rápida & Auto-Guardado en Nube"]
         A2["👑 Cuentas Raíz & Asignación de Perfiles"]
         A3["📊 Finanzas & Rentabilidad en Tiempo Real"]
-        A4["👥 Accesos Tienda & Auto-Generador de Claves (Nick = Nombre)"]
-        A5["📦 Catálogo Web & Autocompletado con Suma Multi-Cuenta"]
-        A6["🎁 Creador de Combos Especiales (Suma de Servicios & Ahorro %)"]
-        A7["📌 Posits / Notas Rápidas (Colores, Fijados & Firestore)"]
-        A8["🔒 Control de Visibilidad de Credenciales"]
+        A4["👥 Accesos Tienda & Auto-Generador de Claves"]
+        A5["📦 Catálogo Web & Combos con Ahorro %"]
+        A6["📌 Posits / Notas Rápidas"]
     end
 
-    subgraph FIREBASE["🔥 BACKEND & BASE DE DATOS (Firebase Cloud)"]
-        F1[("users\n(Clientes, Nicknames & Accesos)")]
-        F2[("subscriptions\n(Cuentas & Perfiles)")]
-        F3[("masterAccounts\n(Cuentas Raíz & Capacidad)")]
-        F4[("store_catalog\n(Catálogo, Combos, linkedService & Stock)")]
-        F5[("postits\n(Notas, Recordatorios & Pendientes)")]
-        F6[("history\n(Libro Mayor)")]
-        F7["Storage\n(Imágenes de Productos y Combos)"]
+    subgraph BACKEND["⚙️ BACKEND & WORKER IMAP (Node.js/Express)"]
+        B1["POST /api/recharges/create\n(Generador de Céntimos Únicos: ej. $10.43)"]
+        B2["lemon-imap-service.js\n(Lector IMAP Seguro TLS/SSL & Parser Regex)"]
+        B3["recharge-controller.js\n(Conciliación e Idempotencia Anti-Duplicado)"]
     end
 
-    subgraph CLIENTE["👤 CLIENTES & TIENDA PÚBLICA"]
-        C1["🛒 index.html\n(Tienda, Combos con Ahorro %, Stock Sumado & Carrito)"]
-        C2["🔐 login-cliente.html\n(Acceso con Teléfono y Clave)"]
-        C3["📋 perfil.html\n(Portal VIP: Modificar Nickname, Servicios Activos)"]
+    subgraph FIREBASE["🔥 BASE DE DATOS CLOUD (Firebase Firestore)"]
+        F1[("users\n(Clientes, Saldo VIP & Accesos)")]
+        F2[("recharge_orders\n(Órdenes Pendientes con Céntimos Únicos)")]
+        F3[("processed_emails\n(Registro Idempotente de Correos Conciliados)")]
+        F4[("subscriptions\n(Cuentas & Perfiles)")]
+        F5[("masterAccounts\n(Cuentas Raíz & Capacidad)")]
+        F6[("store_catalog\n(Catálogo & Combos)")]
+        F7[("postits\n(Notas Rápidas)")]
+        F8[("history\n(Historial Contable)")]
     end
 
-    subgraph EXTERNAL["📲 COMUNICACIÓN & PEDIDOS"]
-        W1["WhatsApp Oficial: +51 991735344\n(Detalle de Combos, Productos & Total de la Suma)"]
-        P1["Yape / Plin / Transferencias"]
+    subgraph CLIENTE["👤 CLIENTES & PORTAL VIP"]
+        C1["🛒 index.html\n(Tienda, Combos & Carrito)"]
+        C2["🔐 login-cliente.html\n(Login con Teléfono y Clave)"]
+        C3["📋 perfil.html\n(Mi Perfil, Saldo VIP & Recargar con Lemon Cash)"]
     end
 
-    %% Conexiones Administrador a Base de Datos
-    A1 -->|Guarda| F2
-    A1 -->|Registra| F6
-    A2 -->|Administra cupos| F3
-    A2 -->|Vincula perfil| F2
-    A4 -->|Crea/Edita accesos| F1
-    A5 -->|Publica productos| F4
-    A6 -->|Publica combos con ventajas y % ahorro| F4
-    A6 -->|Sube imágenes| F7
-    A7 -->|Sincroniza notas| F5
-    A8 -->|Controla visibilidad| F3
-    A8 -->|Controla visibilidad| F2
+    subgraph LEMON["🍋 LEMON CASH & BANDEJA DE CORREO"]
+        L1["App Lemon Cash\n(Cliente transfiere monto exacto: ej. $10.43)"]
+        L2["Bandeja de Correo IMAP\n(Notificación oficial de Lemon Cash)"]
+    end
 
-    %% Conexiones Base de Datos a Cliente
-    F4 -.->|Lectura de catálogo & combos| C1
-    F1 -.->|Autenticación| C2
-    F1 -.->|Datos de Perfil & Modificación de Nickname| C3
-    F2 -.->|Lectura de cuentas activas/vencidas| C3
-    F3 -.->|Cálculo de cupos disponibles sumados| C1
+    %% Flujo de Recarga Automática
+    C3 -->|1. Solicita Recarga $10| B1
+    B1 -->|2. Registra Orden Pending $10.43| F2
+    B1 -->|3. Muestra monto exacto y $lemontag| C3
+    C3 -->|4. Transfiere $10.43| L1
+    L1 -->|5. Envía comprobante oficial| L2
+    L2 -->|6. Lee correo y extrae monto con regex| B2
+    B2 -->|7. Cruza monto y verifica no duplicidad| B3
+    B3 -->|8. Actualiza orden a completed| F2
+    B3 -->|9. Acredita Saldo Atómicamente| F1
+    B3 -->|10. Registra email procesado| F3
+    F1 -.->|11. Refleja nuevo saldo en vivo| C3
 
-    %% Conexiones con WhatsApp
-    C1 -->|Envía carrito con desglose de combos| W1
-    C3 -->|Solicita renovación / soporte| W1
-    A4 -->|Envía credenciales de acceso| W1
-    W1 --> P1
+    %% Operación del Administrador
+    A1 -->|Auto-guarda| F4
+    A1 -->|Auto-guarda| F8
+    A2 -->|Sincroniza| F5
+    A5 -->|Publica| F6
+    A6 -->|Sincroniza| F7
+```
+
+---
+
+## 🍋 Guía de Configuración: Sistema de Recargas Lemon Cash
+
+### 1. Variables de Entorno en `/backend/.env`
+Crea el archivo `.env` dentro de la carpeta `backend/` con las siguientes variables:
+
+```env
+# Puerto del Servidor Backend
+PORT=5000
+NODE_ENV=development
+
+# Configuración IMAP para lectura de correos de Lemon Cash
+IMAP_HOST=imap.gmail.com
+IMAP_PORT=993
+IMAP_TLS=true
+IMAP_USER=tu_correo_dedicado@gmail.com
+IMAP_APP_PASSWORD=tu_contraseña_de_aplicacion_gmail
+
+# Frecuencia de lectura (15000 = cada 15 segundos)
+IMAP_POLL_INTERVAL_MS=15000
+
+# Dominios / Remitentes autorizados de Lemon Cash
+LEMON_ALLOWED_SENDERS=no-reply@lemon.me,notificaciones@lemoncash.com,lemon.me,lemoncash.io
+
+# Datos de tu cuenta Lemon Cash para recibir pagos
+LEMON_TAG=$cuycitogo
+LEMON_CVU=0000123400005678901234
+LEMON_ALIAS=cuycitogo.lemon
+LEMON_ACCOUNT_HOLDER=CuycitoGO Streaming VIP
+
+# Tiempo de expiración de órdenes (en minutos)
+RECHARGE_EXPIRATION_MINUTES=30
+```
+
+> [!TIP]
+> **¿Cómo obtener la Contraseña de Aplicación en Gmail?**
+> 1. Ve a tu Cuenta de Google -> Seguridad -> Verificación en dos pasos.
+> 2. En la sección "Contraseñas de aplicaciones", genera una nueva llamada `CuycitoGO IMAP`.
+> 3. Copia los 16 caracteres generados y pégalos en `IMAP_APP_PASSWORD`.
+
+### 2. Instalación de Dependencias e Inicio del Backend
+Abre una terminal en la carpeta `backend/`:
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+### 3. Simulación de Pruebas (Sin necesidad de transferencias reales)
+Para probar la conciliación automática en desarrollo:
+```bash
+node test-email-simulation.js 10.43 $usuario_prueba
 ```
 
 ---
 
 ## 📜 Historial de Versiones & Changelog
 
-### 🚀 **Versión 4.3 (Notas Posit en Panel & Creador de Combos de Ofertas)**
-- **📌 Apartado de Posit / Notas Rápidas en el Dashboard**:
-  - Ubicado en el panel lateral derecho, directamente debajo de las alertas de vencimiento.
-  - Sincronizado en tiempo real con la colección `postits` de Firebase Firestore.
-  - Paleta de 5 colores temáticos (Amarillo, Verde, Celeste, Rosa, Morado), fijado de notas prioritarias arriba (Pin 📌), edición en caliente y eliminación.
-- **🎁 Creador Dinámico de Combos de Servicios & Ofertas**:
-  - Modal especializado accesible desde el botón *Crear Combo Oferta 🔥* en Catálogo Web.
-  - **Suma de Servicios Modular**: Permite agregar múltiples plataformas (`Servicio 1 + Servicio 2 + ...`).
-  - **Cálculo Automático en Vivo**:
-    * Suma de Precios Regulares Unitarios (Tachado).
-    * Precio Oferta Especial del Combo.
-    * Ahorro en Dinero (S/) y Porcentaje de Ahorro (`% DE AHORRO`).
-  - **Ventajas Comerciales**: Lista de ventajas destacadas (perfiles privados, calidad 4K, garantía 30 días, PIN independiente).
-  - **Diseño de Tarjetas Combo en Tienda Pública ([index.html](file:///c:/Users/Cristhian/Desktop/CuzcitoGo/index.html))**:
-    * Badge de `-XX% COMBO AHORRO`.
-    * Desglose de servicios incluidos y precios unitarios.
-    * Integración completa con el carrito y mensajes de WhatsApp (+51 991735344).
-
----
-
-### 🚀 **Versión 4.2 (Suma Multi-Cuenta Raíz en Catálogo & Nickname Inicial)**
-- **📦 Carga Automática Avanzada & Suma de Cuentas Raíz en Catálogo**:
-  - Suma de cupos libres entre múltiples cuentas de la misma plataforma (ej. 2 Cuentas Netflix = 7 cupos libres).
-- **👤 Tratamiento de Nickname y Nombre en Clientes**:
-  - Nickname = Nombre completo por defecto; en el portal del cliente el Nombre Real es fijo y solo se edita el Nickname.
-
----
-
-### 🚀 **Versión 4.1 (Visibilidad de Credenciales & WhatsApp Oficial)**
-- **🔒 Política Estricta de Visibilidad de Credenciales**:
-  - Credenciales ocultas para clientes si la cuenta matriz no tiene permiso activado.
-- **📲 Integración de WhatsApp Oficial (+51 991735344)**.
-
----
-
-### 🚀 **Versión 4.0 (Seguridad, Auto-Accesos y Stock en Vivo)**
-- **⚡ Generador Automático de Accesos Web con Teléfono Aleatorio**: Generación de credenciales en 1-clic.
+### 🚀 **Versión 4.4 (Recargas Automáticas Lemon Cash & Auto-Guardado Unificado)**
+- **☁️ Auto-Guardado Unificado en el Dashboard**:
+  - Eliminación de botones redundantes en el navbar.
+  - Indicador interactivo `🟢 Nube Sincronizada (HH:MM:SS)` con confirmación visual automática cada vez que se guarda o modifica un registro.
+- **🍋 Sistema de Recargas de Saldo Automatizado con Lemon Cash**:
+  - **Lógica de Céntimos Únicos**: Generación de montos aleatorios exclusivos (ej. `$10.43`) para identificar de forma unívoca a cada cliente.
+  - **Servicio IMAP & Parser Regex**: Lectura continua de la bandeja de correo, filtro estricto de remitentes Lemon Cash y extracción del monto exacto con céntimos.
+  - **Conciliación e Idempotencia**: Acreditación atómica a la billetera del usuario en Firestore y protección contra correos duplicados (`processed_emails`).
+  - **Billetera VIP en Portal del Cliente ([perfil.html](file:///c:/Users/Cristhian/Desktop/CuzcitoGo/perfil.html))**: Modal interactivo de recarga con datos copiables de Lemon Cash y verificación en tiempo real.
 
 ---
 

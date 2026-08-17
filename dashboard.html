@@ -25,30 +25,28 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-4">
-            <div id="dbStatus" class="text-[11px] font-black uppercase tracking-wider px-3 py-1.5 rounded bg-black border border-gray-700 text-gray-400 flex items-center gap-2">
-                <i class="fa-solid fa-spinner fa-spin"></i> Conectando...
+        <div class="flex items-center gap-3">
+            <!-- Indicador único de Auto-Guardado en Nube (Interactivo) -->
+            <div id="dbStatus" onclick="window.triggerManualSync()" class="cursor-pointer hover:border-emerald-400 transition text-[11px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl bg-black/90 border border-emerald-500/50 text-emerald-400 flex items-center gap-2 shadow glow-gold" title="Auto-guardado activo. Haz click para forzar sincronización inmediata.">
+                <i class="fa-solid fa-cloud-check text-emerald-400 text-sm animate-pulse"></i>
+                <span id="dbStatusText">Nube Sincronizada</span>
             </div>
 
-            <div class="flex items-center bg-black p-1 rounded-lg border border-cuycito-red/50">
+            <div class="flex items-center bg-black p-1 rounded-xl border border-cuycito-red/50">
                 <span class="text-xs text-slate-400 px-2 font-medium">Moneda:</span>
                 <button id="currencyPEN" onclick="window.setGlobalCurrency('PEN')" class="px-3 py-1 text-xs font-bold rounded bg-cuycito-gold text-black transition">PEN (S/)</button>
                 <button id="currencyUSD" onclick="window.setGlobalCurrency('USD')" class="px-3 py-1 text-xs font-bold rounded text-slate-400 hover:text-cuycito-gold transition">USD ($)</button>
             </div>
             
-            <button onclick="document.getElementById('pwdGenModal').classList.remove('hidden'); window.generatePassword();" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2.5 rounded flex items-center gap-2 transition glow-red">
+            <button onclick="document.getElementById('pwdGenModal').classList.remove('hidden'); window.generatePassword();" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition shadow">
                 <i class="fa-solid fa-key"></i> Generar Pass
             </button>
             
-            <button onclick="window.saveToFirebase()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded flex items-center gap-2 transition glow-gold">
-                <i class="fa-solid fa-cloud-arrow-up"></i> Guardar Nube
+            <button onclick="document.getElementById('jsonModal').classList.remove('hidden')" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-white text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition" title="Backup / Restauración JSON">
+                <i class="fa-solid fa-code text-cuycito-red"></i> JSON
             </button>
             
-            <button onclick="document.getElementById('jsonModal').classList.remove('hidden')" class="bg-cuycito-red hover:bg-cuycito-red_light text-xs px-3 py-2.5 rounded flex items-center gap-2 font-bold transition">
-                <i class="fa-solid fa-code"></i> JSON
-            </button>
-            
-            <button onclick="window.logoutApp()" class="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white text-xs px-4 py-2.5 rounded flex items-center gap-2 font-bold transition">
+            <button onclick="window.logoutApp()" class="bg-gray-900 hover:bg-cuycito-redDark border border-gray-800 text-gray-300 hover:text-white text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 font-bold transition">
                 <i class="fa-solid fa-right-from-bracket"></i> Salir
             </button>
         </div>

@@ -232,10 +232,35 @@ window.calculateEndDate = () => {
 };
 
 // =====================================
-// 3. GUARDADO Y SINCRONIZACIÓN CLOUD
+// 3. GUARDADO AUTOMÁTICO Y SINCRONIZACIÓN CLOUD
 // =====================================
-window.saveToFirebase = async () => {
-    document.getElementById('dbStatus').innerHTML = '<span class="text-yellow-400"><i class="fa-solid fa-spinner fa-spin"></i> Subiendo...</span>';
+window.notifyAutoSave = (customMsg = null) => {
+    const statusEl = document.getElementById('dbStatus');
+    const textEl = document.getElementById('dbStatusText');
+    if (!statusEl) return;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const msg = customMsg || `Nube Sincronizada (${timeStr})`;
+    
+    if (textEl) textEl.innerText = msg;
+    else statusEl.innerHTML = `<i class="fa-solid fa-cloud-check text-emerald-400 text-sm animate-pulse"></i> <span>${msg}</span>`;
+    
+    statusEl.className = "cursor-pointer hover:border-emerald-400 transition text-[11px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl bg-black/90 border border-emerald-500/60 text-emerald-400 flex items-center gap-2 shadow glow-gold";
+};
+
+window.notifySaving = (msg = "Guardando en Nube...") => {
+    const statusEl = document.getElementById('dbStatus');
+    const textEl = document.getElementById('dbStatusText');
+    if (!statusEl) return;
+    
+    if (textEl) textEl.innerText = msg;
+    else statusEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-yellow-400 text-sm"></i> <span class="text-yellow-400">${msg}</span>`;
+    
+    statusEl.className = "cursor-pointer transition text-[11px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl bg-black/90 border border-yellow-500/60 text-yellow-400 flex items-center gap-2 shadow";
+};
+
+window.triggerManualSync = async () => {
+    window.notifySaving("Sincronizando Nube...");
     try {
         for (const sub of appState.subscriptions) await setDoc(doc(db, "subscriptions", sub.id), sub);
         for (const tx of appState.history) await setDoc(doc(db, "history", tx.id), tx);
@@ -248,14 +273,17 @@ window.saveToFirebase = async () => {
         for (const cat of appState.catalog) await setDoc(doc(db, "store_catalog", cat.id), cat);
         for (const pos of appState.postits) await setDoc(doc(db, "postits", pos.id), pos);
         
-        alert('✅ ¡Todos los datos fueron sincronizados en la Nube Firebase!');
-        document.getElementById('dbStatus').innerHTML = '<span class="text-emerald-400"><i class="fa-solid fa-cloud-check"></i> Sincronizado</span>';
+        window.notifyAutoSave();
+        alert("✅ ¡Base de datos completa sincronizada con la Nube Firebase!");
     } catch (e) {
         console.error(e);
-        alert('❌ Error al guardar en Firebase.');
-        document.getElementById('dbStatus').innerHTML = '<span class="text-red-500">Error Reglas</span>';
+        const statusEl = document.getElementById('dbStatus');
+        if (statusEl) statusEl.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Error al Sincronizar</span>';
+        alert("❌ Error al sincronizar con Firebase.");
     }
 };
+
+window.saveToFirebase = window.triggerManualSync;
 
 window.logoutApp = () => { signOut(auth).then(() => window.location.replace('login.html')); };
 
