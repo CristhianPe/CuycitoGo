@@ -49,8 +49,18 @@ export class RechargeController {
             randomCents = Math.floor(Math.random() * 99) + 1;
         }
 
-        const exactAmount = parseFloat(`${parsedBase}.${randomCents < 10 ? '0' + randomCents : randomCents}`);
-        const orderId = `rec_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        let dynamicQrUrl = null;
+        let dynamicTag = config.lemon.tag;
+        try {
+            const settingsDoc = await db.collection('settings').doc('general').get();
+            if (settingsDoc.exists) {
+                const sData = settingsDoc.data();
+                if (sData.paymentQrUrl) dynamicQrUrl = sData.paymentQrUrl;
+                if (sData.lemonTag) dynamicTag = sData.lemonTag;
+            }
+        } catch (e) {
+            console.error("Error leyendo settings/general en backend:", e);
+        }
 
         const orderData = {
             id: orderId,
@@ -64,7 +74,8 @@ export class RechargeController {
             currency: currency.toUpperCase(),
             status: 'pending', // 'pending' | 'completed' | 'expired' | 'canceled'
             paymentMethod: 'Lemon Cash',
-            lemonTag: config.lemon.tag,
+            paymentQrUrl: dynamicQrUrl,
+            lemonTag: dynamicTag || config.lemon.tag,
             lemonCVU: config.lemon.cvu,
             lemonAlias: config.lemon.alias,
             lemonHolder: config.lemon.holder,

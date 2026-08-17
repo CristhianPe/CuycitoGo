@@ -1,4 +1,4 @@
-import { db, collection, getDocs, doc, setDoc } from "./firebase-config.js";
+import { db, collection, getDocs, getDoc, doc, setDoc } from "./firebase-config.js";
 
 // Estado de la sesión del cliente
 let currentClientUser = null;
@@ -533,10 +533,10 @@ window.generateRechargeOrder = async () => {
         document.getElementById('orderExactAmountDisplay').innerText = `S/ ${order.exactAmount.toFixed(2)}`;
         document.getElementById('lemonTagDisplay').innerText = order.lemonTag || '$cmancocambillo';
         
-        const cachedQr = localStorage.getItem("paymentQrUrl");
-        if (cachedQr) {
+        await window.loadClientPaymentQR();
+        if (order.paymentQrUrl) {
             const orderQr = document.getElementById('orderQrImage');
-            if (orderQr) orderQr.src = cachedQr;
+            if (orderQr) orderQr.src = order.paymentQrUrl;
         }
 
         if (step1) step1.classList.add('hidden');
@@ -576,11 +576,7 @@ window.generateRechargeOrder = async () => {
             await setDoc(doc(db, "recharge_orders", orderId), orderData);
 
             document.getElementById('orderExactAmountDisplay').innerText = `S/ ${exactAmount.toFixed(2)}`;
-            const cachedQr = localStorage.getItem("paymentQrUrl");
-            if (cachedQr) {
-                const orderQr = document.getElementById('orderQrImage');
-                if (orderQr) orderQr.src = cachedQr;
-            }
+            await window.loadClientPaymentQR();
 
             if (step1) step1.classList.add('hidden');
             if (step2) step2.classList.remove('hidden');

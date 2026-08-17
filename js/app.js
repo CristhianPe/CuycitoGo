@@ -2223,8 +2223,8 @@ window.renderRechargesTable = async () => {
                 <tr class="hover:bg-black/50 transition">
                     <td class="p-3 font-bold text-white">${order.userName || 'Cliente VIP'}</td>
                     <td class="p-3 font-mono text-gray-400">${order.userPhone || 'N/A'}</td>
-                    <td class="p-3 font-bold text-white">$ ${(order.baseAmount || 0).toFixed(2)}</td>
-                    <td class="p-3 font-black text-cuycito-gold glow-gold">$ ${(order.exactAmount || order.baseAmount || 0).toFixed(2)}</td>
+                    <td class="p-3 font-bold text-white">S/ ${(order.baseAmount || 0).toFixed(2)}</td>
+                    <td class="p-3 font-black text-cuycito-gold glow-gold">S/ ${(order.exactAmount || order.baseAmount || 0).toFixed(2)}</td>
                     <td class="p-3">${methodBadge}</td>
                     <td class="p-3 text-[11px] text-gray-400 font-mono">${dateStr}</td>
                     <td class="p-3 text-center">
@@ -2260,7 +2260,7 @@ window.renderRechargesTable = async () => {
                 <tr class="hover:bg-black/50 transition">
                     <td class="p-3 text-[11px] text-gray-400 font-mono">${dateStr}</td>
                     <td class="p-3 font-bold text-white">${order.userName || order.userId}</td>
-                    <td class="p-3 font-black text-emerald-400">$ ${(order.creditedAmount || order.exactAmount || order.baseAmount || 0).toFixed(2)} ${order.currency || 'USD'}</td>
+                    <td class="p-3 font-black text-emerald-400">S/ ${(order.creditedAmount || order.exactAmount || order.baseAmount || 0).toFixed(2)}</td>
                     <td class="p-3">${typeBadge}</td>
                     <td class="p-3 font-mono text-[11px] text-gray-400 truncate max-w-[150px]">${order.transferReference || 'N/A'}</td>
                     <td class="p-3 text-center">
@@ -2278,10 +2278,10 @@ window.approveRechargeOrder = async (orderId) => {
     if (!order) return alert("Orden no encontrada.");
 
     const amountToCredit = parseFloat(order.exactAmount || order.baseAmount || 0);
-    if (!confirm(`¿Aprobar manualmente la recarga de $${amountToCredit.toFixed(2)} para el cliente "${order.userName || order.userId}"?`)) return;
+    if (!confirm(`¿Aprobar manualmente la recarga de S/ ${amountToCredit.toFixed(2)} para el cliente "${order.userName || order.userId}"?`)) return;
 
     try {
-        // 1. Buscar cliente y acreditar saldo
+        // 1. Buscar cliente y acreditar saldo (monto total con céntimos)
         const userDocRef = doc(db, "users", order.userId);
         const clientObj = appState.clients.find(c => c.id === order.userId);
         const currentBal = clientObj ? parseFloat(clientObj.balance || 0) : 0;
@@ -2306,7 +2306,7 @@ window.approveRechargeOrder = async (orderId) => {
             person: order.userName || order.userId,
             service: 'Recarga Saldo VIP',
             amount: amountToCredit,
-            currency: order.currency || 'USD',
+            currency: order.currency || 'PEN',
             orderId: order.id
         };
         appState.history.push(newTx);
@@ -2315,7 +2315,7 @@ window.approveRechargeOrder = async (orderId) => {
         window.notifyAutoSave('Recarga Aprobada');
         window.renderRechargesTable();
         window.renderClients();
-        alert(`✅ ¡Recarga de $${amountToCredit.toFixed(2)} aprobada y acreditada exitosamente!`);
+        alert(`✅ ¡Recarga de S/ ${amountToCredit.toFixed(2)} aprobada y acreditada exitosamente!`);
 
     } catch (e) {
         console.error(e);

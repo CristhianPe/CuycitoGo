@@ -1,4 +1,4 @@
-import { db, collection, getDocs, doc, setDoc } from "./firebase-config.js";
+import { db, collection, getDocs, getDoc, doc, setDoc } from "./firebase-config.js";
 
 const CENTRAL_WHATSAPP_PHONE = "51991735344";
 
