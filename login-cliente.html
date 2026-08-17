@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es" class="dark h-full bg-[#0a0a0a]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CuycitoGO - Acceso Clientes</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cuycito: {
+                            black: '#0a0a0a',
+                            dark: '#121212',
+                            card: '#161616',
+                            red: '#dc2626',
+                            redDark: '#850000',
+                            redHover: '#b91c1c',
+                            gold: '#ffb703',
+                            goldLight: '#fbbf24',
+                            goldHover: '#e5a500'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="h-full flex flex-col justify-between selection:bg-cuycito-gold selection:text-black bg-cuy-gradient">
+
+    <!-- Header mínimo con retorno -->
+    <header class="p-5 flex justify-between items-center max-w-6xl mx-auto w-full">
+        <a href="index.html" class="flex items-center gap-3 group">
+            <div class="w-11 h-11 bg-black rounded-xl border-2 border-cuycito-gold glow-gold flex items-center justify-center text-2xl transition group-hover:scale-105">🐹</div>
+            <div>
+                <span class="text-2xl font-black tracking-wider text-white">Cuycito<span class="text-cuycito-gold">GO</span></span>
+                <span class="block text-[10px] text-gray-400 -mt-1 tracking-widest font-bold uppercase">Streaming & Cuentas VIP</span>
+            </div>
+        </a>
+        <a href="index.html" class="text-xs font-bold text-gray-400 hover:text-cuycito-gold transition flex items-center gap-2 px-3 py-2 rounded-lg bg-[#141414] border border-gray-800">
+            <i class="fa-solid fa-arrow-left"></i> Volver a la Tienda
+        </a>
+    </header>
+
+    <!-- Contenedor Principal de Login -->
+    <main class="flex-1 flex items-center justify-center px-4 py-8">
+        <div class="w-full max-w-md bg-[#121212] border border-gray-800 rounded-3xl p-8 shadow-2xl glow-border-red relative overflow-hidden">
+            <!-- Detalle decorativo dorado -->
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-cuycito-gold/10 rounded-full blur-2xl"></div>
+            <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-cuycito-red/10 rounded-full blur-2xl"></div>
+
+            <div class="text-center relative z-10 mb-8">
+                <div class="w-16 h-16 bg-black border-2 border-cuycito-gold rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 glow-gold animate-pulse-subtle">
+                    🔑
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-black text-white">Portal de Clientes</h1>
+                <p class="text-xs text-gray-400 mt-1">Ingresa para ver tus servicios activos, claves y fechas de vencimiento.</p>
+            </div>
+
+            <!-- Formulario de Acceso -->
+            <form id="clientLoginForm" class="space-y-4 relative z-10">
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-mobile-screen text-cuycito-gold"></i> Número de Celular (Usuario)
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="loginPhone" 
+                            required 
+                            placeholder="Ej. 999888777" 
+                            class="w-full bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cuycito-gold transition font-medium"
+                        >
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider flex items-center justify-between">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-lock text-cuycito-red"></i> Contraseña</span>
+                        <button type="button" onclick="window.togglePasswordVisibility()" class="text-[11px] text-gray-500 hover:text-cuycito-gold normal-case">
+                            <span id="pwdToggleText">Mostrar</span>
+                        </button>
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="password" 
+                            id="loginPass" 
+                            required 
+                            placeholder="••••••••" 
+                            class="w-full bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cuycito-gold transition font-mono"
+                        >
+                    </div>
+                </div>
+
+                <div id="loginAlertBox" class="hidden p-3 rounded-xl bg-red-950/40 border border-cuycito-red text-red-300 text-xs text-center font-semibold"></div>
+
+                <button 
+                    type="submit" 
+                    id="btnLoginSubmit" 
+                    class="w-full bg-gradient-to-r from-cuycito-redDark via-cuycito-red to-cuycito-redHover hover:from-cuycito-red hover:to-cuycito-gold text-white font-extrabold py-3.5 rounded-xl transition-all duration-300 shadow-lg glow-red text-sm flex items-center justify-center gap-2 uppercase tracking-wider"
+                >
+                    <i class="fa-solid fa-right-to-bracket"></i> Ingresar a Mi Cuenta
+                </button>
+            </form>
+
+            <div class="mt-8 pt-6 border-t border-gray-800/80 text-center text-xs text-gray-500 space-y-2 relative z-10">
+                <p>¿No tienes una cuenta aún? Compra en nuestra tienda y te crearemos tus accesos de inmediato.</p>
+                <a href="https://wa.me/51991735344?text=Hola%20CuycitoGO,%20necesito%20ayuda%20para%20acceder%20a%20mi%20cuenta" target="_blank" class="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 font-bold transition">
+                    <i class="fa-brands fa-whatsapp"></i> Soporte por WhatsApp (+51 991735344)
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="py-4 text-center text-[11px] text-gray-600">
+        © CuycitoGO • Streaming & Servicios Digitales
+    </footer>
+
+    <script type="module" src="js/client-login.js"></script>
+</body>
+</html>

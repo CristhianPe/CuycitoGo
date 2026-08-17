@@ -1,320 +1,590 @@
-// Importamos las herramientas de Firebase desde tu archivo de configuración central
-import { db, collection, getDocs, query, where, doc, setDoc } from './firebase-config.js';
+import { db, collection, getDocs } from "./firebase-config.js";
 
-// ==========================================
-// CONFIGURACIÓN PRINCIPAL
-// ==========================================
-const WHATSAPP_PHONE = "51900000000"; // Pon aquí tu número (ej: 51987654321)
+const CENTRAL_WHATSAPP_PHONE = "51991735344";
+
+let catalogProducts = [];
+let masterAccounts = [];
 let cart = [];
-let currentClientUser = null;
+let activeCategory = 'ALL';
+
+// Inicialización de la Tienda al Cargar la Página
+document.addEventListener('DOMContentLoaded', async () => {
+    initAuthStatus();
+    loadCartFromStorage();
+    await loadStoreCatalog();
+});
 
 // ==========================================
-// 1. VISTAS Y NAVEGACIÓN
+// 1. ESTADO DE AUTENTICACIÓN DEL CLIENTE
 // ==========================================
-window.showView = (viewId) => {
-    document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
-    const view = document.getElementById(viewId);
-    if(view) view.classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-};
+function initAuthStatus() {
+    const clientSession = localStorage.getItem("cuycitoClient");
+    const container = document.getElementById('userAuthContainer');
+    if (!container) return;
 
-window.checkAuthAndShowProfile = () => {
-    if (currentClientUser) { 
-        window.showView('profileView'); 
-    } else { 
-        window.showView('loginView'); 
-    }
-};
-
-// ==========================================
-// 2. AUTENTICACIÓN (LOGIN DE CLIENTES)
-// ==========================================
-
-// Mantener sesión abierta si el cliente ya ingresó antes
-const savedSession = localStorage.getItem("cuycitoClient");
-if (savedSession) {
-    currentClientUser = JSON.parse(savedSession);
-    updateUIForUser();
-    loadClientSubscriptions(currentClientUser.name);
-}
-
-// Función para actualizar la interfaz cuando el cliente se loguea
-function updateUIForUser() {
-    const navName = document.getElementById('navUserName');
-    const profileName = document.getElementById('profileNameDisplay');
-    const profilePhone = document.getElementById('profilePhoneDisplay');
-    const profileEmail = document.getElementById('profileEmailDisplay');
-    const profileAvatar = document.getElementById('profileAvatar');
-
-    if(navName) navName.innerText = `Hola, ${currentClientUser.name.split(' ')[0]}`;
-    if(profileName) profileName.innerText = currentClientUser.name;
-    if(profilePhone) profilePhone.innerText = currentClientUser.phone;
-    if(profileEmail) profileEmail.innerText = currentClientUser.email || 'Sin correo asignado';
-    if(profileAvatar) profileAvatar.innerText = currentClientUser.name.charAt(0).toUpperCase();
-
-    // Llenar datos en el modal de edición
-    const updatePhone = document.getElementById('updatePhone');
-    const updateEmail = document.getElementById('updateEmail');
-    const updatePass = document.getElementById('updatePass');
-
-    if(updatePhone) updatePhone.value = currentClientUser.phone;
-    if(updateEmail) updateEmail.value = currentClientUser.email || '';
-    if(updatePass) updatePass.value = currentClientUser.pass;
-
-    // Cambiar los botones de la barra superior
-    const loggedOutBtns = document.getElementById('loggedOutButtons');
-    const loggedInBtns = document.getElementById('loggedInButtons');
-    
-    if(loggedOutBtns) loggedOutBtns.classList.add('hidden');
-    if(loggedInBtns) loggedInBtns.classList.remove('hidden');
-}
-
-// Proceso de Login verificando en la base de datos
-window.handleLogin = async (e) => {
-    e.preventDefault();
-    const phone = document.getElementById('loginPhone').value.trim();
-    const pass = document.getElementById('loginPass').value.trim();
-    const btn = document.getElementById('btnSubmitLogin');
-    const errorMsg = document.getElementById('loginErrorMsg');
-
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
-    errorMsg.classList.add('hidden');
-
-    try {
-        const q = query(collection(db, "users"), where("phone", "==", phone), where("pass", "==", pass));
-        const snap = await getDocs(q);
-        
-        if (!snap.empty) {
-            const userData = snap.docs[0].data();
-            localStorage.setItem("cuycitoClient", JSON.stringify(userData));
-            currentClientUser = userData;
-            
-            updateUIForUser();
-            await loadClientSubscriptions(userData.name);
-            
-            window.showView('profileView');
-            btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Entrar a Mi Panel';
-        } else {
-            throw new Error("Credenciales inválidas");
+    if (clientSession) {
+        try {
+            const user = JSON.parse(clientSession);
+            const nickname = user.nickname || user.name || 'Cliente';
+            container.innerHTML = `
+                <a href="perfil.html" class="flex items-center gap-2 bg-black/80 hover:bg-gray-900 border border-cuycito-gold/60 text-cuycito-gold px-3.5 py-2 rounded-xl text-xs font-black transition glow-gold shadow">
+                    <i class="fa-solid fa-user-check text-emerald-400"></i>
+                    <span>@${nickname}</span>
+                </a>
+            `;
+        } catch (e) {
+            renderLoginButton(container);
         }
-    } catch (err) {
-        btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Entrar a Mi Panel';
-        errorMsg.classList.remove('hidden');
+    } else {
+        renderLoginButton(container);
     }
-};
-
-// Asegurar que el formulario dispare la función handleLogin
-const loginForm = document.getElementById('clientLoginForm');
-if(loginForm) {
-    loginForm.addEventListener('submit', window.handleLogin);
 }
 
-// Cerrar sesión del cliente
-window.logoutClient = () => { 
-    localStorage.removeItem("cuycitoClient");
-    currentClientUser = null;
-    
-    const loggedOutBtns = document.getElementById('loggedOutButtons');
-    const loggedInBtns = document.getElementById('loggedInButtons');
-    
-    if(loggedOutBtns) loggedOutBtns.classList.remove('hidden');
-    if(loggedInBtns) loggedInBtns.classList.add('hidden');
-    
-    window.showView('storeView');
-};
-
-// Guardar cambios si el cliente edita su perfil
-window.updateClientData = async (e) => {
-    e.preventDefault();
-    const newEmail = document.getElementById('updateEmail').value.trim();
-    const newPass = document.getElementById('updatePass').value.trim();
-
-    currentClientUser.email = newEmail;
-    currentClientUser.pass = newPass;
-
-    try {
-        await setDoc(doc(db, "users", currentClientUser.id), currentClientUser);
-        localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
-        updateUIForUser();
-        alert("✅ ¡Tus datos fueron actualizados exitosamente!");
-        const modal = document.getElementById('editProfileModal');
-        if(modal) modal.classList.add('hidden');
-    } catch(e) {
-        alert("❌ Ocurrió un error al actualizar tus datos.");
-    }
-};
+function renderLoginButton(container) {
+    container.innerHTML = `
+        <a href="login-cliente.html" class="flex items-center gap-2 bg-gradient-to-r from-cuycito-red to-cuycito-redHover hover:from-cuycito-redHover hover:to-cuycito-gold text-white px-4 py-2 rounded-xl text-xs font-black transition shadow glow-red">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span>Ingresar</span>
+        </a>
+    `;
+}
 
 // ==========================================
-// 3. CATÁLOGO DINÁMICO DE TIENDA
+// 2. CARGA DE PRODUCTOS & STOCK DESDE FIREBASE
 // ==========================================
 async function loadStoreCatalog() {
-    const container = document.getElementById('catalogContainer');
-    if(!container) return;
+    const loadingState = document.getElementById('catalogLoadingState');
+    const grid = document.getElementById('catalogGrid');
+
     try {
-        const q = query(collection(db, "store_catalog"));
-        const snap = await getDocs(q);
-        
-        let html = '';
-        if(snap.empty) {
-            html = `<div class="col-span-full py-10 text-center text-gray-500 flex flex-col items-center">
-                        <i class="fa-solid fa-store-slash text-3xl mb-3 opacity-50"></i>
-                        <p>Pronto añadiremos servicios geniales aquí.</p>
-                    </div>`;
-        } else {
-            snap.forEach(doc => {
-                const p = doc.data();
-                const imgHTML = p.imageUrl && p.imageUrl.trim() !== '' 
-                    ? `<img src="${p.imageUrl}" class="w-full h-32 object-cover rounded-t-xl" alt="Producto">` 
-                    : `<div class="w-full h-32 bg-${p.colorClass} flex items-center justify-center text-white/30 text-4xl rounded-t-xl"><i class="fa-solid ${p.icon || 'fa-box'}"></i></div>`;
+        // 1. Leer Cuentas Raíz para cálculo de stock dinámico en vivo
+        const masterSnap = await getDocs(collection(db, "masterAccounts"));
+        masterAccounts = [];
+        masterSnap.forEach(doc => {
+            masterAccounts.push({ id: doc.id, ...doc.data() });
+        });
 
-                html += `
-                <div class="bg-[#121212] border border-gray-800 rounded-2xl hover:border-${p.colorClass}/50 transition duration-300 flex flex-col justify-between group">
-                    <div class="relative">
-                        ${p.promo ? `<span class="bg-cuycito-red text-white text-[9px] px-2 py-0.5 rounded uppercase font-black absolute top-2 right-2 shadow-lg">Oferta</span>` : ''}
-                        ${imgHTML}
-                    </div>
-                    <div class="p-5">
-                        <h3 class="text-base font-extrabold text-white group-hover:text-cuycito-gold transition">${p.title}</h3>
-                        <p class="text-xs text-gray-400 mt-1 line-clamp-2">${p.description}</p>
-                        <div class="pt-4 mt-4 border-t border-gray-800 flex items-center justify-between">
-                            <div><span class="text-[10px] text-gray-400 block uppercase">Precio</span><span class="text-lg font-black text-cuycito-gold">S/ ${p.price.toFixed(2)}</span></div>
-                            <button onclick="window.addToCart('${p.title}', ${p.price}, '${p.icon || 'fa-box'}', 'text-${p.colorClass}')" class="bg-cuycito-red hover:bg-cuycito-redHover text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-2 glow-red"><i class="fa-solid fa-cart-plus"></i> Agregar</button>
-                        </div>
-                    </div>
-                </div>`;
-            });
-        }
-        container.innerHTML = html;
+        // 2. Leer Catálogo Web
+        const catalogSnap = await getDocs(collection(db, "store_catalog"));
+        catalogProducts = [];
+        catalogSnap.forEach(doc => {
+            const data = { id: doc.id, ...doc.data() };
+
+            // Cálculo en tiempo real de stock si está enlazado a Cuenta Raíz o a Servicio Combinado
+            if (data.linkedService) {
+                const matchingAccounts = masterAccounts.filter(m => (m.service || '').toLowerCase() === data.linkedService.toLowerCase());
+                if (matchingAccounts.length > 0) {
+                    const totalFreeSlots = matchingAccounts.reduce((sum, m) => {
+                        const occupied = (m.profiles || []).filter(p => p !== null).length;
+                        return sum + Math.max(0, m.capacity - occupied);
+                    }, 0);
+                    data.stock = totalFreeSlots;
+                }
+            } else if (data.linkedMasterId) {
+                const masterAcc = masterAccounts.find(m => m.id === data.linkedMasterId);
+                if (masterAcc) {
+                    const occupied = (masterAcc.profiles || []).filter(p => p !== null).length;
+                    data.stock = Math.max(0, masterAcc.capacity - occupied);
+                }
+            }
+
+            catalogProducts.push(data);
+        });
+
+        if (loadingState) loadingState.classList.add('hidden');
+        renderProducts(catalogProducts);
+
     } catch (error) {
-        console.error("Error cargando catálogo", error);
-        container.innerHTML = '<p class="col-span-full text-center text-red-400">Error al conectar con el servidor.</p>';
-    }
-}
-loadStoreCatalog();
-
-// ==========================================
-// 4. MIS SERVICIOS (PANEL DE CLIENTE)
-// ==========================================
-async function loadClientSubscriptions(clientName) {
-    const tbody = document.getElementById('clientServicesBody');
-    if(!tbody) return;
-    try {
-        // Busca las suscripciones activas usando el nombre del cliente
-        const q = query(collection(db, "subscriptions"), where("person", "==", clientName));
-        const snap = await getDocs(q);
-        
-        let html = '';
-        if(snap.empty) {
-            html = `<tr><td colspan="4" class="p-6 text-center text-gray-500 italic">No tienes servicios contratados. Visita nuestra tienda.</td></tr>`;
-        } else {
-            snap.forEach(doc => {
-                const sub = doc.data();
-                const today = new Date(); today.setHours(0,0,0,0);
-                const endD = new Date(sub.endDate);
-                const days = Math.ceil((endD - today) / 86400000);
-                const badgeColor = days < 0 ? 'bg-cuycito-red/20 text-red-400 border-cuycito-red/50' : (days <= 3 ? 'bg-cuycito-gold/20 text-cuycito-gold border-cuycito-gold/50' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30');
-
-                html += `
-                <tr class="hover:bg-gray-800 transition">
-                    <td class="p-4 font-bold text-white"><div class="flex items-center gap-2"><i class="fa-solid fa-play text-cuycito-gold"></i> ${sub.service}</div></td>
-                    <td class="p-4 font-mono text-[11px] bg-black/30 rounded-lg border border-gray-800">
-                        <span class="block text-gray-400">User: <strong class="text-white">${sub.email || '-'}</strong></span>
-                        <span class="block text-gray-400">Pass: <strong class="text-cuycito-gold">${sub.pass || '-'}</strong></span>
-                        <span class="block text-gray-400 mt-1">Perfil/PIN: <strong class="text-white">${sub.pin || '-'}</strong></span>
-                    </td>
-                    <td class="p-4 text-center font-mono text-gray-400 text-xs">${sub.endDate}</td>
-                    <td class="p-4 text-center"><span class="border px-2.5 py-1 rounded text-[11px] font-black ${badgeColor}">${days < 0 ? 'Expiró' : days + ' días'}</span></td>
-                </tr>`;
-            });
+        console.error("Error al cargar el catálogo de Firebase:", error);
+        if (loadingState) {
+            loadingState.innerHTML = `
+                <div class="col-span-full text-center text-red-400 py-8 bg-[#121212] rounded-3xl border border-red-500/30 p-6">
+                    <i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i>
+                    <p class="font-bold text-sm">No pudimos conectar con la base de datos.</p>
+                    <p class="text-xs text-gray-500 mt-1">Por favor recarga la página o inténtalo más tarde.</p>
+                </div>
+            `;
         }
-        tbody.innerHTML = html;
-    } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-500 font-bold">Error de conexión.</td></tr>`;
     }
 }
 
 // ==========================================
-// 5. SISTEMA DE CARRITO DE COMPRAS
+// 3. FILTROS Y RENDERIZADO DE PRODUCTOS
 // ==========================================
-window.addToCart = (title, price, iconClass, colorClass) => {
-    const existingIndex = cart.findIndex(item => item.title === title);
-    if (existingIndex > -1) { cart[existingIndex].quantity += 1; } 
-    else { cart.push({ title, price, quantity: 1, icon: iconClass, color: colorClass }); }
-    renderCart();
+window.filterByCategory = (category) => {
+    activeCategory = category;
+
+    // Actualizar estilo visual de los botones de filtro
+    const buttons = document.querySelectorAll('.cat-pill');
+    buttons.forEach(btn => {
+        const cat = btn.getAttribute('data-category');
+        if (cat === category) {
+            btn.className = 'cat-pill active bg-cuycito-red text-white px-4 py-2 rounded-xl whitespace-nowrap transition shadow glow-red';
+        } else if (cat === 'OFERTA') {
+            btn.className = 'cat-pill bg-black hover:bg-gray-900 border border-gray-800 text-cuycito-red hover:text-red-400 px-4 py-2 rounded-xl whitespace-nowrap transition flex items-center gap-1.5';
+        } else {
+            btn.className = 'cat-pill bg-black hover:bg-gray-900 border border-gray-800 text-gray-300 hover:text-cuycito-gold px-4 py-2 rounded-xl whitespace-nowrap transition';
+        }
+    });
+
+    window.filterCatalog();
 };
 
-window.updateQuantity = (title, change) => {
-    const index = cart.findIndex(item => item.title === title);
-    if (index > -1) {
-        cart[index].quantity += change;
-        if (cart[index].quantity <= 0) cart.splice(index, 1);
+window.filterCatalog = () => {
+    const grid = document.getElementById('catalogGrid');
+    if (!grid) return;
+
+    const searchTerm = (document.getElementById('storeSearchInput')?.value || '').toLowerCase().trim();
+    const sortOrder = document.getElementById('storeSortSelect')?.value || 'featured';
+
+    let filtered = catalogProducts.filter(item => {
+        const matchSearch = (item.title || '').toLowerCase().includes(searchTerm) || 
+                            (item.description || '').toLowerCase().includes(searchTerm) ||
+                            (item.category || '').toLowerCase().includes(searchTerm) ||
+                            ((item.comboServices || []).some(s => (s.service || '').toLowerCase().includes(searchTerm)));
+
+        let matchCategory = true;
+        if (activeCategory === 'OFERTA') {
+            matchCategory = !!item.promo;
+        } else if (activeCategory === 'Combos') {
+            matchCategory = item.isCombo || (item.category || '').toLowerCase() === 'combos';
+        } else if (activeCategory !== 'ALL') {
+            matchCategory = (item.category || '').toLowerCase() === activeCategory.toLowerCase() ||
+                            (item.title || '').toLowerCase().includes(activeCategory.toLowerCase());
+        }
+
+        return matchSearch && matchCategory;
+    });
+
+    // Ordenamiento
+    if (sortOrder === 'price_asc') {
+        filtered.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+    } else if (sortOrder === 'price_desc') {
+        filtered.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
+    } else if (sortOrder === 'promo_first') {
+        filtered.sort((a, b) => (b.promo ? 1 : 0) - (a.promo ? 1 : 0));
     }
-    renderCart();
+
+    renderProducts(filtered);
 };
 
-window.clearCart = () => { cart = []; renderCart(); };
+function renderProducts(filtered) {
+    const grid = document.getElementById('catalogGrid');
+    if (!grid) return;
 
-function renderCart() {
-    const container = document.getElementById('cartItemsContainer');
-    const cartBadge = document.getElementById('cartBadge');
-    const cartSubtotal = document.getElementById('cartSubtotal');
-    const cartTotal = document.getElementById('cartTotal');
-
-    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-    if(cartBadge) cartBadge.innerText = totalItems;
-
-    if (cart.length === 0) {
-        if(container) container.innerHTML = `<div id="emptyCartMessage" class="text-center py-8 text-gray-500 space-y-2"><i class="fa-solid fa-basket-shopping text-3xl opacity-30"></i><p class="text-xs">Aún no has agregado ningún servicio.</p></div>`;
-        if(cartSubtotal) cartSubtotal.innerText = "S/ 0.00"; 
-        if(cartTotal) cartTotal.innerText = "S/ 0.00";
+    if (filtered.length === 0) {
+        grid.innerHTML = `
+            <div class="col-span-full py-16 text-center text-gray-500 space-y-3 bg-[#121212] rounded-3xl border border-gray-800 p-8">
+                <i class="fa-solid fa-box-open text-4xl text-gray-600"></i>
+                <p class="text-sm font-semibold text-gray-400">No encontramos productos con esos filtros en este momento.</p>
+                <button onclick="window.filterByCategory('ALL'); document.getElementById('storeSearchInput').value='';" class="bg-cuycito-gold text-black font-extrabold text-xs px-4 py-2 rounded-xl transition shadow">
+                    Ver todos los servicios
+                </button>
+            </div>
+        `;
         return;
     }
 
-    let html = ''; let totalAmount = 0;
+    let html = '';
+    filtered.forEach(p => {
+        const isCombo = p.isCombo || p.category === 'Combos';
+        const price = parseFloat(p.price) || 0;
+        const categoryTag = p.category || (isCombo ? 'Combos' : 'Streaming');
+        const stock = p.stock !== undefined ? p.stock : 5;
+        const hasStock = stock > 0;
+
+        const stockBadge = hasStock 
+            ? `<span class="bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1"><i class="fa-solid fa-boxes-stacked"></i> Stock: ${stock} libres</span>`
+            : `<span class="bg-red-950/80 text-red-400 border border-cuycito-red/50 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1"><i class="fa-solid fa-circle-xmark"></i> Agotado</span>`;
+
+        const imageHTML = p.imageUrl && p.imageUrl.trim() !== ''
+            ? `<img src="${p.imageUrl}" alt="${p.title}" class="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-500">`
+            : `<div class="w-full h-44 bg-gradient-to-tr from-black via-gray-900 to-${p.colorClass || 'red-950'} flex flex-col items-center justify-center text-cuycito-gold text-4xl">
+                 <i class="fa-solid ${isCombo ? 'fa-gift' : 'fa-tv'}"></i>
+                 <span class="text-[10px] text-gray-500 font-bold tracking-widest uppercase mt-2">${categoryTag}</span>
+               </div>`;
+
+        const actionButtonsHTML = hasStock 
+            ? `
+                <div class="flex items-center gap-2">
+                    <button onclick="window.quickBuy('${p.id}')" class="bg-black hover:bg-gray-900 border border-gray-800 hover:border-cuycito-gold text-gray-300 hover:text-cuycito-gold p-2.5 rounded-xl transition text-xs" title="Comprar directo por WhatsApp">
+                        <i class="fa-brands fa-whatsapp text-base text-emerald-400"></i>
+                    </button>
+                    <button onclick="window.addToCart('${p.id}')" class="bg-gradient-to-r from-cuycito-red to-cuycito-redHover hover:from-cuycito-redHover hover:to-cuycito-gold text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow glow-red">
+                        <i class="fa-solid fa-cart-plus"></i> Agregar
+                    </button>
+                </div>
+            `
+            : `
+                <button onclick="window.requestOutOfStockWhatsApp('${p.title.replace(/'/g, "\\'")}')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white font-extrabold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5 shadow" title="Reservar por WhatsApp">
+                    <i class="fa-brands fa-whatsapp text-emerald-400"></i> Reservar
+                </button>
+            `;
+
+        // Renderizado especial para COMBOS
+        if (isCombo) {
+            let comboBadgesHTML = '';
+            if (p.comboServices && p.comboServices.length > 0) {
+                comboBadgesHTML = `
+                <div class="flex flex-wrap items-center gap-1.5 my-2">
+                    ${p.comboServices.map(s => `
+                        <span class="bg-black/90 border border-cuycito-gold/40 text-cuycito-gold text-[10px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1 shadow">
+                            <span>${s.service}</span>
+                            <span class="text-gray-400 font-mono text-[9px] font-normal">(S/ ${(s.comboPrice || 0).toFixed(2)})</span>
+                        </span>
+                    `).join('<span class="text-cuycito-red font-black text-xs">+</span>')}
+                </div>`;
+            }
+
+            let advantagesHTML = '';
+            if (p.advantages && p.advantages.length > 0) {
+                advantagesHTML = `
+                <div class="space-y-1 my-2 bg-black/40 p-2.5 rounded-xl border border-gray-800/80">
+                    ${p.advantages.slice(0, 4).map(adv => `
+                        <div class="text-[11px] text-gray-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-check text-emerald-400 text-[10px] flex-shrink-0"></i>
+                            <span class="line-clamp-1">${adv.replace(/^✔\s*/, '')}</span>
+                        </div>
+                    `).join('')}
+                </div>`;
+            }
+
+            const savingsPercent = p.savingsPercent || (p.regularPriceTotal ? Math.round(((p.regularPriceTotal - price) / p.regularPriceTotal) * 100) : 25);
+            const savingsAmount = p.savingsAmount || (p.regularPriceTotal ? (p.regularPriceTotal - price) : 0);
+
+            html += `
+            <div class="bg-[#121212] border-2 border-cuycito-gold/50 rounded-3xl overflow-hidden hover:border-cuycito-gold transition-all duration-300 flex flex-col justify-between group shadow-[0_0_20px_rgba(255,183,3,0.15)] hover:shadow-[0_0_30px_rgba(255,183,3,0.3)]">
+                
+                <!-- Imagen y Badges Combo -->
+                <div class="relative overflow-hidden bg-black">
+                    <div class="absolute top-3 left-3 z-10 bg-gradient-to-r from-cuycito-red via-red-600 to-amber-600 text-white text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-wider shadow-lg flex items-center gap-1.5 glow-red">
+                        <i class="fa-solid fa-gift text-cuycito-gold"></i> COMBO AHORRO -${savingsPercent}%
+                    </div>
+                    
+                    <span class="absolute top-3 right-3 z-10 bg-black/90 backdrop-blur-md border border-cuycito-gold/50 text-cuycito-gold text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase">
+                        ${categoryTag}
+                    </span>
+
+                    ${imageHTML}
+                </div>
+
+                <!-- Contenido Informativo Combo -->
+                <div class="p-5 flex-1 flex flex-col justify-between space-y-3">
+                    <div>
+                        <h3 class="text-base font-black text-white group-hover:text-cuycito-gold transition line-clamp-2">
+                            ${p.title}
+                        </h3>
+                        ${comboBadgesHTML}
+                        <p class="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                            ${p.description || 'Disfruta de múltiples plataformas con perfiles privados independientes, 4K y garantía total.'}
+                        </p>
+                        ${advantagesHTML}
+                    </div>
+
+                    <div class="pt-3 border-t border-gray-800/80 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1.5">
+                                ${p.regularPriceTotal ? `<span class="text-xs text-gray-500 line-through font-mono">S/ ${p.regularPriceTotal.toFixed(2)}</span>` : ''}
+                                ${savingsAmount > 0 ? `<span class="bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-1.5 py-0.5 rounded">Ahorras S/ ${savingsAmount.toFixed(2)}</span>` : ''}
+                            </div>
+                            ${stockBadge}
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-[9px] uppercase tracking-wider text-gray-500 block font-bold">Precio Promo Combo</span>
+                                <span class="text-2xl font-black text-cuycito-gold glow-gold">S/ ${price.toFixed(2)}</span>
+                            </div>
+                            ${actionButtonsHTML}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+        } else {
+            // Renderizado Estándar
+            html += `
+            <div class="bg-[#121212] border border-gray-800/80 rounded-3xl overflow-hidden hover:border-cuycito-gold/50 transition-all duration-300 flex flex-col justify-between group shadow-xl hover:shadow-2xl">
+                
+                <!-- Imagen y Badges -->
+                <div class="relative overflow-hidden bg-black">
+                    ${p.promo ? `
+                    <div class="absolute top-3 left-3 z-10 bg-gradient-to-r from-cuycito-red to-red-700 text-white text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider shadow-lg flex items-center gap-1 glow-red">
+                        <i class="fa-solid fa-fire animate-pulse"></i> Oferta Especial
+                    </div>` : ''}
+                    
+                    <span class="absolute top-3 right-3 z-10 bg-black/80 backdrop-blur-md border border-gray-800 text-gray-300 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase">
+                        ${categoryTag}
+                    </span>
+
+                    ${imageHTML}
+                </div>
+
+                <!-- Contenido Informativo -->
+                <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
+                    <div>
+                        <h3 class="text-base font-black text-white group-hover:text-cuycito-gold transition line-clamp-1">
+                            ${p.title}
+                        </h3>
+                        <p class="text-xs text-gray-400 mt-1.5 line-clamp-2 leading-relaxed">
+                            ${p.description || 'Entrega inmediata con garantía 100% durante todo tu mes.'}
+                        </p>
+                    </div>
+
+                    <div class="pt-3 border-t border-gray-800/80 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[9px] uppercase tracking-wider text-gray-500 block font-bold">Precio Online</span>
+                            ${stockBadge}
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xl font-black text-cuycito-gold">S/ ${price.toFixed(2)}</span>
+                            ${actionButtonsHTML}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+    });
+
+    grid.innerHTML = html;
+}
+
+// ==========================================
+// 4. CARRITO DE COMPRAS & PEDIDOS WHATSAPP (+51 991735344)
+// ==========================================
+window.toggleCartDrawer = () => {
+    const drawer = document.getElementById('cartDrawer');
+    const backdrop = document.getElementById('cartDrawerBackdrop');
+    if (!drawer || !backdrop) return;
+
+    if (drawer.classList.contains('translate-x-full')) {
+        drawer.classList.remove('translate-x-full');
+        backdrop.classList.remove('hidden');
+    } else {
+        drawer.classList.add('translate-x-full');
+        backdrop.classList.add('hidden');
+    }
+};
+
+window.addToCart = (productId) => {
+    const product = catalogProducts.find(p => p.id === productId);
+    if (!product) return;
+
+    const existing = cart.find(item => item.id === productId);
+    if (existing) {
+        existing.quantity += 1;
+    } else {
+        cart.push({
+            id: product.id,
+            title: product.title,
+            price: parseFloat(product.price) || 0,
+            quantity: 1,
+            category: product.category || 'Streaming',
+            isCombo: !!product.isCombo,
+            comboServices: product.comboServices || [],
+            savingsPercent: product.savingsPercent || 0,
+            regularPriceTotal: product.regularPriceTotal || 0
+        });
+    }
+
+    saveCart();
+    updateCartUI();
+    window.toggleCartDrawer();
+};
+
+window.updateQuantity = (productId, delta) => {
+    const item = cart.find(i => i.id === productId);
+    if (!item) return;
+
+    item.quantity += delta;
+    if (item.quantity <= 0) {
+        cart = cart.filter(i => i.id !== productId);
+    }
+
+    saveCart();
+    updateCartUI();
+};
+
+window.removeFromCart = (productId) => {
+    cart = cart.filter(i => i.id !== productId);
+    saveCart();
+    updateCartUI();
+};
+
+window.clearCart = () => {
+    if (confirm("¿Estás seguro de que deseas vaciar tu carrito?")) {
+        cart = [];
+        saveCart();
+        updateCartUI();
+    }
+};
+
+function saveCart() {
+    localStorage.setItem("cuycitoCart", JSON.stringify(cart));
+    updateCartCounter();
+}
+
+function loadCartFromStorage() {
+    try {
+        const saved = localStorage.getItem("cuycitoCart");
+        if (saved) {
+            cart = JSON.parse(saved);
+            updateCartCounter();
+            updateCartUI();
+        }
+    } catch (e) {
+        cart = [];
+    }
+}
+
+function updateCartCounter() {
+    const totalCount = cart.reduce((acc, curr) => acc + curr.quantity, 0);
+    const badges = document.querySelectorAll('.cart-count-badge');
+    badges.forEach(b => {
+        b.innerText = totalCount;
+        if (totalCount > 0) {
+            b.classList.remove('hidden');
+        } else {
+            b.classList.add('hidden');
+        }
+    });
+}
+
+function updateCartUI() {
+    const container = document.getElementById('cartItemsContainer');
+    const totalEl = document.getElementById('cartTotalPrice');
+    const emptyState = document.getElementById('cartEmptyState');
+    const footer = document.getElementById('cartFooter');
+
+    if (!container) return;
+
+    if (cart.length === 0) {
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (footer) footer.classList.add('hidden');
+        container.innerHTML = '';
+        if (totalEl) totalEl.innerText = 'S/ 0.00';
+        return;
+    }
+
+    if (emptyState) emptyState.classList.add('hidden');
+    if (footer) footer.classList.remove('hidden');
+
+    let total = 0;
+    let html = '';
+
     cart.forEach(item => {
-        const itemSubtotal = item.price * item.quantity;
-        totalAmount += itemSubtotal;
+        const subtotal = item.price * item.quantity;
+        total += subtotal;
+
+        let comboServicesTag = '';
+        if (item.isCombo && item.comboServices && item.comboServices.length > 0) {
+            comboServicesTag = `<p class="text-[10px] text-cuycito-gold font-bold mt-0.5">🎁 ${item.comboServices.map(s => s.service).join(' + ')}</p>`;
+        }
+
         html += `
-        <div class="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-3 flex items-center justify-between gap-3 mb-2">
-            <div class="flex items-center gap-2.5 overflow-hidden">
-                <div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center ${item.color} text-sm flex-shrink-0 border border-gray-800"><i class="fa-solid ${item.icon}"></i></div>
-                <div class="truncate">
-                    <h4 class="text-xs font-bold text-white truncate">${item.title}</h4>
-                    <span class="text-[10px] text-cuycito-gold font-semibold">S/ ${item.price.toFixed(2)} c/u</span>
-                </div>
+        <div class="flex items-center justify-between gap-3 bg-[#0a0a0a] border border-gray-800 p-3.5 rounded-2xl">
+            <div class="flex-1">
+                <h4 class="text-xs font-black text-white line-clamp-1">${item.title}</h4>
+                ${comboServicesTag}
+                <p class="text-[10px] text-gray-500 font-mono">S/ ${item.price.toFixed(2)} c/u</p>
+                <p class="text-xs font-black text-cuycito-gold mt-1">S/ ${subtotal.toFixed(2)}</p>
             </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
-                <div class="flex items-center bg-gray-900 border border-gray-800 rounded-lg">
-                    <button onclick="window.updateQuantity('${item.title}', -1)" class="w-6 h-6 flex items-center justify-center text-xs text-gray-400 hover:text-cuycito-red transition">-</button>
-                    <span class="text-xs font-bold px-1.5 text-white">${item.quantity}</span>
-                    <button onclick="window.updateQuantity('${item.title}', 1)" class="w-6 h-6 flex items-center justify-center text-xs text-gray-400 hover:text-cuycito-gold transition">+</button>
+
+            <div class="flex items-center gap-2">
+                <div class="flex items-center bg-black border border-gray-700 rounded-lg overflow-hidden">
+                    <button onclick="window.updateQuantity('${item.id}', -1)" class="px-2 py-1 text-gray-400 hover:text-white transition font-bold text-xs">-</button>
+                    <span class="px-2 py-1 text-white font-mono text-xs font-bold">${item.quantity}</span>
+                    <button onclick="window.updateQuantity('${item.id}', 1)" class="px-2 py-1 text-gray-400 hover:text-white transition font-bold text-xs">+</button>
                 </div>
+                <button onclick="window.removeFromCart('${item.id}')" class="text-gray-500 hover:text-cuycito-red p-1 transition" title="Eliminar">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
             </div>
         </div>`;
     });
 
-    if(container) container.innerHTML = html;
-    if(cartSubtotal) cartSubtotal.innerText = `S/ ${totalAmount.toFixed(2)}`;
-    if(cartTotal) cartTotal.innerText = `S/ ${totalAmount.toFixed(2)}`;
+    container.innerHTML = html;
+    if (totalEl) totalEl.innerText = `S/ ${total.toFixed(2)}`;
 }
 
-window.sendWhatsAppOrder = () => {
-    if (cart.length === 0) return alert("⚠️ Tu carrito está vacío.");
-    
-    const customerInput = document.getElementById('customerNameInput');
-    const clientName = (customerInput && customerInput.value.trim()) || (currentClientUser ? currentClientUser.name : "Cliente Web");
-    
-    let message = `🚀 *NUEVO PEDIDO - CUYCITOGO* 🚀\n👤 *Cliente:* ${clientName}\n----------------------------------\n📋 *RESUMEN DE ITEMS:*\n\n`;
-    let total = 0;
-    
-    cart.forEach((item, idx) => {
-        const sub = item.price * item.quantity;
-        total += sub;
-        message += `${idx + 1}. *${item.title}*\n   └ Cantidad: ${item.quantity} x S/ ${item.price.toFixed(2)} = *S/ ${sub.toFixed(2)}*\n\n`;
-    });
-    
-    message += `----------------------------------\n💰 *TOTAL A PAGAR: S/ ${total.toFixed(2)}*\n🔒 *Garantía:* 30 días activa\n\nQuedo a la espera de sus datos de pago para la entrega. ¡Gracias!`;
+// Envío del pedido a WhatsApp (+51 991735344) con detalle de productos y suma total
+window.sendOrderWhatsApp = () => {
+    if (cart.length === 0) return alert("Tu carrito está vacío.");
 
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/${WHATSAPP_PHONE}?text=${encodedMessage}`, '_blank');
+    let clientName = (document.getElementById('cartClientName')?.value || document.getElementById('cartCustomerNameInput')?.value || '').trim();
+    let clientPhone = '';
+    
+    // Si tiene sesión activa, usar su Nickname y teléfono
+    const clientSession = localStorage.getItem("cuycitoClient");
+    if (clientSession) {
+        try {
+            const user = JSON.parse(clientSession);
+            if (!clientName) clientName = `@${user.nickname || user.name}`;
+            clientPhone = user.phone || '';
+        } catch (e) {}
+    }
+
+    if (!clientName) {
+        clientName = prompt("Por favor ingresa tu Nombre o Nickname para el pedido:") || "Cliente Web";
+    }
+
+    let total = 0;
+    let itemsText = '';
+
+    cart.forEach((item, index) => {
+        const subtotal = item.price * item.quantity;
+        total += subtotal;
+        
+        let comboDetail = '';
+        if (item.isCombo && item.comboServices && item.comboServices.length > 0) {
+            comboDetail = `\n     🎁 *Servicios:* ${item.comboServices.map(s => `${s.service} (S/ ${(s.comboPrice || 0).toFixed(2)})`).join(' + ')}`;
+            if (item.savingsPercent) comboDetail += `\n     🔥 *Ahorro:* ${item.savingsPercent}%`;
+        }
+
+        itemsText += `  ${index + 1}. *${item.title}*${comboDetail}\n     ▪ Cantidad: x${item.quantity}\n     ▪ Subtotal: S/ ${subtotal.toFixed(2)}\n\n`;
+    });
+
+    const clientPhoneText = clientPhone ? `\n📱 *Teléfono:* ${clientPhone}` : '';
+
+    const msg = `🐹 *¡HOLA CUYCITOGO! QUIERO REALIZAR UN PEDIDO* 🐹\n\n👤 *Cliente:* ${clientName}${clientPhoneText}\n\n📦 *Productos Seleccionados:*\n${itemsText}━━━━━━━━━━━━━━━━━━━━━\n💰 *PRECIO TOTAL DE LA SUMA:* S/ ${total.toFixed(2)}\n━━━━━━━━━━━━━━━━━━━━━\n\n¿Me confirman la disponibilidad y los datos para realizar el pago por Yape / Plin? ¡Muchas gracias! 🙌`;
+
+    window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
 };
+
+// Compra rápida directa para un solo producto (+51 991735344)
+window.quickBuy = (productId) => {
+    const product = catalogProducts.find(p => p.id === productId);
+    if (!product) return;
+
+    let clientName = "Cliente";
+    let clientPhone = '';
+    
+    const clientSession = localStorage.getItem("cuycitoClient");
+    if (clientSession) {
+        try {
+            const user = JSON.parse(clientSession);
+            clientName = `@${user.nickname || user.name}`;
+            clientPhone = user.phone || '';
+        } catch (e) {}
+    }
+
+    const price = parseFloat(product.price) || 0;
+    const clientPhoneText = clientPhone ? `\n📱 *Teléfono:* ${clientPhone}` : '';
+
+    let comboExtra = '';
+    if (product.isCombo && product.comboServices && product.comboServices.length > 0) {
+        comboExtra = `\n🎁 *Servicios incluidos:* ${product.comboServices.map(s => `${s.service} (S/ ${(s.comboPrice || 0).toFixed(2)})`).join(' + ')}`;
+        if (product.regularPriceTotal) comboExtra += `\n💵 *Precio Regular:* ~S/ ${product.regularPriceTotal.toFixed(2)}~`;
+        if (product.savingsPercent) comboExtra += `\n🔥 *Ahorro:* ${product.savingsPercent}%`;
+    }
+
+    const msg = `🐹 *¡HOLA CUYCITOGO! COMPRA RÁPIDA* 🐹\n\n👤 *Cliente:* ${clientName}${clientPhoneText}\n🎬 *Producto:* ${product.title}${comboExtra}\n💰 *Precio:* S/ ${price.toFixed(2)}\n\n¿Tienen disponibilidad inmediata para pago por Yape / Plin? ¡Muchas gracias! 🙌`;
+
+    window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
+};
+
+window.requestOutOfStockWhatsApp = (productTitle) => {
+    const msg = `¡Hola CuycitoGO! 🐹👋\nVi que el producto *${productTitle}* figura como *Agotado* en la web.\n¿Cuándo tendrán nuevo stock o pueden reservarme un cupo para cuando activen una nueva cuenta? ¡Muchas gracias!`;
+    window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
+};
+
+window.submitWhatsAppOrder = window.sendOrderWhatsApp;

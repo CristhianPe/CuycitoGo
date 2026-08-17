@@ -21,7 +21,7 @@
             <div class="relative w-16 h-16 rounded-full flex items-center justify-center bg-black border-2 border-cuycito-gold glow-gold text-3xl">🐹</div>
             <div>
                 <h1 class="text-3xl font-black tracking-widest text-cuycito-gold drop-shadow-md" style="font-family: impact, sans-serif;">CuycitoGO</h1>
-                <p class="text-xs text-gray-400 uppercase tracking-widest font-bold">Admin Center</p>
+                <p class="text-xs text-gray-400 uppercase tracking-widest font-bold">Admin Center PRO</p>
             </div>
         </div>
 
@@ -73,7 +73,7 @@
                     </select>
                 </div>
                 <div>
-                    <label id="personLabel" class="block text-gray-400 mb-1">Nombre del Cliente</label>
+                    <label id="personLabel" class="block text-gray-400 mb-1">Nombre del Cliente (Identificador)</label>
                     <input type="text" id="personName" required placeholder="Ej. Juan Pérez" class="w-full bg-black border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold">
                 </div>
                 <div>
@@ -87,6 +87,10 @@
                     <div class="grid grid-cols-2 gap-2">
                         <input type="text" id="credPass" placeholder="Contraseña" class="bg-cuycito-dark border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold">
                         <input type="text" id="credPin" placeholder="PIN / Perfil" class="bg-cuycito-dark border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold">
+                    </div>
+                    <div class="flex items-center gap-2 pt-1">
+                        <input type="checkbox" id="credHidePass" class="w-3.5 h-3.5 accent-cuycito-gold bg-black border-gray-700">
+                        <label for="credHidePass" class="text-[10px] text-gray-400 font-semibold cursor-pointer">🔒 Ocultar contraseña al cliente en su portal</label>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
@@ -117,9 +121,10 @@
                 <button id="tab-btn-catalog" onclick="window.switchTab('catalog')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition"><i class="fa-solid fa-tags"></i> Catálogo Web</button>
             </div>
 
+            <!-- TAB 1: SERVICIOS ACTIVOS -->
             <section id="view-subs" class="bg-cuycito-dark rounded-xl border border-gray-800 overflow-hidden shadow-xl block">
                 <div class="p-4 border-b border-gray-800 bg-black/50 flex flex-wrap justify-end gap-3 text-xs">
-                    <input type="text" id="searchActive" oninput="window.renderActiveTable()" placeholder="Buscar cliente..." class="bg-black border border-gray-700 rounded px-3 py-2 text-white outline-none focus:border-cuycito-gold">
+                    <input type="text" id="searchActive" oninput="window.renderActiveTable()" placeholder="Buscar cliente o servicio..." class="bg-black border border-gray-700 rounded px-3 py-2 text-white outline-none focus:border-cuycito-gold">
                     <select id="filterActiveService" onchange="window.renderActiveTable()" class="bg-black border border-gray-700 rounded px-2 py-2 text-white outline-none focus:border-cuycito-gold"><option value="">Todos los Servicios</option></select>
                     <select id="filterActiveStatus" onchange="window.renderActiveTable()" class="bg-black border border-cuycito-gold rounded px-2 py-2 text-cuycito-gold font-bold outline-none"><option value="ALL">Todas las cuentas</option><option value="VIGENTE" selected>🟢 Vigentes</option><option value="VENCIDO">🔴 Vencidas</option></select>
                     <span id="activeCountBadge" class="bg-cuycito-red text-white border border-red-500/50 px-3 py-2 rounded font-black shadow-[0_0_8px_rgba(133,0,0,0.8)]">0</span>
@@ -127,21 +132,26 @@
                 <div class="overflow-x-auto min-h-[300px]">
                     <table class="w-full text-left text-xs text-gray-300">
                         <thead class="bg-black text-cuycito-gold uppercase tracking-widest font-bold border-b border-cuycito-red/50">
-                            <tr><th class="p-4">Cliente</th><th class="p-4">Servicio</th><th class="p-4">Accesos</th><th class="p-4">Caduca</th><th class="p-4 text-center">Estado</th><th class="p-4 text-center">Acciones</th></tr>
+                            <tr><th class="p-4">Cliente</th><th class="p-4">Servicio</th><th class="p-4">Accesos & Visibilidad</th><th class="p-4">Caduca</th><th class="p-4 text-center">Estado</th><th class="p-4 text-center">Renovar</th><th class="p-4 text-center">Acciones</th></tr>
                         </thead>
                         <tbody id="activeTableBody" class="divide-y divide-gray-800"></tbody>
                     </table>
                 </div>
             </section>
 
+            <!-- TAB 2: CUENTAS RAÍZ -->
             <section id="view-master" class="hidden space-y-4">
-                <div class="flex justify-between items-center bg-black/50 p-4 rounded-xl border border-gray-800">
-                    <p class="text-xs text-gray-400">Control de rentabilidad y asignación de Cuentas Completas.</p>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-black/50 p-4 rounded-xl border border-gray-800">
+                    <div>
+                        <h3 class="text-sm font-black text-white uppercase"><i class="fa-solid fa-server text-emerald-400 mr-1.5"></i> Control de Cuentas Raíz & Asignación</h3>
+                        <p class="text-xs text-gray-400 mt-0.5">Controla cupos libres, rentabilidad y activa o desactiva la visibilidad de contraseñas para los clientes.</p>
+                    </div>
                     <button onclick="document.getElementById('masterModal').classList.remove('hidden')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-4 py-2 rounded glow-gold"><i class="fa-solid fa-plus"></i> Nueva Cuenta Raíz</button>
                 </div>
                 <div id="masterGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10"></div>
             </section>
 
+            <!-- TAB 3: FINANZAS -->
             <section id="view-finance" class="hidden space-y-6 pb-10">
                 <div class="bg-black border border-gray-800 rounded-xl p-4 flex justify-between items-center gap-4">
                     <h2 class="text-xl font-black text-cuycito-gold uppercase tracking-widest"><i class="fa-solid fa-chart-line mr-2"></i> Reporte Mensual</h2>
@@ -163,16 +173,39 @@
                 </div>
             </section>
 
+            <!-- TAB 4: ACCESOS TIENDA -->
             <section id="view-clients" class="hidden space-y-4">
-                <div class="flex justify-between items-center bg-black/50 p-4 rounded-xl border border-gray-800">
-                    <p class="text-xs text-gray-400">Crea los accesos. El <strong>Número</strong> será su Usuario para loguearse en la Tienda.</p>
-                    <button onclick="window.openClientModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-4 py-2 rounded glow-gold"><i class="fa-solid fa-user-plus"></i> Crear Acceso Web</button>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-black/50 p-4 rounded-xl border border-gray-800">
+                    <div>
+                        <h3 class="text-sm font-black text-white uppercase"><i class="fa-solid fa-address-book text-blue-400 mr-1.5"></i> Gestión de Accesos & Servicios de Clientes</h3>
+                        <p class="text-xs text-gray-400 mt-0.5">Crea accesos automáticos para clientes pendientes y gestiona sus credenciales.</p>
+                    </div>
+                    <button onclick="window.openClientModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-4 py-2.5 rounded-lg glow-gold transition flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus"></i> Crear Acceso Web
+                    </button>
                 </div>
+
+                <!-- Buscador de Clientes y Filtro -->
+                <div class="flex flex-wrap items-center justify-between gap-3 bg-black/40 p-3 rounded-xl border border-gray-800 text-xs">
+                    <div class="relative flex-1 min-w-[240px]">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" id="searchClientsInput" oninput="window.renderClients()" placeholder="Buscar por Nombre, Nickname, Teléfono o Servicio..." class="w-full bg-black border border-gray-700 rounded-lg pl-9 pr-3 py-2 text-white outline-none focus:border-blue-400">
+                    </div>
+                    <span id="clientsCountBadge" class="bg-blue-900/60 text-blue-300 border border-blue-500/40 px-3 py-2 rounded-lg font-bold">0 Clientes</span>
+                </div>
+
                 <div class="bg-cuycito-dark rounded-xl border border-gray-800 overflow-hidden shadow-xl">
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto min-h-[250px]">
                         <table class="w-full text-left text-xs text-gray-300">
                             <thead class="bg-black text-blue-400 uppercase tracking-widest font-bold border-b border-gray-800">
-                                <tr><th class="p-4">Nombre Cliente</th><th class="p-4">Número (Usuario)</th><th class="p-4">Contraseña</th><th class="p-4">Correo</th><th class="p-4 text-center">Acciones</th></tr>
+                                <tr>
+                                    <th class="p-4">Cliente (Nombre Real)</th>
+                                    <th class="p-4">Nickname</th>
+                                    <th class="p-4">Número (Usuario)</th>
+                                    <th class="p-4">Contraseña</th>
+                                    <th class="p-4">Servicios Activos Enlazados</th>
+                                    <th class="p-4 text-center">Acciones & Enlazado</th>
+                                </tr>
                             </thead>
                             <tbody id="clientsTableBody" class="divide-y divide-gray-800"></tbody>
                         </table>
@@ -180,76 +213,495 @@
                 </div>
             </section>
 
+            <!-- TAB 5: CATÁLOGO WEB & PUBLICACIÓN CON STOCK -->
             <section id="view-catalog" class="hidden space-y-4 pb-10">
-                <div class="flex justify-between items-center bg-black/50 p-4 rounded-xl border border-gray-800">
-                    <p class="text-xs text-gray-400">Crea y edita los productos que se mostrarán en tu tienda web.</p>
-                    <button onclick="window.openCatalogModal()" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black text-xs font-black px-4 py-2 rounded glow-gold"><i class="fa-solid fa-box-open"></i> Nuevo Producto</button>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-black/50 p-4 rounded-xl border border-gray-800">
+                    <div>
+                        <h3 class="text-sm font-black text-cuycito-gold uppercase"><i class="fa-solid fa-tags text-cuycito-gold mr-1.5"></i> Gestión del Catálogo Web & Stock en Vivo</h3>
+                        <p class="text-xs text-gray-400 mt-0.5">Publica productos directamente desde Cuentas Raíz, suma stock o crea combos de oferta con cálculo de ahorro.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.openComboModal()" class="bg-gradient-to-r from-cuycito-red via-red-600 to-amber-600 hover:from-cuycito-redHover hover:to-cuycito-gold text-white text-xs font-black px-4 py-2.5 rounded-lg shadow-lg glow-red transition flex items-center gap-2">
+                            <i class="fa-solid fa-gift"></i> Crear Combo Oferta 🔥
+                        </button>
+                        <button onclick="window.openCatalogModal()" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black text-xs font-black px-4 py-2.5 rounded-lg glow-gold transition flex items-center gap-2">
+                            <i class="fa-solid fa-box-open"></i> Nuevo Producto
+                        </button>
+                    </div>
                 </div>
+
+                <!-- Buscador de Catálogo -->
+                <div class="flex flex-wrap items-center justify-between gap-3 bg-black/40 p-3 rounded-xl border border-gray-800 text-xs">
+                    <div class="relative flex-1 min-w-[240px]">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" id="searchCatalogInput" oninput="window.renderCatalog()" placeholder="Buscar producto o servicio en catálogo..." class="w-full bg-black border border-gray-700 rounded-lg pl-9 pr-3 py-2 text-white outline-none focus:border-cuycito-gold">
+                    </div>
+                    <select id="filterCatalogCategory" onchange="window.renderCatalog()" class="bg-black border border-gray-700 text-gray-300 font-bold rounded-lg px-3 py-2 outline-none">
+                        <option value="">Todas las Categorías</option>
+                        <option value="Streaming">Streaming</option>
+                        <option value="Pantallas / Perfil">Pantalla / Perfil</option>
+                        <option value="Cuentas Raíz">Cuentas Completas</option>
+                        <option value="Música">Música</option>
+                        <option value="Gaming">Gaming</option>
+                        <option value="Combos">Combos</option>
+                    </select>
+                </div>
+
                 <div id="catalogGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
             </section>
 
         </main>
 
         <aside class="w-80 bg-cuycito-dark border-l border-cuycito-red/30 p-5 overflow-y-auto shrink-0 flex flex-col gap-4 custom-scrollbar">
-            <h2 class="text-sm font-black uppercase tracking-widest text-white flex items-center justify-between border-b border-cuycito-red pb-2">
-                <span><i class="fa-solid fa-triangle-exclamation text-cuycito-gold animate-pulse mr-2"></i> Por Vencer</span>
-                <span id="alertCount" class="bg-cuycito-gold text-black px-2 py-1 rounded font-black shadow-[0_0_8px_rgba(255,183,3,0.6)]">0</span>
-            </h2>
-            <div id="notificationsContainer" class="space-y-3"></div>
+            <!-- 1. ALERTAS: PRÓXIMOS A VENCER -->
+            <div>
+                <h2 class="text-sm font-black uppercase tracking-widest text-white flex items-center justify-between border-b border-cuycito-red pb-2 mb-3">
+                    <span><i class="fa-solid fa-triangle-exclamation text-cuycito-gold animate-pulse mr-2"></i> Por Vencer</span>
+                    <span id="alertCount" class="bg-cuycito-gold text-black px-2 py-1 rounded font-black shadow-[0_0_8px_rgba(255,183,3,0.6)]">0</span>
+                </h2>
+                <div id="notificationsContainer" class="space-y-3"></div>
+            </div>
+
+            <!-- 2. SECCIÓN: POSIT / NOTAS RÁPIDAS (DEBAJO DE ALERTAS) -->
+            <div class="border-t border-gray-800 pt-4 mt-1 space-y-3">
+                <div class="flex items-center justify-between border-b border-cuycito-gold/40 pb-2">
+                    <h2 class="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
+                        <i class="fa-solid fa-note-sticky text-cuycito-gold text-base"></i> Notas / Posit
+                    </h2>
+                    <button type="button" onclick="window.toggleNewPostitForm()" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black text-[11px] font-black px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow">
+                        <i class="fa-solid fa-plus"></i> Nuevo Posit
+                    </button>
+                </div>
+
+                <!-- Formulario desplegable para crear/editar Posit -->
+                <div id="newPostitForm" class="hidden bg-[#0d0d0d] border border-cuycito-gold/60 rounded-xl p-3 space-y-2.5 shadow-xl">
+                    <input type="hidden" id="editPostitId" value="">
+                    <textarea id="postitContent" rows="3" placeholder="Escribe tu nota, recordatorio, proveedor o pendiente..." class="w-full bg-black border border-gray-700 rounded-lg p-2 text-xs text-white placeholder-gray-500 outline-none focus:border-cuycito-gold resize-none"></textarea>
+                    
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5" id="postitColorPicker">
+                            <button type="button" onclick="window.selectPostitColor('yellow')" class="w-4 h-4 rounded-full bg-yellow-400 border-2 border-white transition transform scale-110 shadow" data-color="yellow" title="Amarillo"></button>
+                            <button type="button" onclick="window.selectPostitColor('emerald')" class="w-4 h-4 rounded-full bg-emerald-400 border border-transparent transition opacity-70 hover:opacity-100 shadow" data-color="emerald" title="Verde"></button>
+                            <button type="button" onclick="window.selectPostitColor('cyan')" class="w-4 h-4 rounded-full bg-cyan-400 border border-transparent transition opacity-70 hover:opacity-100 shadow" data-color="cyan" title="Celeste"></button>
+                            <button type="button" onclick="window.selectPostitColor('rose')" class="w-4 h-4 rounded-full bg-rose-400 border border-transparent transition opacity-70 hover:opacity-100 shadow" data-color="rose" title="Rosa"></button>
+                            <button type="button" onclick="window.selectPostitColor('purple')" class="w-4 h-4 rounded-full bg-purple-400 border border-transparent transition opacity-70 hover:opacity-100 shadow" data-color="purple" title="Morado"></button>
+                        </div>
+                        <input type="hidden" id="selectedPostitColor" value="yellow">
+
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="window.toggleNewPostitForm(false)" class="text-gray-500 hover:text-white text-xs px-1.5 py-0.5">Cancelar</button>
+                            <button type="button" onclick="window.savePostit()" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black font-black text-xs px-3 py-1 rounded-lg transition shadow">Guardar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenedor dinámico de Posits -->
+                <div id="postitsContainer" class="space-y-2.5 max-h-[380px] overflow-y-auto custom-scrollbar pr-1">
+                    <div class="p-3 text-center text-gray-500 text-xs italic">Cargando posits...</div>
+                </div>
+            </div>
         </aside>
     </div>
 
+    <!-- MODAL MEJORADO: CREAR ACCESO CLIENTE CON PESTAÑA DE CLIENTES PENDIENTES & AUTO-GENERADOR -->
     <div id="clientModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-cuycito-dark border border-blue-500 rounded-xl p-6 w-full max-w-sm space-y-4 shadow-[0_0_30px_rgba(37,99,235,0.3)]">
-            <h3 class="text-lg font-black text-blue-400 uppercase border-b border-gray-800 pb-2"><i class="fa-solid fa-user-shield"></i> Acceso Cliente</h3>
-            <input type="hidden" id="cId">
-            <datalist id="clientNamesList"></datalist>
-            <div class="space-y-3 text-xs font-medium">
-                <div><label class="block text-gray-400 mb-1">Nombre Completo</label><input type="text" id="cName" list="clientNamesList" placeholder="Escribe un nombre" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-blue-400"></div>
-                <div><label class="block text-blue-400 font-bold mb-1">Número (Usuario de Login)</label><input type="text" id="cPhone" required placeholder="Ej. 999888777" class="w-full bg-black border border-blue-500/50 rounded p-2 text-white outline-none focus:border-blue-400"></div>
-                <div><label class="block text-blue-400 font-bold mb-1">Contraseña de Acceso</label><div class="flex gap-2"><input type="text" id="cPass" required class="w-full bg-black border border-blue-500/50 rounded p-2 text-white outline-none focus:border-blue-400"><button onclick="document.getElementById('cPass').value = Math.random().toString(36).slice(-8);" class="bg-gray-800 px-3 rounded text-gray-300 hover:text-white"><i class="fa-solid fa-dice"></i></button></div></div>
-                <div><label class="block text-gray-400 mb-1">Correo (Opcional)</label><input type="email" id="cEmail" placeholder="tu@correo.com" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-blue-400"></div>
+        <div class="bg-cuycito-dark border border-blue-500 rounded-2xl p-6 w-full max-w-xl space-y-4 shadow-[0_0_35px_rgba(37,99,235,0.3)] max-h-[92vh] overflow-y-auto custom-scrollbar">
+            
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 class="text-lg font-black text-blue-400 uppercase flex items-center gap-2">
+                    <i class="fa-solid fa-user-shield"></i> Acceso a Tienda para Clientes
+                </h3>
+                <button onclick="document.getElementById('clientModal').classList.add('hidden')" class="text-gray-500 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
             </div>
-            <div class="flex justify-between items-center pt-3">
-                <button onclick="window.deleteClient()" class="text-cuycito-red hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
-                <div class="flex gap-2"><button onclick="document.getElementById('clientModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-4 py-2 rounded">Cancelar</button><button onclick="window.saveClient()" class="bg-blue-600 hover:bg-blue-500 text-white font-black text-xs px-4 py-2 rounded">Guardar Cliente</button></div>
-            </div>
-        </div>
-    </div>
 
-    <div id="catalogModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-cuycito-dark border border-cuycito-gold rounded-xl p-6 w-full max-w-lg space-y-4 shadow-[0_0_30px_rgba(255,183,3,0.3)] max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <h3 class="text-lg font-black text-cuycito-gold uppercase border-b border-gray-800 pb-2"><i class="fa-solid fa-box"></i> Producto de Tienda</h3>
-            <input type="hidden" id="catId">
-            <input type="hidden" id="catOldImage">
-            <div class="space-y-3 text-xs font-medium">
-                <div><label class="block text-gray-400 mb-1">Título del Producto</label><input type="text" id="catTitle" placeholder="Ej. Netflix Premium 4K" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold"></div>
-                <div><label class="block text-gray-400 mb-1">Descripción Breve</label><textarea id="catDesc" rows="2" placeholder="Ej. 1 Perfil Privado con PIN..." class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold"></textarea></div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div><label class="block text-gray-400 mb-1">Precio a mostrar (S/)</label><input type="number" step="0.01" id="catPrice" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold"></div>
-                    <div>
-                        <label class="block text-gray-400 mb-1">Color Temático</label>
-                        <select id="catColor" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none"><option value="red-600">Rojo (Netflix)</option><option value="emerald-500">Verde (Spotify)</option><option value="blue-500">Azul (Disney+)</option><option value="purple-500">Morado (HBO/Max)</option><option value="yellow-500">Amarillo (Prime)</option><option value="orange-500">Naranja (Crunchyroll)</option></select>
+            <!-- Navegación de Pestañas del Modal -->
+            <div class="flex border-b border-gray-800 gap-3 text-xs font-black">
+                <button type="button" id="tab-btn-client-pending" onclick="window.switchClientModalTab('pending')" class="text-blue-400 border-b-2 border-blue-400 pb-2 uppercase transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-bolt text-cuycito-gold"></i> Clientes Pendientes (<span id="pendingClientsCount">0</span>)
+                </button>
+                <button type="button" id="tab-btn-client-manual" onclick="window.switchClientModalTab('manual')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 uppercase transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-pen-to-square"></i> Registro / Edición Manual
+                </button>
+            </div>
+
+            <!-- PESTAÑA 1: LISTA DE CLIENTES PENDIENTES DE ACCESO -->
+            <div id="client-tab-pending" class="space-y-3">
+                <p class="text-xs text-gray-400">Clientes que tienen compras registradas pero <strong>aún no tienen acceso web</strong>. Haz clic en el botón para generar su usuario y clave en 1 solo clic:</p>
+                <div id="pendingClientsList" class="space-y-2.5 max-h-64 overflow-y-auto custom-scrollbar pr-1"></div>
+            </div>
+
+            <!-- PESTAÑA 2: FORMULARIO MANUAL -->
+            <div id="client-tab-manual" class="hidden space-y-3 text-xs font-medium">
+                <input type="hidden" id="cId">
+                <datalist id="clientNamesList"></datalist>
+                
+                <div class="flex justify-end">
+                    <button type="button" onclick="window.generateRandomClientPhoneAndPass()" class="bg-indigo-600/80 hover:bg-indigo-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow">
+                        <i class="fa-solid fa-dice"></i> Generar Teléfono y Clave Aleatoria
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block text-gray-400 mb-1 font-bold">Nombre Completo (Identificador para Vincular)</label>
+                    <input type="text" id="cName" list="clientNamesList" placeholder="Ej. Juan Pérez" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-blue-400 font-bold">
+                    <span class="text-[10px] text-gray-500">Debe coincidir con el nombre de sus ventas registradas.</span>
+                </div>
+                <div>
+                    <label class="block text-cuycito-gold font-bold mb-1">Nickname (Nombre Visible en su Portal)</label>
+                    <input type="text" id="cNickname" placeholder="Ej. Juancho, GamerVIP" class="w-full bg-black border border-cuycito-gold/60 rounded p-2 text-white outline-none focus:border-cuycito-gold font-bold">
+                </div>
+                <div>
+                    <label class="block text-blue-400 font-bold mb-1">Número de Celular (Usuario de Login)</label>
+                    <input type="text" id="cPhone" required placeholder="Ej. 999888777" class="w-full bg-black border border-blue-500/50 rounded p-2 text-white outline-none focus:border-blue-400 font-mono">
+                </div>
+                <div>
+                    <label class="block text-blue-400 font-bold mb-1">Contraseña de Acceso</label>
+                    <input type="text" id="cPass" required class="w-full bg-black border border-blue-500/50 rounded p-2 text-white outline-none focus:border-blue-400 font-mono">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Correo Electrónico (Opcional)</label>
+                    <input type="email" id="cEmail" placeholder="tu@correo.com" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-blue-400">
+                </div>
+
+                <div class="flex justify-between items-center pt-3 border-t border-gray-800">
+                    <button type="button" onclick="window.deleteClient()" class="text-cuycito-red hover:text-red-400 text-xs font-bold flex items-center gap-1.5"><i class="fa-solid fa-trash"></i> Eliminar</button>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="document.getElementById('clientModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-4 py-2 rounded">Cancelar</button>
+                        <button type="button" onclick="window.saveClient()" class="bg-blue-600 hover:bg-blue-500 text-white font-black text-xs px-4 py-2 rounded">Guardar Cliente</button>
                     </div>
                 </div>
-                <div><label class="block text-gray-400 mb-1 text-cuycito-gold font-bold">Imagen del Producto (Opcional)</label><input type="file" id="catImageFile" accept="image/*" class="w-full bg-black border border-gray-700 rounded p-2 text-gray-400 text-[10px]"></div>
-                <div class="flex items-center gap-2 pt-2"><input type="checkbox" id="catPromo" class="w-4 h-4 accent-cuycito-red bg-black border-gray-700"><label for="catPromo" class="text-cuycito-red_light font-black uppercase tracking-wider cursor-pointer">Marcar como Oferta 🔥</label></div>
             </div>
-            <div class="flex justify-between items-center pt-3 border-t border-gray-800 mt-4">
-                <button type="button" onclick="window.deleteCatalogItem()" class="text-cuycito-red hover:text-red-400 transition"><i class="fa-solid fa-trash"></i></button>
-                <div class="flex gap-3"><button onclick="document.getElementById('catalogModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-5 py-2.5 rounded">Cancelar</button><button onclick="window.saveCatalogItem()" class="bg-cuycito-gold text-black font-black text-xs px-5 py-2.5 rounded">Guardar en Tienda</button></div>
+
+            <!-- Contenedor de Resultado / Acceso Generado Reciente -->
+            <div id="newAccessGeneratedBanner" class="hidden bg-emerald-950/80 border border-emerald-500/60 rounded-xl p-3.5 space-y-2 text-xs"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DE GESTIÓN Y ENLAZADO DE SERVICIOS PARA UN CLIENTE -->
+    <div id="clientServicesModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-cuycito-dark border border-cuycito-gold rounded-xl p-6 w-full max-w-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar shadow-[0_0_35px_rgba(255,183,3,0.25)]">
+            
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <div>
+                    <h3 class="text-lg font-black text-cuycito-gold uppercase flex items-center gap-2">
+                        <i class="fa-solid fa-link"></i> Gestión de Servicios Enlazados
+                    </h3>
+                    <p class="text-xs text-gray-400">
+                        Cliente: <strong id="csmClientName" class="text-white"></strong> 
+                        (<span id="csmClientNickname" class="text-cuycito-gold"></span>) • 
+                        Usuario: <span id="csmClientPhone" class="font-mono text-blue-400"></span>
+                    </p>
+                </div>
+                <button onclick="document.getElementById('clientServicesModal').classList.add('hidden')" class="text-gray-500 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- 1. Lista de Servicios Actualmente Enlazados -->
+            <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-black uppercase text-white flex items-center gap-1.5">
+                        <i class="fa-solid fa-ticket text-emerald-400"></i> Servicios Asignados a este Cliente
+                    </h4>
+                    <span id="csmLinkedCountBadge" class="bg-emerald-950 text-emerald-400 border border-emerald-500/40 px-2.5 py-0.5 rounded text-[10px] font-bold">0 servicios</span>
+                </div>
+                <div id="csmLinkedList" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1"></div>
+            </div>
+
+            <!-- 2. Herramienta para Buscar y Vincular Servicio Existente -->
+            <div class="bg-black/70 border border-gray-800 rounded-xl p-4 space-y-3">
+                <h4 class="text-xs font-black uppercase text-cuycito-gold flex items-center gap-1.5">
+                    <i class="fa-solid fa-magnifying-glass"></i> Vincular una Suscripción Existente del Sistema
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                    <div class="sm:col-span-2">
+                        <input type="text" id="csmSearchSubs" oninput="window.renderCsmAvailableSubs()" placeholder="Buscar suscripción por servicio, correo o cliente actual..." class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold">
+                    </div>
+                    <select id="csmAvailableSelect" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold text-xs"></select>
+                </div>
+                <div class="flex justify-end">
+                    <button onclick="window.linkSelectedSubToClient()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-4 py-2 rounded transition flex items-center gap-2">
+                        <i class="fa-solid fa-check"></i> Enlazar Suscripción Seleccionada
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. Crear y Vincular Nuevo Servicio Directo -->
+            <div class="bg-black/70 border border-gray-800 rounded-xl p-4 space-y-3">
+                <h4 class="text-xs font-black uppercase text-blue-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus-circle"></i> Crear y Asignar Nueva Suscripción Directa
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                    <div>
+                        <label class="block text-[10px] text-gray-400 mb-1">Servicio</label>
+                        <select id="csmNewService" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none"></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-400 mb-1">Correo / Usuario</label>
+                        <input type="text" id="csmNewEmail" placeholder="correo@ejemplo.com" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-400 mb-1">Contraseña</label>
+                        <input type="text" id="csmNewPass" placeholder="Clave" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-400 mb-1">PIN / Perfil</label>
+                        <input type="text" id="csmNewPin" placeholder="PIN / Perfil" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-400 mb-1">Monto Cobrado (S/)</label>
+                        <input type="number" step="0.01" id="csmNewAmount" placeholder="0.00" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-400 mb-1">Duración (Meses)</label>
+                        <input type="number" min="1" value="1" id="csmNewMonths" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none">
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 pt-1">
+                    <input type="checkbox" id="csmNewHidePass" class="w-3.5 h-3.5 accent-cuycito-gold bg-black border-gray-700">
+                    <label for="csmNewHidePass" class="text-[10px] text-gray-400 font-semibold cursor-pointer">🔒 Ocultar contraseña a este cliente en su portal web</label>
+                </div>
+                <div class="flex justify-end pt-1">
+                    <button onclick="window.createAndLinkDirectSub()" class="bg-blue-600 hover:bg-blue-500 text-white font-black text-xs px-4 py-2 rounded transition flex items-center gap-2">
+                        <i class="fa-solid fa-bolt"></i> Crear & Enlazar Inmediatamente
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t border-gray-800">
+                <button onclick="document.getElementById('clientServicesModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-5 py-2.5 rounded hover:bg-gray-700 transition">
+                    Cerrar
+                </button>
             </div>
         </div>
     </div>
 
+    <!-- MODAL DE PRODUCTO DE CATÁLOGO WEB CON PUBLICACIÓN DESDE CUENTA RAÍZ & STOCK -->
+    <div id="catalogModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-cuycito-dark border border-cuycito-gold rounded-2xl p-6 w-full max-w-lg space-y-4 shadow-[0_0_35px_rgba(255,183,3,0.3)] max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <h3 class="text-lg font-black text-cuycito-gold uppercase border-b border-gray-800 pb-2"><i class="fa-solid fa-box"></i> Producto de Tienda Web</h3>
+            <input type="hidden" id="catId">
+            <input type="hidden" id="catOldImage">
+            <input type="hidden" id="catLinkedMasterId">
+            <input type="hidden" id="catLinkedService">
+
+            <!-- BLOQUE: PUBLICACIÓN AUTOMÁTICA DESDE CUENTA RAÍZ / SUMA POR SERVICIO -->
+            <div class="bg-black/70 border border-cuycito-gold/50 rounded-xl p-3.5 space-y-2">
+                <label class="block text-cuycito-gold font-extrabold uppercase text-[11px] flex items-center gap-1.5">
+                    <i class="fa-solid fa-bolt"></i> Cargar Automáticamente & Sumar Cuentas Raíz
+                </label>
+                <div class="flex gap-2">
+                    <select id="catMasterSelect" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white text-xs outline-none focus:border-cuycito-gold"></select>
+                    <button type="button" onclick="window.loadCatalogFromMasterAccount()" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black font-black text-xs px-3 py-2 rounded transition flex items-center gap-1 flex-shrink-0">
+                        <i class="fa-solid fa-download"></i> Cargar
+                    </button>
+                </div>
+                <span class="text-[10px] text-gray-400 block">Selecciona una plataforma para sumar automáticamente el stock de todas tus cuentas raíz (ej. 2 Cuentas Netflix = Stock combinado).</span>
+            </div>
+
+            <div class="space-y-3 text-xs font-medium">
+                <div>
+                    <label class="block text-gray-400 mb-1">Título del Producto</label>
+                    <input type="text" id="catTitle" placeholder="Ej. Netflix Premium 4K - 1 Perfil Privado" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-gray-400 mb-1">Tipo de Producto / Categoría</label>
+                        <select id="catCategory" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold">
+                            <option value="Streaming">Streaming</option>
+                            <option value="Pantallas / Perfil">Pantallas / Perfil</option>
+                            <option value="Cuentas Raíz">Cuentas Raíz / Completas</option>
+                            <option value="Música">Música</option>
+                            <option value="Gaming">Gaming</option>
+                            <option value="Combos">Combos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1">Precio a mostrar (S/)</label>
+                        <input type="number" step="0.01" id="catPrice" placeholder="0.00" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-gray-400 mb-1">Stock Disponible (Cupos/Cuentas)</label>
+                        <input type="number" min="0" id="catStock" value="5" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1">Color Temático</label>
+                        <select id="catColor" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none">
+                            <option value="red-600">Rojo (Netflix)</option>
+                            <option value="emerald-500">Verde (Spotify)</option>
+                            <option value="blue-500">Azul (Disney+)</option>
+                            <option value="purple-500">Morado (HBO/Max)</option>
+                            <option value="yellow-500">Amarillo (Prime)</option>
+                            <option value="orange-500">Naranja (Crunchyroll)</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Descripción Breve</label>
+                    <textarea id="catDesc" rows="2" placeholder="Ej. 1 Perfil Privado con PIN, calidad 4K Ultra HD y garantía 30 días..." class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-gray-400 mb-1 text-cuycito-gold font-bold">Subir Imagen (Opcional)</label>
+                        <input type="file" id="catImageFile" accept="image/*" class="w-full bg-black border border-gray-700 rounded p-1.5 text-gray-400 text-[10px]">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1">O URL de Imagen</label>
+                        <input type="url" id="catImageUrlDirect" placeholder="https://..." class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none text-xs">
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 pt-2">
+                    <input type="checkbox" id="catPromo" class="w-4 h-4 accent-cuycito-red bg-black border-gray-700">
+                    <label for="catPromo" class="text-cuycito-red_light font-black uppercase tracking-wider cursor-pointer">Marcar como Oferta 🔥</label>
+                </div>
+            </div>
+            <div class="flex justify-between items-center pt-3 border-t border-gray-800 mt-4">
+                <button type="button" onclick="window.deleteCatalogItem()" class="text-cuycito-red hover:text-red-400 transition"><i class="fa-solid fa-trash"></i> Eliminar</button>
+                <div class="flex gap-3">
+                    <button onclick="document.getElementById('catalogModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-5 py-2.5 rounded">Cancelar</button>
+                    <button onclick="window.saveCatalogItem()" class="bg-cuycito-gold text-black font-black text-xs px-5 py-2.5 rounded">Guardar en Tienda</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DEDICADO: CREADOR DE COMBOS DE SERVICIOS (OFERTAS) -->
+    <div id="comboModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-cuycito-dark border border-cuycito-gold rounded-3xl p-6 sm:p-7 w-full max-w-2xl space-y-4 shadow-[0_0_45px_rgba(255,183,3,0.35)] max-h-[92vh] overflow-y-auto custom-scrollbar">
+            
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <div>
+                    <h3 class="text-lg font-black text-cuycito-gold uppercase flex items-center gap-2">
+                        <i class="fa-solid fa-gift text-cuycito-red"></i> Creador de Combos & Promociones
+                    </h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Agrega 2 o más servicios, establece precios unitarios en combo y calcula el ahorro automático.</p>
+                </div>
+                <button onclick="document.getElementById('comboModal').classList.add('hidden')" class="text-gray-500 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="comboId">
+            <input type="hidden" id="comboOldImage">
+
+            <!-- 1. SERVICIOS DEL COMBO (SUMA SERVICIO 1 + SERVICIO 2 + ...) -->
+            <div class="bg-black/70 border border-gray-800 rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-black uppercase text-white flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-cuycito-gold"></i> Servicios Incluidos en el Combo
+                    </label>
+                    <button type="button" onclick="window.addComboServiceRow()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow">
+                        <i class="fa-solid fa-plus"></i> Agregar Servicio (+)
+                    </button>
+                </div>
+
+                <!-- Contenedor dinámico de filas de servicios -->
+                <div id="comboServicesContainer" class="space-y-2.5">
+                    <!-- Filas dinámicas -->
+                </div>
+
+                <!-- CAJA DE CÁLCULO DE AHORRO Y SUMA AUTOMÁTICA -->
+                <div class="bg-[#0f0f0f] border border-cuycito-gold/40 rounded-xl p-3.5 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                    <div class="p-2 bg-black/50 rounded-lg border border-gray-800">
+                        <span class="text-[9px] uppercase tracking-wider text-gray-500 block font-bold">Precio Regular Total</span>
+                        <span id="comboCalcRegularTotal" class="text-sm font-black text-gray-300 line-through">S/ 0.00</span>
+                    </div>
+                    <div class="p-2 bg-black/50 rounded-lg border border-emerald-500/30">
+                        <span class="text-[9px] uppercase tracking-wider text-emerald-400 block font-bold">Precio Oferta Combo</span>
+                        <span id="comboCalcOfferTotal" class="text-base font-black text-cuycito-gold">S/ 0.00</span>
+                    </div>
+                    <div class="p-2 bg-black/50 rounded-lg border border-gray-800">
+                        <span class="text-[9px] uppercase tracking-wider text-gray-500 block font-bold">Ahorro en Dinero</span>
+                        <span id="comboCalcSavingsAmount" class="text-sm font-black text-emerald-400">S/ 0.00</span>
+                    </div>
+                    <div class="p-2 bg-cuycito-red/20 rounded-lg border border-cuycito-red/50">
+                        <span class="text-[9px] uppercase tracking-wider text-red-300 block font-bold">Descuento (%)</span>
+                        <span id="comboCalcSavingsPercent" class="text-base font-black text-white glow-red">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. DETALLES COMERCIALES DEL COMBO -->
+            <div class="space-y-3.5 text-xs font-medium">
+                <div>
+                    <label class="block text-gray-400 mb-1 font-bold">Título del Combo</label>
+                    <input type="text" id="comboTitle" placeholder="Ej. Combo Dúo: Netflix 4K + Disney+ Premium" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white outline-none focus:border-cuycito-gold font-bold text-sm">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-gray-400 mb-1 font-bold">Color Temático de la Tarjeta</label>
+                        <select id="comboColor" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white outline-none">
+                            <option value="red-600">🔥 Rojo & Dorado (Recomendado)</option>
+                            <option value="purple-500">Morado VIP</option>
+                            <option value="blue-500">Azul Streaming</option>
+                            <option value="emerald-500">Verde Ahorro</option>
+                            <option value="yellow-500">Dorado Premium</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1 font-bold">Disponibilidad / Stock a Mostrar</label>
+                        <input type="number" min="0" id="comboStock" value="10" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white outline-none focus:border-cuycito-gold font-bold" placeholder="Ej. 10 cupos">
+                        <span class="text-[10px] text-gray-500">Disponible independiente de cuentas raíz.</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-gray-400 mb-1 font-bold">Descripción del Combo</label>
+                    <textarea id="comboDesc" rows="2" placeholder="Ej. Disfruta de lo mejor del streaming con 2 perfiles privados independientes, calidad 4K Ultra HD y garantía total durante 30 días..." class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white outline-none focus:border-cuycito-gold"></textarea>
+                </div>
+
+                <!-- Ventajas y Beneficios -->
+                <div>
+                    <label class="block text-cuycito-gold mb-1 font-extrabold uppercase flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-check"></i> Ventajas y Beneficios Destacados (1 por línea)
+                    </label>
+                    <textarea id="comboAdvantages" rows="3" placeholder="✔ 2 Perfiles Privados con PIN independiente&#10;✔ Calidad 4K Ultra HD y audio espacial&#10;✔ Garantía total y soporte prioritario 30 días&#10;✔ Entrega y activación inmediata" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white outline-none focus:border-cuycito-gold font-mono text-xs"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-gray-400 mb-1 text-cuycito-gold font-bold">Subir Imagen Personalizada (Opcional)</label>
+                        <input type="file" id="comboImageFile" accept="image/*" class="w-full bg-black border border-gray-700 rounded-xl p-2 text-gray-400 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1 font-bold">O URL Directa de Imagen</label>
+                        <input type="url" id="comboImageUrlDirect" placeholder="https://..." class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white outline-none text-xs">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-3 border-t border-gray-800 mt-4">
+                <button type="button" onclick="window.deleteComboItem()" id="btnDeleteCombo" class="text-cuycito-red hover:text-red-400 transition hidden"><i class="fa-solid fa-trash"></i> Eliminar Combo</button>
+                <div></div>
+                <div class="flex gap-3">
+                    <button onclick="document.getElementById('comboModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-5 py-2.5 rounded-xl hover:bg-gray-700 transition">Cancelar</button>
+                    <button onclick="window.saveComboItem()" class="bg-gradient-to-r from-cuycito-red to-amber-600 hover:from-cuycito-redHover hover:to-cuycito-gold text-white font-black text-xs px-6 py-2.5 rounded-xl shadow-lg glow-red transition">Guardar Combo en Tienda</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GENERADOR DE PASS -->
     <div id="pwdGenModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-cuycito-dark border border-indigo-500 rounded-xl p-6 w-full max-w-sm space-y-4 shadow-[0_0_30px_rgba(79,70,229,0.3)]">
             <h3 class="text-lg font-black text-indigo-400 uppercase border-b border-gray-800 pb-2"><i class="fa-solid fa-key"></i> Generador de Claves</h3>
-            <div class="flex items-center gap-2 mt-4"><input type="text" id="genPwdDisplay" readonly class="w-full bg-black border border-gray-700 rounded p-3 text-white font-mono text-center text-lg outline-none"><button onclick="window.copyGeneratedPassword()" class="bg-[#0ea5e9] hover:bg-blue-400 text-black px-4 py-3 rounded"><i class="fa-regular fa-copy text-lg"></i></button></div>
-            <div class="flex justify-between items-center pt-2"><button onclick="window.generatePassword()" class="text-indigo-400 text-xs font-bold"><i class="fa-solid fa-rotate"></i> Otra clave</button><button onclick="document.getElementById('pwdGenModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-5 py-2.5 rounded">Cerrar</button></div>
+            <div class="flex items-center gap-2 mt-4">
+                <input type="text" id="genPwdDisplay" readonly class="w-full bg-black border border-gray-700 rounded p-3 text-white font-mono text-center text-lg outline-none">
+                <button onclick="window.copyGeneratedPassword()" class="bg-[#0ea5e9] hover:bg-blue-400 text-black px-4 py-3 rounded"><i class="fa-regular fa-copy text-lg"></i></button>
+            </div>
+            <div class="flex justify-between items-center pt-2">
+                <button onclick="window.generatePassword()" class="text-indigo-400 text-xs font-bold"><i class="fa-solid fa-rotate"></i> Otra clave</button>
+                <button onclick="document.getElementById('pwdGenModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-5 py-2.5 rounded">Cerrar</button>
+            </div>
         </div>
     </div>
 
+    <!-- MODAL REGISTRO MÚLTIPLE -->
     <div id="bulkAddModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-cuycito-dark border border-blue-500 rounded-xl p-6 w-full max-w-3xl space-y-4 flex flex-col max-h-[90vh]">
             <h3 class="text-lg font-black text-blue-400 uppercase border-b border-gray-800 pb-2">Registro Múltiple</h3>
@@ -262,6 +714,7 @@
         </div>
     </div>
 
+    <!-- MODAL CUENTA RAÍZ -->
     <div id="masterModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-cuycito-dark border border-emerald-500 rounded-xl p-6 w-full max-w-sm space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <h3 class="text-lg font-black text-emerald-400 uppercase border-b border-gray-800 pb-2">Crear Cuenta Raíz</h3>
@@ -272,24 +725,34 @@
                 <div class="grid grid-cols-2 gap-3"><div><label class="block text-gray-400 mb-1">Fecha</label><input type="date" id="mStartDate" class="w-full bg-black border border-gray-700 rounded p-2 text-white"></div><div><label class="block text-gray-400 mb-1">Meses</label><input type="number" min="1" value="1" id="mMonths" class="w-full bg-black border border-gray-700 rounded p-2 text-white"></div></div>
                 <div><label class="block text-gray-400 mb-1">Correo Principal</label><input type="text" id="mEmail" class="w-full bg-black border border-gray-700 rounded p-2 text-white"></div>
                 <div><label class="block text-gray-400 mb-1">Contraseña</label><input type="text" id="mPass" class="w-full bg-black border border-gray-700 rounded p-2 text-white"></div>
+                <div class="flex items-center gap-2 pt-1">
+                    <input type="checkbox" id="mHidePass" class="w-3.5 h-3.5 accent-cuycito-gold bg-black border-gray-700">
+                    <label for="mHidePass" class="text-[10px] text-gray-300 font-semibold cursor-pointer">🔒 Ocultar contraseña a los clientes asignados</label>
+                </div>
             </div>
             <div class="flex justify-end gap-3 pt-3"><button onclick="document.getElementById('masterModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-5 py-2.5 rounded">Cancelar</button><button onclick="window.saveMasterAccount()" class="bg-emerald-600 text-white font-black text-xs px-5 py-2.5 rounded">Guardar</button></div>
         </div>
     </div>
 
+    <!-- MODAL EDITAR CUENTA RAÍZ -->
     <div id="editMasterModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-cuycito-dark border border-blue-500 rounded-xl p-6 w-full max-w-sm space-y-4">
-            <h3 class="text-lg font-black text-blue-400 uppercase border-b border-gray-800 pb-2"><i class="fa-solid fa-pen-to-square"></i> Editar Cuenta</h3>
+            <h3 class="text-lg font-black text-blue-400 uppercase border-b border-gray-800 pb-2"><i class="fa-solid fa-pen-to-square"></i> Editar Cuenta Raíz</h3>
             <input type="hidden" id="editMasterId">
             <div class="space-y-3 text-xs font-medium">
                 <div><label class="block text-gray-400 mb-1">Correo</label><input type="text" id="editMasterEmail" class="w-full bg-black border border-gray-700 rounded p-2 text-white"></div>
                 <div><label class="block text-gray-400 mb-1">Contraseña</label><input type="text" id="editMasterPass" class="w-full bg-black border border-gray-700 rounded p-2 text-white"></div>
                 <div><label class="block text-cuycito-gold mb-1 font-bold">Cupos</label><input type="number" id="editMasterCapacity" min="1" class="w-full bg-black border border-cuycito-gold rounded p-2 text-cuycito-gold font-bold text-center"></div>
+                <div class="flex items-center gap-2 pt-1">
+                    <input type="checkbox" id="editMasterHidePass" class="w-3.5 h-3.5 accent-cuycito-gold bg-black border-gray-700">
+                    <label for="editMasterHidePass" class="text-[10px] text-gray-300 font-semibold cursor-pointer">🔒 Ocultar contraseña a los clientes en su portal</label>
+                </div>
             </div>
             <div class="flex justify-end gap-3 pt-3"><button onclick="document.getElementById('editMasterModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-5 py-2.5 rounded">Cancelar</button><button onclick="window.saveEditMasterModal()" class="bg-blue-600 text-white font-black text-xs px-5 py-2.5 rounded">Actualizar</button></div>
         </div>
     </div>
 
+    <!-- MODAL ASIGNAR CLIENTE A CUENTA RAÍZ -->
     <div id="assignModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-cuycito-dark border border-cuycito-gold rounded-xl p-6 w-full max-w-md space-y-4">
             <h3 class="text-lg font-black text-cuycito-gold uppercase border-b border-gray-800 pb-2">Asignar Cliente</h3>
@@ -299,6 +762,7 @@
         </div>
     </div>
 
+    <!-- MODAL EDICIÓN SUSCRIPCIÓN -->
     <div id="editModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-cuycito-dark border border-cuycito-red rounded-xl p-6 w-full max-w-md space-y-4">
             <h3 class="text-lg font-black text-cuycito-gold uppercase border-b border-gray-800 pb-2"><i class="fa-solid fa-pen-to-square"></i> Edición Manual</h3>
@@ -309,6 +773,10 @@
                 <input type="text" id="editServiceCustom" class="hidden w-full bg-black border border-cuycito-gold rounded p-2 text-white mb-2">
                 <input type="text" id="editEmail" class="w-full bg-black border border-gray-700 rounded p-2 text-white" placeholder="Correo">
                 <div class="grid grid-cols-2 gap-3"><input type="text" id="editPass" class="w-full bg-black border border-gray-700 rounded p-2 text-white" placeholder="Contraseña"><input type="text" id="editPin" class="w-full bg-black border border-gray-700 rounded p-2 text-white" placeholder="PIN/Perfil"></div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="editHidePass" class="w-3.5 h-3.5 accent-cuycito-gold bg-black border-gray-700">
+                    <label for="editHidePass" class="text-[10px] text-gray-300 font-semibold cursor-pointer">🔒 Ocultar contraseña al cliente en su portal</label>
+                </div>
                 <div class="grid grid-cols-2 gap-3"><input type="number" step="0.01" id="editAmount" class="w-full bg-black border border-gray-700 rounded p-2 text-white"><select id="editCurrency" class="w-full bg-black border border-gray-700 rounded p-2 text-white"><option value="PEN">PEN (S/)</option><option value="USD">USD ($)</option></select></div>
                 <input type="date" id="editEndDate" class="w-full bg-cuycito-red/20 border border-cuycito-red rounded p-2 text-white font-bold">
             </div>
@@ -319,6 +787,7 @@
         </div>
     </div>
 
+    <!-- MODAL JSON -->
     <div id="jsonModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-cuycito-dark border border-cuycito-gold rounded-xl p-6 w-full max-w-2xl space-y-4">
             <h3 class="text-lg font-black text-cuycito-gold uppercase">Backup Data</h3>
@@ -327,6 +796,7 @@
         </div>
     </div>
 
+    <!-- MODAL INFO DETALLE -->
     <div id="infoModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-cuycito-dark border border-[#0ea5e9] rounded-xl p-6 w-full max-w-sm space-y-4">
             <h3 class="text-lg font-black text-[#0ea5e9] uppercase border-b border-gray-800 pb-2"><i class="fa-solid fa-receipt"></i> Detalle</h3>
