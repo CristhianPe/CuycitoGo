@@ -14,17 +14,17 @@ try {
         });
         console.log("🔥 [Firebase Admin] Inicializado con Service Account Key:", resolvedPath);
     } else {
-        // Inicialización por defecto con Project ID
         admin.initializeApp({
-            projectId: process.env.FIREBASE_PROJECT_ID || "cuycitogo"
+            projectId: process.env.FIREBASE_PROJECT_ID || "cuycitogo-app"
         });
-        console.log("🔥 [Firebase Admin] Inicializado con Project ID predeterminado (cuycitogo)");
+        console.log("🔥 [Firebase Admin] Inicializado con Project ID (cuycitogo-app)");
     }
     db = admin.firestore();
 } catch (error) {
-    console.warn("⚠️ [Firebase Admin] Aviso al inicializar Firebase Admin:", error.message);
     if (admin.apps.length > 0) {
         db = admin.firestore();
+    } else {
+        console.warn("⚠️ [Firebase Admin]:", error.message);
     }
 }
 
