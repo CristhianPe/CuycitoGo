@@ -14,7 +14,7 @@ export const config = {
         user: process.env.IMAP_USER || '',
         password: process.env.IMAP_APP_PASSWORD || '',
         pollIntervalMs: parseInt(process.env.IMAP_POLL_INTERVAL_MS, 10) || 15000,
-        allowedSenders: (process.env.LEMON_ALLOWED_SENDERS || 'no-reply@lemon.me,notificaciones@lemoncash.com,lemon.me,lemoncash.io').split(',').map(s => s.trim().toLowerCase())
+        allowedSenders: (process.env.LEMON_ALLOWED_SENDERS || 'no-reply@lemon.me,notificaciones@lemoncash.com,notificaciones@lemoncash.com.ar,lemon.me,lemoncash.io,lemoncash.com.ar').split(',').map(s => s.trim().toLowerCase())
     },
 
     // Lemon Cash Merchant Data

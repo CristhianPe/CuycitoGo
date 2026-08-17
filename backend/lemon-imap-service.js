@@ -158,33 +158,40 @@ export class LemonImapService {
      * @param {string} subject - Asunto del correo
      */
     parseLemonEmailContent(text, html, subject) {
-        const fullContent = `${subject}\n${text}\n${html.replace(/<[^>]*>?/gm, ' ')}`;
+        const cleanSubj = subject || '';
+        
+        // 1. Ignorar transferencias salientes (ej. "Enviaste S/ 11.27 💸")
+        if (/^enviaste\b/i.test(cleanSubj.trim()) || /has enviado/i.test(text)) {
+            // console.log(`⏩ [Ignorado: Transferencia Saliente] Asunto: "${cleanSubj}"`);
+            return null;
+        }
+
+        const fullContent = `${cleanSubj}\n${text}\n${(html || '').replace(/<[^>]*>?/gm, ' ')}`;
 
         let amount = null;
         let reference = null;
         let sender = null;
 
         // =========================================================================
-        // REGEX 1: Extracción de Monto con céntimos (ej. $10.42 / 10,42 / $ 10.42)
+        // REGEX 1: Extracción de Monto (ej. Recibiste S/ 7, Recibiste S/ 10.43, Recibiste $10.43)
         // =========================================================================
         const amountPatterns = [
-            // "Recibiste $10.42" o "Te transfirieron $10.42"
-            /(?:recibiste|te transfirieron|ingresaron|transferencia recibida|recibido)\s*(?:de)?\s*[:]?\s*(?:[$sS/|ARS|USD|USDT])?\s*([0-9]{1,6}[.,][0-9]{2})/i,
+            // "Recibiste S/ 10.43" o "Recibiste S/ 10" o "Recibiste $10.43"
+            /(?:recibiste|te transfirieron|ingresaron|transferencia recibida|recibido)\s*(?:de)?\s*[:]?\s*(?:[$sS/|ARS|USD|USDT]+)?\s*([0-9]+(?:[.,][0-9]{1,2})?)/i,
             
-            // "Monto: $10.42" o "Importe: $10.42"
-            /(?:monto|importe|total|dinero recibido)\s*[:]?\s*(?:[$sS/|ARS|USD|USDT])?\s*([0-9]{1,6}[.,][0-9]{2})/i,
+            // "Monto: $10.42" o "Importe: S/ 10.42"
+            /(?:monto|importe|total|dinero recibido)\s*[:]?\s*(?:[$sS/|ARS|USD|USDT]+)?\s*([0-9]+(?:[.,][0-9]{1,2})?)/i,
             
-            // "$ 10.42 de @usuario"
-            /(?:[$sS/])\s*([0-9]{1,6}[.,][0-9]{2})\s*(?:de|desde|por)/i,
+            // "$ 10.42 de @usuario" o "S/ 10.42 de..."
+            /(?:[$sS/|ARS|USD])\s*([0-9]+(?:[.,][0-9]{1,2})?)\s*(?:de|desde|por)/i,
 
             // Patrón genérico con símbolo de moneda
-            /(?:[$|USD|ARS|USDT])\s*([0-9]{1,6}[.,][0-9]{2})/i
+            /(?:[$|USD|ARS|USDT]|S\/)\s*([0-9]+(?:[.,][0-9]{1,2})?)/i
         ];
 
         for (const pattern of amountPatterns) {
             const match = fullContent.match(pattern);
             if (match && match[1]) {
-                // Normalizar coma a punto decimal
                 const rawNum = match[1].replace(',', '.');
                 const parsed = parseFloat(rawNum);
                 if (parsed > 0) {
