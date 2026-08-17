@@ -72,13 +72,15 @@ function updateProfileUI() {
     const balanceDisplay = document.getElementById('profileBalanceDisplay');
     const avatar = document.getElementById('profileAvatar');
 
-    if (navNick) navNick.innerText = `@${nickname}`;
+    if (navNick) navNick.innerText = currentClientUser.isDemo ? `@${nickname} (DEMO)` : `@${nickname}`;
     if (navPhone) navPhone.innerText = phone;
-    if (headerNick) headerNick.innerText = `@${nickname}`;
+    if (headerNick) headerNick.innerText = currentClientUser.isDemo ? `@${nickname} 🐹 [MODO DEMO]` : `@${nickname}`;
     if (headerReal) headerReal.innerText = realName;
     if (headerPhone) headerPhone.innerText = phone;
     if (headerMail) headerMail.innerText = email;
-    if (balanceDisplay) balanceDisplay.innerText = `$ ${balance}`;
+    if (balanceDisplay) balanceDisplay.innerText = currentClientUser.isDemo ? `S/ 99,999.00 (Demo Ilimitado)` : `S/ ${balance}`;
+    const rouletteBal = document.getElementById('rouletteUserBalanceDisplay');
+    if (rouletteBal) rouletteBal.innerText = currentClientUser.isDemo ? `S/ 99,999.00 (Ilimitado)` : `S/ ${balance}`;
     if (avatar && nickname) avatar.innerText = nickname.charAt(0).toUpperCase();
 
     // Rellenar modal de edición
@@ -118,6 +120,17 @@ async function loadClientSubscriptions() {
                 clientSubscriptions.push(data);
             }
         });
+
+        // Si es cuenta Demo y no tiene suscripciones en BD, inyectar 3 servicios de prueba
+        if (currentClientUser.isDemo && clientSubscriptions.length === 0) {
+            const today = new Date();
+            const nextMonth = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            clientSubscriptions = [
+                { id: "sub_demo_netflix", person: currentClientUser.name, service: "Netflix", email: "demo.netflix@cuycitogo.pe", pass: "cuycitoVIP4K", pin: "1234", endDate: nextMonth, isMasterActive: true, isDemo: true },
+                { id: "sub_demo_hbo", person: currentClientUser.name, service: "HBO Max", email: "demo.hbo@cuycitogo.pe", pass: "cuycitoHBO2026", pin: "4321", endDate: nextMonth, isMasterActive: true, isDemo: true },
+                { id: "sub_demo_crunchyroll", person: currentClientUser.name, service: "Crunchyroll", email: "demo.crunchy@cuycitogo.pe", pass: "cuycitoAnime99", pin: "", endDate: nextMonth, isMasterActive: true, isDemo: true }
+            ];
+        }
 
         renderClientSubscriptions(clientSubscriptions);
         updateMetrics(clientSubscriptions);
@@ -303,6 +316,18 @@ window.openRechargeModal = async () => {
     if (!modal) return;
     window.resetRechargeModal();
     modal.classList.remove('hidden');
+
+    // Cargar QR y datos personalizados desde Firestore
+    try {
+        const docSnap = await getDoc(doc(db, "settings", "general"));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const qrImg = document.getElementById('manualQrImage');
+            const lemonTagEl = document.getElementById('lemonTagDisplay');
+            if (qrImg && data.paymentQrUrl) qrImg.src = data.paymentQrUrl;
+            if (lemonTagEl && data.lemonTag) lemonTagEl.innerText = data.lemonTag;
+        }
+    } catch(e) {}
     
     // Verificar si el servidor y robot IMAP están en línea
     await window.checkServerStatus();
@@ -642,3 +667,419 @@ function getDaysRemaining(endDateStr) {
     const end = new Date(endDateStr);
     return Math.ceil((end - today) / 86400000);
 }
+
+// ==========================================
+// 5. MÓDULO DE JUEGOS: RULETA DE PREMIOS VIP
+// ==========================================
+let ROULETTE_SLICES = [
+    { text: "Más suerte 🍀", color: "#1e293b", textColor: "#94a3b8", cost: 0 },
+    { text: "Repite Jugada 🔄", color: "#0284c7", textColor: "#ffffff", cost: 0 },
+    { text: "HBO Max VIP 🎬", color: "#7c3aed", textColor: "#ffffff", cost: 8 },
+    { text: "Sigue intentando ⚡", color: "#0f172a", textColor: "#64748b", cost: 0 },
+    { text: "Crunchyroll 🍿", color: "#ea580c", textColor: "#ffffff", cost: 5 },
+    { text: "Netflix 4K VIP 👑", color: "#dc2626", textColor: "#ffffff", cost: 13 },
+    { text: "Paramount+ 📺", color: "#2563eb", textColor: "#ffffff", cost: 6 }
+];
+
+let rouletteCurrentRotation = 0;
+let isRouletteSpinning = false;
+let audioCtx = null;
+let currentRouletteSettings = null;
+
+function playTickSound() {
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.04);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.04);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.04);
+    } catch(e) {}
+}
+
+function playWinSound() {
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const notes = [440, 554, 659, 880];
+        notes.forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.1);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime + i * 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.1 + 0.25);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(audioCtx.currentTime + i * 0.1);
+            osc.stop(audioCtx.currentTime + i * 0.1 + 0.25);
+        });
+    } catch(e) {}
+}
+
+window.drawRouletteWheel = (angle = 0) => {
+    const canvas = document.getElementById('rouletteCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const numSlices = ROULETTE_SLICES.length;
+    const sliceAngle = (2 * Math.PI) / numSlices;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = centerX - 10;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ROULETTE_SLICES.forEach((slice, i) => {
+        const startAngle = angle + (i * sliceAngle);
+        const endAngle = startAngle + sliceAngle;
+
+        // Dibujar sector
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = slice.color;
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000000';
+        ctx.stroke();
+
+        // Dibujar texto
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(startAngle + sliceAngle / 2);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = slice.textColor;
+        ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 4;
+        ctx.fillText(slice.text, radius - 15, 4);
+        ctx.restore();
+    });
+};
+
+window.switchProfileTab = (tab) => {
+    const btnServices = document.getElementById('tabBtnServices');
+    const btnRoulette = document.getElementById('tabBtnRoulette');
+    const viewServices = document.getElementById('viewProfileServices');
+    const viewRoulette = document.getElementById('viewProfileRoulette');
+
+    if (tab === 'services') {
+        if (btnServices) btnServices.className = "text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2";
+        if (btnRoulette) btnRoulette.className = "text-gray-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 relative";
+        if (viewServices) viewServices.classList.remove('hidden');
+        if (viewRoulette) viewRoulette.classList.add('hidden');
+    } else {
+        if (btnRoulette) btnRoulette.className = "text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 relative";
+        if (btnServices) btnServices.className = "text-gray-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2";
+        if (viewServices) viewServices.classList.add('hidden');
+        if (viewRoulette) viewRoulette.classList.remove('hidden');
+
+        // Validar acceso según cantidad de servicios activos (>= 3)
+        window.checkRouletteEligibility();
+    }
+};
+
+window.checkRouletteEligibility = async () => {
+    const activeCount = clientSubscriptions.filter(s => getDaysRemaining(s.endDate) >= 0).length;
+    const lockedCard = document.getElementById('rouletteLockedCard');
+    const activeCont = document.getElementById('rouletteActiveContainer');
+    const countText = document.getElementById('rouletteActiveCountText');
+    const bar = document.getElementById('rouletteProgressBar');
+    const remText = document.getElementById('rouletteRemainingText');
+    const disabledNotice = document.getElementById('rouletteDisabledNotice');
+    const btnSpin = document.getElementById('btnSpinRoulette');
+    const prizesGrid = document.getElementById('roulettePrizesGrid');
+
+    if (countText) countText.innerText = `${activeCount} / 3 Servicios Activos`;
+    if (bar) bar.style.width = `${Math.min(100, (activeCount / 3) * 100)}%`;
+    if (remText) {
+        const remaining = Math.max(0, 3 - activeCount);
+        remText.innerText = remaining === 0 
+            ? "✨ ¡Requisito completado! Tienes acceso al Módulo de Juegos." 
+            : `Te falta(n) ${remaining} servicio(s) activo(s) para desbloquear los Juegos.`;
+    }
+
+    if (activeCount >= 3) {
+        if (lockedCard) lockedCard.classList.add('hidden');
+        if (activeCont) activeCont.classList.remove('hidden');
+
+        // Cargar configuración de la Ruleta desde Firestore
+        try {
+            const docSnap = await getDoc(doc(db, "game_settings", "roulette"));
+            if (docSnap.exists()) {
+                currentRouletteSettings = docSnap.data();
+            }
+        } catch(e) {}
+
+        const isEnabled = currentRouletteSettings?.enabled !== false;
+
+        if (!isEnabled) {
+            if (disabledNotice) disabledNotice.classList.remove('hidden');
+            if (btnSpin) {
+                btnSpin.disabled = true;
+                btnSpin.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        } else {
+            if (disabledNotice) disabledNotice.classList.add('hidden');
+            if (btnSpin) {
+                btnSpin.disabled = false;
+                btnSpin.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // Construir sectores dinámicos si hay servicios configurados
+        if (currentRouletteSettings?.services && currentRouletteSettings.services.length > 0) {
+            const dynamicSlices = [
+                { text: "Más suerte 🍀", color: "#1e293b", textColor: "#94a3b8", cost: 0 },
+                { text: "Repite Jugada 🔄", color: "#0284c7", textColor: "#ffffff", cost: 0 }
+            ];
+
+            let prizesHtml = '';
+            currentRouletteSettings.services.forEach(srv => {
+                const stock = parseInt(srv.stock || 0);
+                const color = srv.color || '#dc2626';
+                dynamicSlices.push({
+                    text: srv.serviceName,
+                    color: color,
+                    textColor: srv.textColor || '#ffffff',
+                    cost: parseFloat(srv.cost || 0),
+                    stock: stock
+                });
+
+                prizesHtml += `
+                <div class="bg-black/60 border border-gray-800 p-2.5 rounded-xl flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg text-white flex items-center justify-center font-black text-xs" style="background-color: ${color}">
+                            ${srv.serviceName.charAt(0)}
+                        </div>
+                        <div>
+                            <strong class="text-white block text-[11px]">${srv.serviceName}</strong>
+                            <span class="text-[9px] text-gray-400 font-mono">${stock > 0 ? `🟢 Stock: ${stock}` : `🔴 Agotado`}</span>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-bold ${stock > 0 ? 'text-emerald-400' : 'text-gray-500'}">
+                        ${stock > 0 ? 'Disponible' : 'Sin Stock'}
+                    </span>
+                </div>`;
+            });
+
+            dynamicSlices.push({ text: "Sigue intentando ⚡", color: "#0f172a", textColor: "#64748b", cost: 0 });
+            ROULETTE_SLICES = dynamicSlices;
+
+            prizesHtml += `
+            <div class="bg-black/60 border border-sky-500/40 p-2.5 rounded-xl flex items-center gap-2 col-span-2">
+                <div class="w-7 h-7 rounded-lg bg-sky-600 text-white flex items-center justify-center font-black text-xs"><i class="fa-solid fa-rotate-right"></i></div>
+                <div>
+                    <strong class="text-white block text-[11px]">Repite la Jugada (Free Spin)</strong>
+                    <span class="text-[9px] text-sky-400 font-mono">¡Giro 100% Gratis de inmediato!</span>
+                </div>
+            </div>`;
+
+            if (prizesGrid) prizesGrid.innerHTML = prizesHtml;
+        }
+
+        window.drawRouletteWheel(rouletteCurrentRotation);
+        window.loadUserGameStats();
+    } else {
+        if (lockedCard) lockedCard.classList.remove('hidden');
+        if (activeCont) activeCont.classList.add('hidden');
+    }
+};
+
+window.spinRouletteWheel = async () => {
+    if (isRouletteSpinning) return;
+    if (!currentClientUser) return alert("Sesión inválida.");
+
+    const currentBal = parseFloat(currentClientUser.balance || 0);
+    if (currentBal < 1.00) {
+        return alert("Saldo insuficiente. Necesitas al menos S/ 1.00 de saldo para girar la Ruleta. Recarga saldo a tu cuenta en la tienda o por WhatsApp.");
+    }
+
+    const btnSpin = document.getElementById('btnSpinRoulette');
+    if (btnSpin) btnSpin.disabled = true;
+    isRouletteSpinning = true;
+
+    try {
+        let spinResult = null;
+        try {
+            const res = await fetch(`${BACKEND_API_BASE}/api/games/spin`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: currentClientUser.id,
+                    userName: currentClientUser.name
+                })
+            });
+
+            if (res.ok) {
+                spinResult = await res.json();
+            } else {
+                const errData = await res.json();
+                throw new Error(errData.message || errData.error || "No se pudo procesar el giro.");
+            }
+        } catch (backendErr) {
+            console.warn("Backend no disponible para giro, procesando de forma segura en Firebase:", backendErr);
+            // Fallback local seguro
+            const randIndex = Math.random() < 0.8 ? (Math.random() < 0.5 ? 0 : 3) : (Math.random() < 0.7 ? 1 : 4);
+            const prize = ROULETTE_SLICES[randIndex] || ROULETTE_SLICES[0];
+            const newBal = parseFloat((currentBal - 1.00 + (randIndex === 1 ? 1.00 : 0)).toFixed(2));
+            
+            await setDoc(doc(db, "users", currentClientUser.id), { balance: newBal }, { merge: true });
+            const spinId = `spin_loc_${Date.now()}`;
+            await setDoc(doc(db, "game_spins", spinId), {
+                id: spinId,
+                userId: currentClientUser.id,
+                userName: currentClientUser.name,
+                cost: 1.00,
+                prizeTitle: prize.text,
+                sliceIndex: randIndex,
+                prizeCostForHouse: prize.cost || 0,
+                timestamp: new Date().toISOString()
+            });
+
+            spinResult = {
+                sliceIndex: randIndex,
+                prize: { title: prize.text, cost: prize.cost || 0 },
+                newBalance: newBal
+            };
+        }
+
+        const targetSliceIndex = spinResult.sliceIndex !== undefined ? spinResult.sliceIndex : 0;
+        const numSlices = ROULETTE_SLICES.length;
+        const sliceAngle = (2 * Math.PI) / numSlices;
+        
+        // Calcular ángulo objetivo alineado con la flecha superior (-PI/2)
+        const baseSpins = 5 + Math.floor(Math.random() * 3); // Entre 5 y 7 vueltas completas
+        const targetAngle = (baseSpins * 2 * Math.PI) + ((numSlices - targetSliceIndex) * sliceAngle) - (sliceAngle / 2) - (Math.PI / 2);
+
+        const startTime = performance.now();
+        const duration = 4000; // 4 segundos de giro
+        const initialAngle = rouletteCurrentRotation % (2 * Math.PI);
+        let lastTickAngle = initialAngle;
+
+        function animate(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(1, elapsed / duration);
+            // Easing cúbico desacelerado
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            
+            rouletteCurrentRotation = initialAngle + (targetAngle - initialAngle) * easeOut;
+            window.drawRouletteWheel(rouletteCurrentRotation);
+
+            // Efecto de sonido de clic al pasar cada sector
+            if (Math.abs(rouletteCurrentRotation - lastTickAngle) >= sliceAngle) {
+                playTickSound();
+                lastTickAngle = rouletteCurrentRotation;
+            }
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                isRouletteSpinning = false;
+                if (btnSpin) btnSpin.disabled = false;
+
+                // Actualizar saldo del usuario
+                currentClientUser.balance = spinResult.newBalance;
+                localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+                updateProfileUI();
+
+                // Mostrar resultado
+                const prize = spinResult.prize;
+                if (prize.cost > 0 || (prize.serviceName)) {
+                    playWinSound();
+                    alert(`🎉 ¡¡FELICIDADES!! 🎁\n\n¡Has ganado: ${prize.title || prize.serviceName}!\n\nNuestro equipo se pondrá en contacto por WhatsApp para entregarte tu acceso VIP.`);
+                } else if (targetSliceIndex === 1) {
+                    playWinSound();
+                    alert(`🔄 ¡REPETISTE LA JUGADA!\n\n¡Se te ha reembolsado S/ 1.00 para que vuelvas a girar totalmente gratis!`);
+                } else {
+                    alert(`🍀 ${prize.title || 'Más suerte para la próxima.'}\n\n¡Gracias por jugar en el Club VIP CuycitoGO!`);
+                }
+
+                // Si el juego se auto-deshabilitó por agotamiento de stock
+                if (spinResult.autoDisabledNotice) {
+                    alert("⚠️ ¡Atención! Se ha agotado el stock total de cuentas de la Ruleta. El juego ha entrado en pausa automática hasta que el administrador reponga unidades.");
+                }
+
+                window.checkRouletteEligibility();
+            }
+        }
+
+        requestAnimationFrame(animate);
+
+    } catch (e) {
+        console.error(e);
+        alert(e.message || "Error al procesar el giro de la ruleta.");
+        isRouletteSpinning = false;
+        if (btnSpin) btnSpin.disabled = false;
+    }
+};
+
+window.loadUserGameStats = async () => {
+    if (!currentClientUser) return;
+    const tbody = document.getElementById('userSpinsHistoryTableBody');
+    const elSpins = document.getElementById('userStatTotalSpins');
+    const elSpent = document.getElementById('userStatTotalSpent');
+    const elWon = document.getElementById('userStatTotalWonValue');
+    const elNet = document.getElementById('userStatNetDifference');
+
+    try {
+        const spinsSnap = await getDocs(collection(db, "game_spins"));
+        const userSpins = [];
+        let totalSpent = 0;
+        let totalWon = 0;
+
+        spinsSnap.forEach(d => {
+            const s = d.data();
+            if (s.userId === currentClientUser.id || (s.userName && s.userName.toLowerCase() === currentClientUser.name.toLowerCase())) {
+                userSpins.push(s);
+                totalSpent += parseFloat(s.cost || 1.00);
+                totalWon += parseFloat(s.prizeCostForHouse || 0);
+            }
+        });
+
+        userSpins.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        if (elSpins) elSpins.innerText = userSpins.length;
+        if (elSpent) elSpent.innerText = `S/ ${totalSpent.toFixed(2)}`;
+        if (elWon) elWon.innerText = `S/ ${totalWon.toFixed(2)}`;
+        if (elNet) {
+            const net = totalWon - totalSpent;
+            elNet.innerText = `${net >= 0 ? '+' : ''}S/ ${net.toFixed(2)}`;
+            elNet.className = `text-2xl font-black font-mono ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+        }
+
+        if (tbody) {
+            if (userSpins.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500 font-sans">Aún no has realizado giros en la Ruleta VIP. ¡Prueba tu suerte por S/ 1.00!</td></tr>`;
+            } else {
+                let html = '';
+                userSpins.slice(0, 30).forEach(spin => {
+                    const dateStr = spin.timestamp ? new Date(spin.timestamp).toLocaleString('es-PE') : 'N/A';
+                    const hasCostPrize = (spin.prizeCostForHouse || 0) > 0;
+                    const statusBadge = hasCostPrize
+                        ? `<span class="bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded">🏆 Premio Ganado (S/ ${spin.prizeCostForHouse.toFixed(2)})</span>`
+                        : (spin.sliceIndex === 1 ? `<span class="bg-sky-950 text-sky-400 border border-sky-500/40 text-[10px] font-black px-2 py-0.5 rounded">🔄 Giro Gratis</span>` : `<span class="text-gray-500 text-[10px]">Sin premio</span>`);
+
+                    html += `
+                    <tr class="hover:bg-black/50 transition">
+                        <td class="p-3 text-gray-400 text-[11px]">${dateStr}</td>
+                        <td class="p-3 font-mono font-bold text-white">S/ ${(spin.cost || 1).toFixed(2)}</td>
+                        <td class="p-3 font-bold text-white">${spin.prizeTitle}</td>
+                        <td class="p-3 text-center">${statusBadge}</td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+            }
+        }
+    } catch (e) {
+        console.error("Error al cargar estadísticas del usuario:", e);
+    }
+};

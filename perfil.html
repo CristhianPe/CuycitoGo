@@ -127,84 +127,257 @@
             </div>
         </section>
 
-        <!-- Tarjetas de Métricas de Servicios -->
-        <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div class="bg-[#121212] border border-gray-800/80 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-gray-400 mb-2">
-                    <span class="text-[11px] uppercase font-extrabold tracking-wider">Total Comprados</span>
-                    <i class="fa-solid fa-layer-group text-cuycito-gold"></i>
+        <!-- NAVEGACIÓN ENTRE SERVICIOS Y JUEGOS -->
+        <div class="flex items-center gap-3 border-b border-gray-800 pb-2">
+            <button id="tabBtnServices" onclick="window.switchProfileTab('services')" class="text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2">
+                <i class="fa-solid fa-layer-group"></i> Mis Servicios Contratados
+            </button>
+            <button id="tabBtnRoulette" onclick="window.switchProfileTab('roulette')" class="text-gray-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 relative">
+                <span class="text-base">🎮</span> Juegos
+                <span class="bg-gradient-to-r from-cuycito-red to-amber-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow glow-red animate-pulse">S/ 1.00</span>
+            </button>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- VISTA 1: MIS SERVICIOS CONTRATADOS                        -->
+        <!-- ========================================================= -->
+        <section id="viewProfileServices" class="space-y-6">
+            <!-- Tarjetas de Métricas de Servicios -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="bg-[#121212] border border-gray-800/80 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-gray-400 mb-2">
+                        <span class="text-[11px] uppercase font-extrabold tracking-wider">Total Comprados</span>
+                        <i class="fa-solid fa-layer-group text-cuycito-gold"></i>
+                    </div>
+                    <p id="metricTotal" class="text-2xl sm:text-3xl font-black text-white">0</p>
                 </div>
-                <p id="metricTotal" class="text-2xl sm:text-3xl font-black text-white">0</p>
+
+                <div class="bg-[#121212] border border-emerald-900/40 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-emerald-400 mb-2">
+                        <span class="text-[11px] uppercase font-extrabold tracking-wider">🟢 Activos</span>
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <p id="metricActive" class="text-2xl sm:text-3xl font-black text-emerald-400">0</p>
+                </div>
+
+                <div class="bg-[#121212] border border-amber-900/40 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-cuycito-gold mb-2">
+                        <span class="text-[11px] uppercase font-extrabold tracking-wider">🟡 Por Vencer</span>
+                        <i class="fa-solid fa-triangle-exclamation animate-pulse"></i>
+                    </div>
+                    <p id="metricExpiring" class="text-2xl sm:text-3xl font-black text-cuycito-gold">0</p>
+                </div>
+
+                <div class="bg-[#121212] border border-red-950/50 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-red-400 mb-2">
+                        <span class="text-[11px] uppercase font-extrabold tracking-wider">🔴 Vencidos</span>
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <p id="metricExpired" class="text-2xl sm:text-3xl font-black text-red-400">0</p>
+                </div>
             </div>
 
-            <div class="bg-[#121212] border border-emerald-900/40 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-emerald-400 mb-2">
-                    <span class="text-[11px] uppercase font-extrabold tracking-wider">🟢 Activos</span>
-                    <i class="fa-solid fa-circle-check"></i>
-                </div>
-                <p id="metricActive" class="text-2xl sm:text-3xl font-black text-emerald-400">0</p>
-            </div>
+            <!-- Lista de Servicios Comprados -->
+            <div class="bg-[#121212] border border-gray-800/80 rounded-3xl overflow-hidden shadow-2xl space-y-4">
+                <div class="p-5 border-b border-gray-800 bg-[#0a0a0a]/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-black text-white flex items-center gap-2.5">
+                            <i class="fa-solid fa-ticket text-cuycito-gold"></i> Mis Servicios Contratados
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Tus cuentas y accesos directos actualizados en tiempo real.</p>
+                    </div>
 
-            <div class="bg-[#121212] border border-amber-900/40 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-cuycito-gold mb-2">
-                    <span class="text-[11px] uppercase font-extrabold tracking-wider">🟡 Por Vencer</span>
-                    <i class="fa-solid fa-triangle-exclamation animate-pulse"></i>
-                </div>
-                <p id="metricExpiring" class="text-2xl sm:text-3xl font-black text-cuycito-gold">0</p>
-            </div>
+                    <div class="flex flex-wrap items-center gap-3 text-xs">
+                        <div class="relative flex-1 sm:w-60">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <input 
+                                type="text" 
+                                id="searchServiceInput" 
+                                oninput="window.filterServicesList()" 
+                                placeholder="Buscar en mis cuentas..." 
+                                class="w-full bg-[#0a0a0a] border border-gray-800 rounded-xl pl-9 pr-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-cuycito-gold transition"
+                            >
+                        </div>
 
-            <div class="bg-[#121212] border border-red-950/50 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-red-400 mb-2">
-                    <span class="text-[11px] uppercase font-extrabold tracking-wider">🔴 Vencidos</span>
-                    <i class="fa-solid fa-clock-rotate-left"></i>
+                        <select 
+                            id="statusServiceFilter" 
+                            onchange="window.filterServicesList()" 
+                            class="bg-[#0a0a0a] border border-gray-800 text-gray-300 font-bold rounded-xl px-3 py-2.5 outline-none focus:border-cuycito-gold transition"
+                        >
+                            <option value="ALL">Todos los Estados</option>
+                            <option value="ACTIVE">🟢 Solo Activos</option>
+                            <option value="EXPIRING">🟡 Próximos a Vencer</option>
+                            <option value="EXPIRED">🔴 Vencidos</option>
+                        </select>
+                    </div>
                 </div>
-                <p id="metricExpired" class="text-2xl sm:text-3xl font-black text-red-400">0</p>
+
+                <div id="servicesContainer" class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="col-span-full py-16 text-center text-gray-500 space-y-3">
+                        <i class="fa-solid fa-spinner fa-spin text-3xl text-cuycito-gold"></i>
+                        <p class="text-sm">Cargando tus servicios contratados...</p>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <!-- Lista de Servicios Comprados -->
-        <section class="bg-[#121212] border border-gray-800/80 rounded-3xl overflow-hidden shadow-2xl space-y-4">
+        <!-- ========================================================= -->
+        <!-- VISTA 2: RULETA DE PREMIOS VIP (3+ SERVICIOS ACTIVOS)    -->
+        <!-- ========================================================= -->
+        <section id="viewProfileRoulette" class="hidden space-y-6">
             
-            <!-- Barra de Filtro y Búsqueda -->
-            <div class="p-5 border-b border-gray-800 bg-[#0a0a0a]/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-lg font-black text-white flex items-center gap-2.5">
-                        <i class="fa-solid fa-ticket text-cuycito-gold"></i> Mis Servicios Contratados
-                    </h2>
-                    <p class="text-xs text-gray-400 mt-0.5">Tus cuentas y accesos directos actualizados en tiempo real.</p>
+            <!-- 1. BLOQUEO SI TIENE MENOS DE 3 SERVICIOS ACTIVOS -->
+            <div id="rouletteLockedCard" class="hidden bg-gradient-to-br from-amber-950/40 via-black to-[#121212] border-2 border-cuycito-gold/50 rounded-3xl p-8 sm:p-12 text-center space-y-5 shadow-2xl glow-gold">
+                <div class="w-20 h-20 mx-auto rounded-3xl bg-cuycito-gold/10 border-2 border-cuycito-gold flex items-center justify-center text-4xl text-cuycito-gold shadow-lg animate-bounce">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                
+                <div class="max-w-xl mx-auto space-y-2">
+                    <span class="text-xs font-black uppercase tracking-widest text-cuycito-gold">Beneficio Exclusivo Club VIP</span>
+                    <h3 class="text-2xl sm:text-3xl font-black text-white">Ruleta de Premios Bloqueada</h3>
+                    <p id="rouletteLockMessage" class="text-sm text-gray-300 leading-relaxed">
+                        Para girar la Ruleta y ganar cuentas completas de <strong>Netflix, HBO Max, Crunchyroll</strong> y más por solo <strong>S/ 1.00</strong>, necesitas tener <strong>3 servicios activos o más</strong>.
+                    </p>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-3 text-xs">
-                    <div class="relative flex-1 sm:w-60">
-                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <input 
-                            type="text" 
-                            id="searchServiceInput" 
-                            oninput="window.filterServicesList()" 
-                            placeholder="Buscar en mis cuentas..." 
-                            class="w-full bg-[#0a0a0a] border border-gray-800 rounded-xl pl-9 pr-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-cuycito-gold transition"
-                        >
+                <!-- Progreso de Servicios Activos -->
+                <div class="max-w-md mx-auto bg-black/80 border border-gray-800 rounded-2xl p-4 space-y-2">
+                    <div class="flex justify-between text-xs font-bold">
+                        <span class="text-gray-400">Tus Servicios Activos:</span>
+                        <span id="rouletteActiveCountText" class="text-cuycito-gold font-mono">0 / 3 Servicios</span>
                     </div>
+                    <div class="w-full bg-gray-900 rounded-full h-3 overflow-hidden border border-gray-800">
+                        <div id="rouletteProgressBar" class="bg-gradient-to-r from-cuycito-red to-cuycito-gold h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <p id="rouletteRemainingText" class="text-[11px] text-gray-400 text-left">Te falta(n) 3 servicio(s) para desbloquear la Ruleta.</p>
+                </div>
 
-                    <select 
-                        id="statusServiceFilter" 
-                        onchange="window.filterServicesList()" 
-                        class="bg-[#0a0a0a] border border-gray-800 text-gray-300 font-bold rounded-xl px-3 py-2.5 outline-none focus:border-cuycito-gold transition"
-                    >
-                        <option value="ALL">Todos los Estados</option>
-                        <option value="ACTIVE">🟢 Solo Activos</option>
-                        <option value="EXPIRING">🟡 Próximos a Vencer</option>
-                        <option value="EXPIRED">🔴 Vencidos</option>
-                    </select>
+                <div>
+                    <a href="index.html" class="inline-flex items-center gap-2 bg-gradient-to-r from-cuycito-red to-cuycito-gold hover:from-cuycito-redHover hover:to-yellow-500 text-black font-black text-sm px-8 py-3.5 rounded-2xl transition shadow-xl glow-red">
+                        <i class="fa-solid fa-cart-shopping"></i> Comprar Servicios en Tienda y Desbloquear
+                    </a>
                 </div>
             </div>
 
-            <!-- Contenedor de Servicios (Grilla / Tarjetas) -->
-            <div id="servicesContainer" class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="col-span-full py-16 text-center text-gray-500 space-y-3">
-                    <i class="fa-solid fa-spinner fa-spin text-3xl text-cuycito-gold"></i>
-                    <p class="text-sm">Cargando tus servicios contratados...</p>
+            <!-- 2. CONSOLA DE JUEGOS Y RULETA INTERACTIVA (DESBLOQUEADA) -->
+            <div id="rouletteActiveContainer" class="hidden space-y-6">
+                
+                <!-- Tablero Principal de la Ruleta -->
+                <div class="bg-[#121212] border-2 border-cuycito-gold/60 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(255,183,3,0.15)] flex flex-col lg:flex-row items-center justify-around gap-8">
+                    
+                    <!-- Lado Izquierdo: Ruleta Visual Canvas -->
+                    <div class="relative flex flex-col items-center justify-center">
+                        
+                        <!-- Puntero / Flecha Indicadora Superior -->
+                        <div class="absolute -top-3 z-20 text-3xl text-cuycito-gold filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
+                            <i class="fa-solid fa-caret-down animate-bounce"></i>
+                        </div>
+
+                        <!-- Canvas de la Ruleta -->
+                        <div class="relative p-2 rounded-full bg-gradient-to-b from-cuycito-gold via-amber-700 to-black shadow-2xl border-4 border-black">
+                            <canvas id="rouletteCanvas" width="360" height="360" class="rounded-full shadow-inner"></canvas>
+                            
+                            <!-- Botón Central de Giro -->
+                            <button id="btnSpinRoulette" onclick="window.spinRouletteWheel()" class="absolute inset-0 m-auto w-24 h-24 rounded-full bg-gradient-to-tr from-cuycito-red via-red-600 to-yellow-500 text-white font-black text-xs uppercase tracking-wider flex flex-col items-center justify-center border-4 border-white/80 shadow-[0_0_25px_rgba(230,57,70,0.8)] hover:scale-105 active:scale-95 transition-all z-10">
+                                <span class="text-sm">🎰</span>
+                                <span class="font-extrabold text-[11px] leading-tight">GIRAR</span>
+                                <span class="text-[9px] text-yellow-200 font-mono">S/ 1.00</span>
+                            </button>
+                        </div>
+
+                        <div class="mt-4 text-center">
+                            <span class="text-[11px] text-gray-400 font-bold bg-black/60 px-4 py-1.5 rounded-full border border-gray-800">
+                                Costo fijo: <strong class="text-emerald-400">S/ 1.00</strong> por intento
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Lado Derecho: Premios Posibles & Saldo del Jugador -->
+                    <div class="w-full lg:max-w-md space-y-4">
+                        <div class="space-y-1">
+                            <span class="text-[10px] font-extrabold uppercase tracking-widest text-cuycito-gold">Club VIP Exclusivo</span>
+                            <h3 class="text-2xl font-black text-white">Premios de la Ruleta 🎁</h3>
+                            <p class="text-xs text-gray-400">Gira por solo 1 Sol y llévate cuentas de streaming completas de inmediato.</p>
+                        </div>
+
+                        <!-- Aviso si la Ruleta está Deshabilitada por Admin / Sin Stock -->
+                        <div id="rouletteDisabledNotice" class="hidden bg-red-950/70 border-2 border-red-500/80 rounded-2xl p-4 text-center space-y-2">
+                            <div class="flex items-center justify-center gap-2 text-red-400 font-black text-sm">
+                                <i class="fa-solid fa-triangle-exclamation animate-pulse"></i> Juego en Mantenimiento / Sin Stock
+                            </div>
+                            <p class="text-xs text-gray-300">La Ruleta VIP está temporalmente en pausa mientras se reponen cuentas en stock. ¡Vuelve pronto!</p>
+                        </div>
+
+                        <!-- Lista Dinámica de Premios en Juego -->
+                        <div id="roulettePrizesGrid" class="grid grid-cols-2 gap-2 text-xs">
+                            <div class="col-span-2 text-center text-gray-500 py-3">Cargando premios disponibles...</div>
+                        </div>
+
+                        <!-- Caja de Saldo & Estado del Jugador (Sin Botón de Recarga) -->
+                        <div class="bg-gradient-to-r from-emerald-950/40 to-black border border-emerald-500/40 rounded-2xl p-4 flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] text-gray-400 uppercase font-bold block"><i class="fa-solid fa-wallet text-emerald-400 mr-1"></i> Tu Saldo VIP Disponible:</span>
+                                <strong id="rouletteUserBalanceDisplay" class="text-xl font-black text-emerald-400 font-mono">S/ 0.00</strong>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[10px] text-gray-400 bg-black/60 border border-gray-800 px-3 py-1.5 rounded-xl font-mono block">
+                                    Consumo directo de saldo
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- 3. RESUMEN FINANCIERO PERSONAL DEL CLIENTE EN EL JUEGO -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="bg-[#121212] border border-gray-800 rounded-2xl p-4 space-y-1">
+                        <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Tus Giros Totales</span>
+                        <h4 id="userStatTotalSpins" class="text-2xl font-black text-white font-mono">0</h4>
+                    </div>
+                    <div class="bg-[#121212] border border-red-950/40 rounded-2xl p-4 space-y-1">
+                        <span class="text-[10px] text-red-400 font-bold uppercase tracking-wider">Total Gastado</span>
+                        <h4 id="userStatTotalSpent" class="text-2xl font-black text-red-400 font-mono">S/ 0.00</h4>
+                    </div>
+                    <div class="bg-[#121212] border border-emerald-950/40 rounded-2xl p-4 space-y-1">
+                        <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Valor Premios Ganados</span>
+                        <h4 id="userStatTotalWonValue" class="text-2xl font-black text-emerald-400 font-mono">S/ 0.00</h4>
+                    </div>
+                    <div class="bg-[#121212] border border-cuycito-gold/40 rounded-2xl p-4 space-y-1">
+                        <span class="text-[10px] text-cuycito-gold font-bold uppercase tracking-wider">Balance Neto</span>
+                        <h4 id="userStatNetDifference" class="text-2xl font-black text-cuycito-gold font-mono">S/ 0.00</h4>
+                    </div>
+                </div>
+
+                <!-- 4. TABLA DE HISTORIAL DE JUGADAS DEL CLIENTE -->
+                <div class="bg-[#121212] border border-gray-800 rounded-3xl overflow-hidden shadow-2xl">
+                    <div class="p-4 border-b border-gray-800 bg-black/60 flex items-center justify-between">
+                        <h3 class="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-cuycito-gold"></i> Historial de Mis Giros en la Ruleta
+                        </h3>
+                        <button onclick="window.loadUserGameStats()" class="text-xs text-gray-400 hover:text-white transition">
+                            <i class="fa-solid fa-arrows-rotate"></i> Actualizar
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[300px] custom-scrollbar">
+                        <table class="w-full text-left text-xs text-gray-400">
+                            <thead class="bg-black text-gray-300 uppercase tracking-wider font-extrabold text-[10px] sticky top-0">
+                                <tr>
+                                    <th class="p-3">Fecha y Hora</th>
+                                    <th class="p-3">Costo</th>
+                                    <th class="p-3">Resultado Obtenido</th>
+                                    <th class="p-3 text-center">Estado del Premio</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userSpinsHistoryTableBody" class="divide-y divide-gray-800 font-mono">
+                                <tr>
+                                    <td colspan="4" class="p-8 text-center text-gray-500 font-sans">Aún no has realizado giros en la Ruleta VIP. ¡Prueba tu suerte por S/ 1.00!</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </section>
 

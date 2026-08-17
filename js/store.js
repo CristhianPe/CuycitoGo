@@ -519,23 +519,20 @@ function updateCartUI() {
             const userBalance = parseFloat(user.balance || 0);
             
             if (balanceBox) balanceBox.classList.remove('hidden');
-            if (balanceText) balanceText.innerText = `$ ${userBalance.toFixed(2)} USD`;
+            if (balanceText) balanceText.innerText = user.isDemo ? `S/ 99,999.00 (Demo Ilimitado)` : `S/ ${userBalance.toFixed(2)}`;
             if (clientNameInput && !clientNameInput.value) {
                 clientNameInput.value = `@${user.nickname || user.name}`;
             }
 
-            // Tipo de cambio referencial USD a PEN (aprox 3.75) para comparar saldo
-            const totalInUSD = total / 3.75;
-
-            if (userBalance >= totalInUSD || userBalance >= total) {
+            if (user.isDemo || userBalance >= total) {
                 if (btnPayBalance) btnPayBalance.classList.remove('hidden');
                 if (balanceNotice) {
-                    balanceNotice.innerHTML = `✨ <strong class="text-emerald-400">¡Tienes saldo suficiente!</strong> Puedes comprar de inmediato con 1 clic.`;
+                    balanceNotice.innerHTML = `✨ <strong class="text-emerald-400">¡Tienes saldo suficiente ${user.isDemo ? '(Demo Ilimitado)' : `(S/ ${userBalance.toFixed(2)})`}!</strong> Puedes comprar de inmediato con 1 clic.`;
                 }
             } else {
                 if (btnPayBalance) btnPayBalance.classList.add('hidden');
                 if (balanceNotice) {
-                    balanceNotice.innerHTML = `💡 Saldo disponible: $${userBalance.toFixed(2)} USD. Puedes <a href="perfil.html" class="text-cuycito-gold underline font-bold">recargar aquí</a> o solicitar por WhatsApp.`;
+                    balanceNotice.innerHTML = `💡 Saldo disponible: S/ ${userBalance.toFixed(2)}. Puedes <a href="perfil.html" class="text-cuycito-gold underline font-bold">recargar aquí</a> o solicitar por WhatsApp.`;
                 }
             }
         } catch (e) {}
@@ -566,46 +563,47 @@ window.payOrderWithBalance = async () => {
         itemsText += `  ${index + 1}. *${item.title}* x${item.quantity} (S/ ${subtotal.toFixed(2)})\n`;
     });
 
-    const totalInUSD = parseFloat((total / 3.75).toFixed(2));
     const currentBalance = parseFloat(user.balance || 0);
 
-    if (currentBalance < totalInUSD && currentBalance < total) {
-        return alert(`Saldo insuficiente. Tienes $${currentBalance.toFixed(2)} y el total equivale a $${totalInUSD.toFixed(2)} USD.`);
+    if (!user.isDemo && currentBalance < total) {
+        return alert(`Saldo insuficiente. Tienes S/ ${currentBalance.toFixed(2)} y el total del pedido es S/ ${total.toFixed(2)}.`);
     }
 
-    if (!confirm(`¿Confirmar compra por S/ ${total.toFixed(2)} ($${totalInUSD.toFixed(2)} USD) descontando de tu Saldo VIP?`)) return;
+    if (!confirm(`¿Confirmar compra por S/ ${total.toFixed(2)} descontando de tu Saldo VIP${user.isDemo ? ' [MODO DEMO]' : ''}?`)) return;
 
     try {
-        const newBalance = parseFloat(Math.max(0, currentBalance - totalInUSD).toFixed(2));
-        user.balance = newBalance;
+        if (!user.isDemo) {
+            const newBalance = parseFloat(Math.max(0, currentBalance - total).toFixed(2));
+            user.balance = newBalance;
 
-        // 1. Descontar saldo en Firestore
-        await setDoc(doc(db, "users", user.id), { balance: newBalance }, { merge: true });
-        localStorage.setItem("cuycitoClient", JSON.stringify(user));
+            // 1. Descontar saldo en Firestore
+            await setDoc(doc(db, "users", user.id), { balance: newBalance }, { merge: true });
+            localStorage.setItem("cuycitoClient", JSON.stringify(user));
 
-        // 2. Registrar en historial contable
-        const txId = `tx_pay_${Date.now()}`;
-        const txData = {
-            id: txId,
-            date: new Date().toISOString().split('T')[0],
-            type: 'VENTA_SALDO',
-            person: user.name || user.nickname,
-            service: `Compra Carrito (${cart.length} productos)`,
-            amount: total,
-            currency: 'PEN',
-            userId: user.id
-        };
-        await setDoc(doc(db, "history", txId), txData);
+            // 2. Registrar en historial contable
+            const txId = `tx_pay_${Date.now()}`;
+            const txData = {
+                id: txId,
+                date: new Date().toISOString().split('T')[0],
+                type: 'VENTA_SALDO',
+                person: user.name || user.nickname,
+                service: `Compra Carrito (${cart.length} productos)`,
+                amount: total,
+                currency: 'PEN',
+                userId: user.id
+            };
+            await setDoc(doc(db, "history", txId), txData);
+        }
 
         // 3. Notificar automáticamente a WhatsApp con el detalle
         const nick = user.nickname || user.name;
-        const msg = `🐹 *¡COMPRA DIRECTA CON SALDO VIP - CUYCITOGO!* 🐹\n\n👤 *Cliente:* ${user.name} (@${nick})\n📱 *Teléfono:* ${user.phone}\n\n📦 *Productos Comprados:*\n${itemsText}━━━━━━━━━━━━━━━━━━━━━\n💰 *Total Pagado con Saldo:* S/ ${total.toFixed(2)} (~$${totalInUSD.toFixed(2)} USD)\n💳 *Nuevo Saldo Restante:* $${newBalance.toFixed(2)} USD\n━━━━━━━━━━━━━━━━━━━━━\n\n¡Por favor registrar y entregar mis credenciales/pantallas en el sistema! 🙌`;
+        const msg = `🐹 *¡COMPRA DIRECTA CON SALDO VIP - CUYCITOGO!* 🐹${user.isDemo ? ' [MODO DEMO]' : ''}\n\n👤 *Cliente:* ${user.name} (@${nick})\n📱 *Teléfono:* ${user.phone}\n\n📦 *Productos Comprados:*\n${itemsText}━━━━━━━━━━━━━━━━━━━━━\n💰 *Total Pagado con Saldo:* S/ ${total.toFixed(2)}\n💳 *Nuevo Saldo Restante:* ${user.isDemo ? 'S/ 99,999.00 (Demo Ilimitado)' : `S/ ${user.balance.toFixed(2)}`}\n━━━━━━━━━━━━━━━━━━━━━\n\n¡Por favor registrar y entregar mis credenciales/pantallas en el sistema! 🙌`;
 
         window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
 
         window.clearCart();
         window.toggleCartDrawer();
-        alert(`🎉 ¡Compra exitosa! Se descontaron $${totalInUSD.toFixed(2)} USD de tu saldo VIP. Revisa tu WhatsApp para la entrega de credenciales.`);
+        alert(`🎉 ¡Compra exitosa${user.isDemo ? ' (MODO DEMO DE PRUEBA)' : ''}! Revisa tu WhatsApp para la entrega de credenciales.`);
         
         // Redirigir a su perfil
         window.location.href = "perfil.html";

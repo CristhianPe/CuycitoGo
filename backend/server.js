@@ -107,6 +107,75 @@ app.post('/api/recharges/force-check-imap', async (req, res) => {
     }
 });
 
+import { GameController, DEFAULT_ROULETTE_SETTINGS } from './game-controller.js';
+
+// ==============================================================================
+// RUTAS DE LA API DEL MÓDULO DE JUEGOS (RULETA VIP)
+// ==============================================================================
+
+// 7. Obtener configuración de la Ruleta (Servicios, Stock, Estado Habilitado)
+app.get('/api/games/roulette/settings', async (req, res) => {
+    try {
+        const settings = await GameController.getRouletteSettings();
+        res.json({ success: true, settings });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 7.1 Guardar configuración de la Ruleta
+app.post('/api/games/roulette/settings', async (req, res) => {
+    try {
+        const updated = await GameController.saveRouletteSettings(req.body);
+        res.json({ success: true, settings: updated });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 8. Girar la Ruleta (Validación 3 servicios + Descuento 1 Sol + Algoritmo 30% House Edge)
+app.post('/api/games/spin', async (req, res) => {
+    try {
+        const { userId, userName } = req.body;
+        if (!userId) {
+            return res.status(400).json({ error: "userId es requerido." });
+        }
+
+        const result = await GameController.spinRoulette(userId, userName);
+        if (!result.success && result.reason === 'INSUFFICIENT_SERVICES') {
+            return res.status(403).json(result);
+        }
+
+        res.json(result);
+    } catch (error) {
+        console.error("❌ Error en /api/games/spin:", error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// 9. Resumen financiero personal e historial del cliente
+app.get('/api/games/stats/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const stats = await GameController.getUserGameStats(userId);
+        res.json({ success: true, stats });
+    } catch (error) {
+        console.error("❌ Error en /api/games/stats:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 10. Métricas globales de la casa (Para el Dashboard del Admin)
+app.get('/api/games/house-stats', async (req, res) => {
+    try {
+        const houseStats = await GameController.getHouseMetrics();
+        res.json({ success: true, houseStats });
+    } catch (error) {
+        console.error("❌ Error en /api/games/house-stats:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ==============================================================================
 // INICIALIZACIÓN DEL SERVIDOR & WORKER IMAP
 // ==============================================================================

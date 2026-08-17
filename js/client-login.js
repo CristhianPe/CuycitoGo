@@ -1,4 +1,4 @@
-import { db, collection, getDocs, query, where } from './firebase-config.js';
+import { db, collection, getDocs, setDoc, doc, query, where } from './firebase-config.js';
 
 // Si ya tiene sesión activa, redirigir directo a perfil.html
 const existingSession = localStorage.getItem("cuycitoClient");
@@ -44,7 +44,80 @@ if (form) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando datos...';
 
         try {
-            // Buscamos el usuario por su número de teléfono y contraseña
+            // VERIFICACIÓN DE CUENTA DEMO PARA PRUEBAS
+            if (phone.toLowerCase() === 'cuycitogodemo' && pass === 'cuycito123') {
+                const demoUser = {
+                    id: "demo_cuycito_user",
+                    name: "Cuycito Demo VIP 🐹",
+                    nickname: "cuycitogodemo",
+                    phone: "cuycitogodemo",
+                    email: "demo@cuycitogo.pe",
+                    pass: "cuycito123",
+                    balance: 999999.00,
+                    isDemo: true,
+                    createdAt: new Date().toISOString()
+                };
+
+                // Asegurar registro de cuenta Demo y 3 suscripciones activas en Firestore para desbloquear juegos
+                try {
+                    await setDoc(doc(db, "users", demoUser.id), demoUser, { merge: true });
+
+                    const today = new Date();
+                    const nextMonth = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+                    const demoSubs = [
+                        {
+                            id: "sub_demo_netflix",
+                            person: "Cuycito Demo VIP 🐹",
+                            service: "Netflix",
+                            email: "demo.netflix@cuycitogo.pe",
+                            pass: "cuycitoVIP4K",
+                            pin: "1234",
+                            endDate: nextMonth,
+                            isMasterActive: true,
+                            isDemo: true
+                        },
+                        {
+                            id: "sub_demo_hbo",
+                            person: "Cuycito Demo VIP 🐹",
+                            service: "HBO Max",
+                            email: "demo.hbo@cuycitogo.pe",
+                            pass: "cuycitoHBO2026",
+                            pin: "4321",
+                            endDate: nextMonth,
+                            isMasterActive: true,
+                            isDemo: true
+                        },
+                        {
+                            id: "sub_demo_crunchyroll",
+                            person: "Cuycito Demo VIP 🐹",
+                            service: "Crunchyroll",
+                            email: "demo.crunchy@cuycitogo.pe",
+                            pass: "cuycitoAnime99",
+                            pin: "",
+                            endDate: nextMonth,
+                            isMasterActive: true,
+                            isDemo: true
+                        }
+                    ];
+
+                    for (const s of demoSubs) {
+                        await setDoc(doc(db, "subscriptions", s.id), s, { merge: true });
+                    }
+                } catch (errSync) {
+                    console.warn("Sincronización Firestore en Demo (continuando local):", errSync);
+                }
+
+                localStorage.setItem("cuycitoClient", JSON.stringify(demoUser));
+                btn.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i> ¡Acceso Concedido (Demo)!';
+                
+                setTimeout(() => {
+                    window.location.replace('perfil.html');
+                }, 400);
+                return;
+            }
+
+            // Buscamos el usuario estándar por su número de teléfono o nickname y contraseña
             const q = query(
                 collection(db, "users"), 
                 where("phone", "==", phone), 
@@ -54,7 +127,6 @@ if (form) {
 
             if (!snap.empty) {
                 const userData = snap.docs[0].data();
-                // Si no tiene nickname registrado, asignamos por defecto su nombre completo
                 if (!userData.nickname) {
                     userData.nickname = userData.name;
                 }
@@ -65,14 +137,15 @@ if (form) {
                     window.location.replace('perfil.html');
                 }, 400);
             } else {
-                throw new Error("Número o contraseña incorrectos. Verifica tus credenciales.");
+                throw new Error("Usuario o contraseña incorrectos. Verifica tus credenciales.");
             }
         } catch (error) {
             console.error("Error en login:", error);
-            alertBox.innerText = error.message || "Número o contraseña incorrectos.";
+            alertBox.innerText = error.message || "Usuario o contraseña incorrectos.";
             alertBox.classList.remove('hidden');
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Ingresar a Mi Cuenta';
         }
     });
 }
+

@@ -1,4 +1,4 @@
-import { auth, db, storage, onAuthStateChanged, signOut, collection, getDocs, doc, setDoc, deleteDoc, ref, uploadBytes, getDownloadURL } from "./firebase-config.js";
+import { auth, db, storage, onAuthStateChanged, signOut, collection, getDocs, getDoc, doc, setDoc, deleteDoc, ref, uploadBytes, getDownloadURL } from "./firebase-config.js";
 
 const DEFAULT_SERVICES = ["Netflix", "Spotify", "HBO Max", "Disney+", "Crunchyroll", "Prime Video"];
 const CENTRAL_WHATSAPP_PHONE = "51991735344";
@@ -13,7 +13,9 @@ let appState = {
     clients: [], 
     catalog: [],
     postits: [],
-    recharges: []
+    recharges: [],
+    rouletteSettings: null,
+    gameSpins: []
 };
 
 let currentTargetAcc = null; 
@@ -150,7 +152,7 @@ window.copyInfoText = () => {
 };
 
 window.switchTab = (tabId) => {
-    ['subs', 'master', 'finance', 'clients', 'catalog', 'recharges'].forEach(id => {
+    ['subs', 'master', 'finance', 'clients', 'catalog', 'recharges', 'games'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const btn = document.getElementById('tab-btn-' + id);
         if(view) {
@@ -158,7 +160,7 @@ window.switchTab = (tabId) => {
             if(id === tabId) {
                 view.classList.remove('hidden');
                 if(id==='subs') view.classList.add('block');
-                if(id==='master' || id==='finance' || id==='clients' || id==='catalog' || id==='recharges') view.className = view.className.replace('hidden', 'block space-y-4');
+                if(id==='master' || id==='finance' || id==='clients' || id==='catalog' || id==='recharges' || id==='games') view.className = view.className.replace('hidden', 'block space-y-4');
             }
         }
         if(btn) {
@@ -168,7 +170,14 @@ window.switchTab = (tabId) => {
         }
     });
     if(tabId === 'finance') window.renderFinance();
-    if(tabId === 'recharges') window.renderRechargesTable();
+    if(tabId === 'recharges') {
+        window.renderRechargesTable();
+        window.loadPaymentQRSettings();
+        window.loadRouletteHouseStats();
+    }
+    if(tabId === 'games') {
+        window.renderGamesSection();
+    }
 };
 
 window.updateAllServiceDropdowns = () => {
@@ -2367,4 +2376,365 @@ window.filterRechargesHistory = () => {
         </tr>`;
     });
     completedBody.innerHTML = html;
+};
+
+// ==========================================
+// 13. CONFIGURACIÓN DE QR Y MÉTRICAS RULETA
+// ==========================================
+window.loadPaymentQRSettings = async () => {
+    try {
+        const docSnap = await getDoc(doc(db, "settings", "general"));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const qrInput = document.getElementById('settingQrUrlInput');
+            const preview = document.getElementById('dashboardQrPreview');
+            const lemonInput = document.getElementById('settingLemonTagInput');
+            const phoneInput = document.getElementById('settingWhatsappPhoneInput');
+
+            if (qrInput && data.paymentQrUrl) qrInput.value = data.paymentQrUrl;
+            if (preview && data.paymentQrUrl) preview.src = data.paymentQrUrl;
+            if (lemonInput && data.lemonTag) lemonInput.value = data.lemonTag;
+            if (phoneInput && data.whatsappPhone) phoneInput.value = data.whatsappPhone;
+        }
+    } catch (e) {
+        console.error("Error al cargar configuración de QR:", e);
+    }
+};
+
+window.handleQrFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const base64 = event.target.result;
+        const qrInput = document.getElementById('settingQrUrlInput');
+        const preview = document.getElementById('dashboardQrPreview');
+        if (qrInput) qrInput.value = base64;
+        if (preview) preview.src = base64;
+    };
+    reader.readAsDataURL(file);
+};
+
+window.savePaymentQRSettings = async () => {
+    const qrUrl = document.getElementById('settingQrUrlInput')?.value.trim() || '';
+    const lemonTag = document.getElementById('settingLemonTagInput')?.value.trim() || '$cmancocambillo';
+    const whatsappPhone = document.getElementById('settingWhatsappPhoneInput')?.value.trim() || '+51 991735344';
+
+    try {
+        await setDoc(doc(db, "settings", "general"), {
+            paymentQrUrl: qrUrl,
+            lemonTag: lemonTag,
+            whatsappPhone: whatsappPhone,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+
+        const preview = document.getElementById('dashboardQrPreview');
+        if (preview && qrUrl) preview.src = qrUrl;
+
+        window.notifyAutoSave('Configuración QR Guardada');
+        alert("✅ ¡Configuración de QR y Lemon Tag guardada exitosamente! Se mostrará a los clientes al recargar.");
+    } catch (e) {
+        console.error(e);
+        alert("Error al guardar la configuración en Firebase.");
+    }
+};
+
+window.loadRouletteHouseStats = async () => {
+    try {
+        let stats = null;
+        try {
+            const res = await fetch('http://localhost:5000/api/games/house-stats');
+            if (res.ok) {
+                const data = await res.json();
+                stats = data.houseStats;
+            }
+        } catch (err) {}
+
+        if (!stats) {
+            const docSnap = await getDoc(doc(db, "game_house_stats", "roulette_global"));
+            if (docSnap.exists()) stats = docSnap.data();
+        }
+
+        if (stats) {
+            const elSpins = document.getElementById('houseStatTotalSpins');
+            const elRev = document.getElementById('houseStatTotalRevenue');
+            const elCost = document.getElementById('houseStatTotalPrizesCost');
+            const elMargin = document.getElementById('houseStatMarginPercent');
+
+            if (elSpins) elSpins.innerText = (stats.totalSpins || 0).toLocaleString();
+            if (elRev) elRev.innerText = `S/ ${(stats.totalRevenue || 0).toFixed(2)}`;
+            if (elCost) elCost.innerText = `S/ ${(stats.totalPrizesCost || 0).toFixed(2)}`;
+            if (elMargin) elMargin.innerText = `${(stats.profitMarginPercent || 100).toFixed(2)}%`;
+        }
+    } catch (e) {
+        console.error("Error al cargar estadísticas de ruleta:", e);
+    }
+};
+
+// ==========================================
+// 14. MÓDULO DE JUEGOS Y CONTROL DE RULETA
+// ==========================================
+const DEFAULT_APP_ROULETTE_SETTINGS = {
+    enabled: true,
+    spinCost: 1.00,
+    minActiveServicesRequired: 3,
+    services: [
+        { id: 'netflix', serviceName: 'Netflix', title: 'Netflix 4K VIP 👑', cost: 13.00, stock: 2, color: '#dc2626', textColor: '#ffffff', baseProbability: 0.005 },
+        { id: 'hbo', serviceName: 'HBO Max', title: 'HBO Max VIP 🎬', cost: 8.00, stock: 3, color: '#7c3aed', textColor: '#ffffff', baseProbability: 0.01 },
+        { id: 'crunchyroll', serviceName: 'Crunchyroll', title: 'Crunchyroll Fan 🍿', cost: 5.00, stock: 5, color: '#ea580c', textColor: '#ffffff', baseProbability: 0.03 },
+        { id: 'paramount', serviceName: 'Paramount+', title: 'Paramount+ 📺', cost: 6.00, stock: 2, color: '#2563eb', textColor: '#ffffff', baseProbability: 0.01 }
+    ]
+};
+
+window.renderGamesSection = async () => {
+    // 1. Cargar Configuración de Ruleta
+    try {
+        const docSnap = await getDoc(doc(db, "game_settings", "roulette"));
+        if (docSnap.exists()) {
+            appState.rouletteSettings = docSnap.data();
+        } else {
+            appState.rouletteSettings = { ...DEFAULT_APP_ROULETTE_SETTINGS };
+        }
+    } catch (e) {
+        appState.rouletteSettings = { ...DEFAULT_APP_ROULETTE_SETTINGS };
+    }
+
+    // 2. Cargar Historial de Giros (Transacciones)
+    try {
+        const spinsSnap = await getDocs(collection(db, "game_spins"));
+        appState.gameSpins = [];
+        spinsSnap.forEach(d => appState.gameSpins.push({ id: d.id, ...d.data() }));
+        appState.gameSpins.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    } catch (e) {}
+
+    // 3. Renderizar Switch Habilitar/Deshabilitar
+    const isEnabled = appState.rouletteSettings.enabled !== false;
+    const led = document.getElementById('rouletteStatusLed');
+    const text = document.getElementById('rouletteStatusText');
+    const btn = document.getElementById('btnToggleRouletteEnabled');
+
+    if (led) led.className = isEnabled ? "w-3 h-3 rounded-full bg-emerald-400 animate-pulse" : "w-3 h-3 rounded-full bg-red-500";
+    if (text) {
+        text.innerText = isEnabled ? "Ruleta Habilitada" : "Ruleta Deshabilitada";
+        text.className = isEnabled ? "text-xs font-black text-emerald-400" : "text-xs font-black text-red-400";
+    }
+    if (btn) {
+        btn.innerText = isEnabled ? "Deshabilitar" : "Habilitar Ruleta";
+        btn.className = isEnabled ? "bg-gray-800 hover:bg-red-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition border border-gray-700" : "bg-emerald-600 hover:bg-emerald-500 text-black font-black text-xs px-3 py-1.5 rounded-lg transition shadow";
+    }
+
+    // 4. Renderizar Finanzas Reales de la Ruleta (Excluyendo cuentas Demo de prueba)
+    let totalRevenue = 0;
+    let totalPrizesCost = 0;
+    let realSpinsCount = 0;
+    appState.gameSpins.forEach(s => {
+        if (!s.isDemo && s.userId !== 'demo_cuycito_user') {
+            totalRevenue += parseFloat(s.cost || 1.00);
+            totalPrizesCost += parseFloat(s.prizeCostForHouse || 0);
+            realSpinsCount++;
+        }
+    });
+
+    const netProfit = totalRevenue - totalPrizesCost;
+    const margin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 100;
+
+    const elSpins = document.getElementById('gameFinanceTotalSpins');
+    const elRev = document.getElementById('gameFinanceTotalRevenue');
+    const elCost = document.getElementById('gameFinanceTotalPrizesCost');
+    const elProfit = document.getElementById('gameFinanceNetProfit');
+
+    if (elSpins) elSpins.innerText = realSpinsCount;
+    if (elRev) elRev.innerText = `S/ ${totalRevenue.toFixed(2)}`;
+    if (elCost) elCost.innerText = `S/ ${totalPrizesCost.toFixed(2)}`;
+    if (elProfit) {
+        elProfit.innerText = `S/ ${netProfit.toFixed(2)} (${margin.toFixed(1)}%)`;
+        elProfit.className = `text-2xl font-black font-mono ${netProfit >= 0 ? 'text-cuycito-gold glow-gold' : 'text-red-400'}`;
+    }
+
+    // 5. Renderizar Tabla de Servicios y Stock
+    window.renderRouletteServicesTable();
+
+    // 6. Renderizar Tabla de Transacciones
+    window.renderGameSpinsTable();
+};
+
+window.renderRouletteServicesTable = () => {
+    const tbody = document.getElementById('rouletteServicesTableBody');
+    if (!tbody || !appState.rouletteSettings) return;
+
+    const services = appState.rouletteSettings.services || [];
+    if (services.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500 font-sans">No hay servicios configurados en la Ruleta. Añade al menos uno con el botón superior.</td></tr>`;
+        return;
+    }
+
+    let html = '';
+    services.forEach((s, index) => {
+        const stock = parseInt(s.stock || 0);
+        const hasStock = stock > 0;
+        const stockBadge = hasStock
+            ? `<span class="bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1.5 w-max"><i class="fa-solid fa-boxes-stacked"></i> ${stock} disponibles</span>`
+            : `<span class="bg-red-950/80 text-red-400 border border-red-500/50 text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1.5 w-max animate-pulse"><i class="fa-solid fa-triangle-exclamation"></i> 0 Agotado (No saldrá)</span>`;
+
+        html += `
+        <tr class="hover:bg-black/50 transition">
+            <td class="p-3">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full" style="background-color: ${s.color || '#dc2626'}"></span>
+                    <strong class="text-white font-bold">${s.serviceName}</strong>
+                </div>
+            </td>
+            <td class="p-3 font-mono font-bold text-gray-300">S/ ${(s.cost || 0).toFixed(2)}</td>
+            <td class="p-3">
+                <div class="flex items-center gap-2">
+                    <input type="number" min="0" value="${stock}" onchange="window.setRouletteServiceStockDirect(${index}, this.value)" class="w-16 bg-black border border-gray-700 rounded-lg p-1.5 text-center text-white font-mono font-black text-xs outline-none focus:border-cuycito-gold">
+                    <button onclick="window.updateRouletteServiceStock(${index}, 1)" class="bg-gray-800 hover:bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded transition" title="Sumar 1 unidad">+1</button>
+                    <button onclick="window.updateRouletteServiceStock(${index}, 5)" class="bg-gray-800 hover:bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded transition" title="Sumar 5 unidades">+5</button>
+                </div>
+            </td>
+            <td class="p-3 font-mono text-gray-400">${((s.baseProbability || 0.01) * 100).toFixed(1)}%</td>
+            <td class="p-3 text-center">${stockBadge}</td>
+            <td class="p-3 text-center">
+                <button onclick="window.deleteRouletteService(${index})" class="text-gray-500 hover:text-red-400 p-1.5 transition" title="Eliminar de la Ruleta">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+            </td>
+        </tr>`;
+    });
+
+    tbody.innerHTML = html;
+};
+
+window.renderGameSpinsTable = () => {
+    const tbody = document.getElementById('gameSpinsAdminTableBody');
+    if (!tbody) return;
+
+    const query = document.getElementById('searchGameSpinsInput')?.value.toLowerCase() || '';
+    const filtered = (appState.gameSpins || []).filter(s => 
+        (s.userName || '').toLowerCase().includes(query) ||
+        (s.userNickname || '').toLowerCase().includes(query) ||
+        (s.prizeTitle || '').toLowerCase().includes(query) ||
+        (s.userPhone || '').toLowerCase().includes(query)
+    );
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 font-sans">No hay transacciones registradas de la Ruleta.</td></tr>`;
+        return;
+    }
+
+    let html = '';
+    filtered.forEach(s => {
+        const dateStr = s.timestamp ? new Date(s.timestamp).toLocaleString('es-PE') : 'N/A';
+        const hasCostPrize = (s.prizeCostForHouse || 0) > 0;
+        const statusBadge = hasCostPrize
+            ? `<span class="bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded shadow">🏆 Ganó Cuenta (S/ ${s.prizeCostForHouse.toFixed(2)})</span>`
+            : (s.sliceIndex === 1 ? `<span class="bg-sky-950 text-sky-400 border border-sky-500/40 text-[10px] font-black px-2 py-0.5 rounded">🔄 Free Spin</span>` : `<span class="text-gray-500 text-[10px] font-sans">❌ No Ganó</span>`);
+
+        const demoBadge = s.isDemo ? `<span class="bg-purple-950 text-purple-300 border border-purple-500/40 text-[9px] font-black px-1.5 py-0.5 rounded ml-1.5">🧪 Demo</span>` : '';
+
+        html += `
+        <tr class="hover:bg-black/50 transition ${s.isDemo ? 'opacity-75' : ''}">
+            <td class="p-3 text-[11px] text-gray-400 font-mono">${dateStr}</td>
+            <td class="p-3 font-bold text-white">${s.userName || 'Cliente VIP'} ${demoBadge}</td>
+            <td class="p-3 font-mono text-[11px] text-gray-400">@${s.userNickname || s.userName} <span class="opacity-60">(${s.userPhone || 'N/A'})</span></td>
+            <td class="p-3 font-mono font-bold text-cuycito-gold">S/ ${(s.cost || 1.00).toFixed(2)}</td>
+            <td class="p-3 font-bold text-white text-xs">${s.prizeTitle || 'N/A'}</td>
+            <td class="p-3 text-center">${statusBadge}</td>
+        </tr>`;
+    });
+
+    tbody.innerHTML = html;
+};
+
+window.filterGameSpinsTable = () => {
+    window.renderGameSpinsTable();
+};
+
+window.toggleRouletteEnabled = async () => {
+    if (!appState.rouletteSettings) return;
+    const currentState = appState.rouletteSettings.enabled !== false;
+    const newState = !currentState;
+    appState.rouletteSettings.enabled = newState;
+
+    try {
+        await setDoc(doc(db, "game_settings", "roulette"), { enabled: newState, updatedAt: new Date().toISOString() }, { merge: true });
+        window.notifyAutoSave(`Ruleta ${newState ? 'Habilitada' : 'Deshabilitada'}`);
+        window.renderGamesSection();
+        alert(`🎰 La Ruleta VIP ha sido ${newState ? 'HABILITADA' : 'DESHABILITADA'} para los clientes.`);
+    } catch(e) {
+        alert("Error al actualizar estado en Firebase.");
+    }
+};
+
+window.openAddRouletteServiceModal = () => {
+    const modal = document.getElementById('addRouletteServiceModal');
+    const datalist = document.getElementById('rouletteServicesListDatalist');
+    if (datalist) {
+        datalist.innerHTML = (appState.services || []).map(srv => `<option value="${srv}"></option>`).join('');
+    }
+    if (modal) modal.classList.remove('hidden');
+};
+
+window.confirmAddRouletteService = () => {
+    const name = document.getElementById('newRouletteServiceName')?.value.trim();
+    const stock = parseInt(document.getElementById('newRouletteServiceStock')?.value) || 1;
+    const cost = parseFloat(document.getElementById('newRouletteServiceCost')?.value) || 10;
+    const color = document.getElementById('newRouletteServiceColor')?.value || '#dc2626';
+    const prob = parseFloat(document.getElementById('newRouletteServiceProb')?.value) || 1.0;
+
+    if (!name) return alert("Por favor ingresa o selecciona un servicio.");
+
+    if (!appState.rouletteSettings.services) appState.rouletteSettings.services = [];
+    appState.rouletteSettings.services.push({
+        id: name.toLowerCase().replace(/\s+/g, '_'),
+        serviceName: name,
+        title: `${name} VIP 🎁`,
+        cost: cost,
+        stock: stock,
+        color: color,
+        textColor: '#ffffff',
+        baseProbability: prob / 100
+    });
+
+    document.getElementById('addRouletteServiceModal').classList.add('hidden');
+    window.renderRouletteServicesTable();
+    window.saveRouletteSettingsToFirebase();
+};
+
+window.updateRouletteServiceStock = (index, delta) => {
+    if (!appState.rouletteSettings.services?.[index]) return;
+    const current = parseInt(appState.rouletteSettings.services[index].stock || 0);
+    appState.rouletteSettings.services[index].stock = Math.max(0, current + delta);
+    window.renderRouletteServicesTable();
+};
+
+window.setRouletteServiceStockDirect = (index, val) => {
+    if (!appState.rouletteSettings.services?.[index]) return;
+    appState.rouletteSettings.services[index].stock = Math.max(0, parseInt(val) || 0);
+    window.renderRouletteServicesTable();
+};
+
+window.deleteRouletteService = (index) => {
+    if (!appState.rouletteSettings.services?.[index]) return;
+    const name = appState.rouletteSettings.services[index].serviceName;
+    if (!confirm(`¿Quitar "${name}" de los premios de la Ruleta?`)) return;
+    appState.rouletteSettings.services.splice(index, 1);
+    window.renderRouletteServicesTable();
+};
+
+window.saveRouletteSettingsToFirebase = async () => {
+    if (!appState.rouletteSettings) return;
+    try {
+        await setDoc(doc(db, "game_settings", "roulette"), {
+            ...appState.rouletteSettings,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+
+        window.notifyAutoSave('Ruleta Guardada');
+        alert("✅ ¡Configuración de la Ruleta y stock de servicios guardados exitosamente!");
+    } catch(e) {
+        console.error(e);
+        alert("Error al guardar la configuración en Firebase.");
+    }
 };

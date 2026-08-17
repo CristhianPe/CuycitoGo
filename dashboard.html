@@ -121,6 +121,9 @@
                     <i class="fa-solid fa-bolt text-yellow-300"></i> Recargas
                     <span id="pendingRechargesBadge" class="hidden px-1.5 py-0.5 text-[10px] bg-cuycito-red text-white font-black rounded-full shadow glow-red animate-pulse">0</span>
                 </button>
+                <button id="tab-btn-games" onclick="window.switchTab('games')" class="text-purple-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-gamepad text-purple-400"></i> Juegos
+                </button>
             </div>
 
             <!-- TAB 1: SERVICIOS ACTIVOS -->
@@ -252,10 +255,102 @@
                 <div id="catalogGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
             </section>
 
-            <!-- TAB 6: GESTIÓN DE RECARGAS DE SALDO -->
+            <!-- TAB 6: GESTIÓN DE RECARGAS DE SALDO Y RULETA DE PREMIOS -->
             <section id="view-recharges" class="hidden space-y-6 pb-10">
                 
-                <!-- Peticiones de Saldo Pendientes / Por Aprobar -->
+                <!-- 1. CONFIGURACIÓN DE QR DE PAGO Y LEMON CASH -->
+                <div class="bg-cuycito-dark rounded-2xl border border-cuycito-gold/40 p-5 shadow-2xl space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-cuycito-gold/20 text-cuycito-gold flex items-center justify-center text-sm border border-cuycito-gold/40">
+                                <i class="fa-solid fa-qrcode"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black text-white uppercase tracking-wider">Configuración de Código QR &amp; Lemon Tag para Clientes</h3>
+                                <p class="text-[10px] text-gray-400">Este código QR e información se muestran cuando los clientes solicitan recargas en la tienda o perfil.</p>
+                            </div>
+                        </div>
+                        <button onclick="window.savePaymentQRSettings()" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black font-black text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5 glow-gold">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar Configuración QR
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 items-center">
+                        <!-- Vista Previa QR -->
+                        <div class="bg-black/70 border border-gray-800 rounded-2xl p-4 flex flex-col items-center justify-center text-center space-y-2">
+                            <div class="w-36 h-36 bg-white p-2 rounded-xl border border-cuycito-gold/60 flex items-center justify-center shadow-md">
+                                <img id="dashboardQrPreview" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://wa.me/51991735344?text=Recarga%20CuycitoGO" alt="QR Vista Previa" class="w-32 h-32 object-contain rounded-lg">
+                            </div>
+                            <span class="text-[10px] text-gray-400 font-mono">Vista previa del QR activo</span>
+                        </div>
+
+                        <!-- Formulario de Configuración -->
+                        <div class="md:col-span-2 space-y-3 text-xs">
+                            <div>
+                                <label class="block text-gray-400 font-bold mb-1 uppercase text-[10px]">URL o Imagen del Código QR (Lemon / Yape / Plin):</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="settingQrUrlInput" placeholder="https://ejemplo.com/mi-qr.png o pega el enlace directo" class="flex-1 bg-black border border-gray-700 rounded-xl px-3 py-2 text-white font-mono text-xs outline-none focus:border-cuycito-gold">
+                                    <label class="bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs px-3 py-2 rounded-xl cursor-pointer flex items-center gap-1.5 transition">
+                                        <i class="fa-solid fa-upload"></i> Subir Imagen
+                                        <input type="file" id="settingQrFileInput" accept="image/*" class="hidden" onchange="window.handleQrFileUpload(event)">
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-gray-400 font-bold mb-1 uppercase text-[10px]">$lemontag Lemon Cash:</label>
+                                    <input type="text" id="settingLemonTagInput" value="$cmancocambillo" placeholder="$cmancocambillo" class="w-full bg-black border border-gray-700 rounded-xl px-3 py-2 text-white font-mono text-xs outline-none focus:border-cuycito-gold">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-400 font-bold mb-1 uppercase text-[10px]">Teléfono WhatsApp de Pagos:</label>
+                                    <input type="text" id="settingWhatsappPhoneInput" value="+51 991735344" placeholder="+51 991735344" class="w-full bg-black border border-gray-700 rounded-xl px-3 py-2 text-white font-mono text-xs outline-none focus:border-cuycito-gold">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. MÉTRICAS GLOBALES DE LA RULETA DE PREMIOS VIP (GANANCIA DE LA CASA >= 30%) -->
+                <div class="bg-cuycito-dark rounded-2xl border border-purple-500/40 p-5 shadow-2xl space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-purple-950 text-purple-400 flex items-center justify-center text-sm border border-purple-500/50">
+                                🎰
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                    Control Financiero de Ruleta VIP <span class="bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[9px] px-2 py-0.5 rounded-md font-bold">Margen Mínimo 30% Protegido</span>
+                                </h3>
+                                <p class="text-[10px] text-gray-400">Algoritmo matemático de ganancia asegurada para la casa por cada giro de S/ 1.00.</p>
+                            </div>
+                        </div>
+                        <button onclick="window.loadRouletteHouseStats()" class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-arrows-rotate"></i> Actualizar Métricas
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div class="bg-black/60 border border-gray-800 rounded-xl p-3.5 space-y-1">
+                            <span class="text-[10px] uppercase font-bold text-gray-400">Total Giros Realizados</span>
+                            <h4 id="houseStatTotalSpins" class="text-xl font-black text-white font-mono">0</h4>
+                        </div>
+                        <div class="bg-black/60 border border-emerald-900/40 rounded-xl p-3.5 space-y-1">
+                            <span class="text-[10px] uppercase font-bold text-emerald-400">Ingresos Totales (S/ 1 c/u)</span>
+                            <h4 id="houseStatTotalRevenue" class="text-xl font-black text-emerald-400 font-mono">S/ 0.00</h4>
+                        </div>
+                        <div class="bg-black/60 border border-red-950/40 rounded-xl p-3.5 space-y-1">
+                            <span class="text-[10px] uppercase font-bold text-red-400">Costo Premios Entregados</span>
+                            <h4 id="houseStatTotalPrizesCost" class="text-xl font-black text-red-400 font-mono">S/ 0.00</h4>
+                        </div>
+                        <div class="bg-black/60 border border-purple-950/40 rounded-xl p-3.5 space-y-1">
+                            <span class="text-[10px] uppercase font-bold text-purple-300">Margen de la Casa</span>
+                            <h4 id="houseStatMarginPercent" class="text-xl font-black text-cuycito-gold font-mono">100.00%</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Peticiones de Saldo Pendientes / Por Aprobar -->
                 <div class="bg-cuycito-dark rounded-2xl border border-yellow-500/40 overflow-hidden shadow-2xl">
                     <div class="p-4 border-b border-gray-800 bg-gradient-to-r from-amber-950/40 to-black flex items-center justify-between">
                         <div class="flex items-center gap-2">
@@ -291,7 +386,7 @@
                     </div>
                 </div>
 
-                <!-- Historial de Recargas (Aprobadas / Conciliadas) -->
+                <!-- 4. Historial de Recargas (Aprobadas / Conciliadas) -->
                 <div class="bg-cuycito-dark rounded-2xl border border-gray-800 overflow-hidden shadow-2xl">
                     <div class="p-4 border-b border-gray-800 bg-black/60 flex flex-wrap items-center justify-between gap-3">
                         <div class="flex items-center gap-2">
@@ -323,6 +418,133 @@
                 </div>
             </section>
 
+            <!-- TAB 7: MÓDULO DE JUEGOS Y CONTROL DE RULETA VIP -->
+            <section id="view-games" class="hidden space-y-6 pb-10">
+                
+                <!-- Header y Sub-menú de Juegos -->
+                <div class="bg-cuycito-dark rounded-2xl border border-purple-500/40 p-5 shadow-2xl space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 pb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-purple-950 text-purple-400 border border-purple-500/50 flex items-center justify-center text-xl shadow-lg">
+                                🎮
+                            </div>
+                            <div>
+                                <h3 class="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                    Módulo de Juegos <span class="bg-purple-900/60 text-purple-300 border border-purple-500/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Juego Activo: Ruleta VIP</span>
+                                </h3>
+                                <p class="text-xs text-gray-400">Configura los servicios en sorteo, stocks, costos y monitorea la rentabilidad en tiempo real.</p>
+                            </div>
+                        </div>
+
+                        <!-- Switch de Habilitar / Deshabilitar Ruleta -->
+                        <div class="flex items-center gap-3 bg-black/80 border border-gray-800 p-2 rounded-xl">
+                            <div class="flex items-center gap-2">
+                                <span id="rouletteStatusLed" class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <span id="rouletteStatusText" class="text-xs font-black text-emerald-400">Ruleta Habilitada</span>
+                            </div>
+                            <button id="btnToggleRouletteEnabled" onclick="window.toggleRouletteEnabled()" class="bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition border border-gray-700">
+                                Deshabilitar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 1. DASHBOARD DE FINANZAS DE LA RULETA (GANANCIAS DE LA HERRAMIENTA) -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div class="bg-black/60 border border-gray-800 rounded-xl p-3.5 space-y-1">
+                            <span class="text-[10px] uppercase font-bold text-gray-400">Total Giros Realizados</span>
+                            <h4 id="gameFinanceTotalSpins" class="text-2xl font-black text-white font-mono">0</h4>
+                        </div>
+                        <div class="bg-black/60 border border-emerald-900/40 rounded-xl p-3.5 space-y-1">
+                            <span class="text-[10px] uppercase font-bold text-emerald-400">Total Recaudado (S/ 1 c/u)</span>
+                            <h4 id="gameFinanceTotalRevenue" class="text-2xl font-black text-emerald-400 font-mono">S/ 0.00</h4>
+                        </div>
+                        <div class="bg-black/60 border border-red-950/40 rounded-xl p-3.5 space-y-1">
+                            <span class="text-[10px] uppercase font-bold text-red-400">Costo Premios Entregados</span>
+                            <h4 id="gameFinanceTotalPrizesCost" class="text-2xl font-black text-red-400 font-mono">S/ 0.00</h4>
+                        </div>
+                        <div class="bg-black/60 border border-purple-950/40 rounded-xl p-3.5 space-y-1">
+                            <span class="text-[10px] uppercase font-bold text-cuycito-gold">Ganancia Neta Real</span>
+                            <h4 id="gameFinanceNetProfit" class="text-2xl font-black text-cuycito-gold font-mono">S/ 0.00</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. CONFIGURACIÓN DE SERVICIOS Y STOCK EN LA RULETA -->
+                <div class="bg-cuycito-dark rounded-2xl border border-cuycito-gold/40 p-5 shadow-2xl space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 pb-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-boxes-stacked text-cuycito-gold text-base"></i>
+                            <h3 class="text-sm font-black text-white uppercase tracking-wider">
+                                Servicios Disponibles y Stock de Premios en la Ruleta
+                            </h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="window.openAddRouletteServiceModal()" class="bg-emerald-600 hover:bg-emerald-500 text-black font-black text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow">
+                                <i class="fa-solid fa-plus"></i> Añadir Servicio a Ruleta
+                            </button>
+                            <button onclick="window.saveRouletteSettingsToFirebase()" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black font-black text-xs px-4 py-1.5 rounded-lg transition shadow flex items-center gap-1.5 glow-gold">
+                                <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+                            </button>
+                        </div>
+                    </div>
+
+                    <p class="text-[11px] text-gray-400">
+                        ⚡ <strong>Algoritmo de Stock de Premios:</strong> Cuando un cliente gana una cuenta, se descuenta 1 unidad de su stock. Si un servicio llega a <strong>0 unidades</strong>, no vuelve a salir. Y si todos los servicios se agotan, la ruleta se <strong>inhabilita automáticamente</strong> hasta reponer stock.
+                    </p>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-gray-400">
+                            <thead class="bg-black text-gray-300 uppercase tracking-wider font-extrabold text-[10px]">
+                                <tr>
+                                    <th class="p-3">Servicio en Ruleta</th>
+                                    <th class="p-3">Costo para la Casa (S/)</th>
+                                    <th class="p-3 text-cuycito-gold">Stock Disponible (Premios)</th>
+                                    <th class="p-3">Probabilidad Base</th>
+                                    <th class="p-3 text-center">Estado de Stock</th>
+                                    <th class="p-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rouletteServicesTableBody" class="divide-y divide-gray-800 font-mono">
+                                <tr>
+                                    <td colspan="6" class="p-8 text-center text-gray-500 font-sans">Cargando servicios de la Ruleta...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 3. LISTA DE TRANSACCIONES / HISTORIAL DE JUGADAS DE CLIENTES -->
+                <div class="bg-cuycito-dark rounded-2xl border border-gray-800 overflow-hidden shadow-2xl space-y-3">
+                    <div class="p-4 border-b border-gray-800 bg-black/60 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-purple-400 text-base"></i>
+                            <h3 class="text-sm font-black text-white uppercase tracking-wider">Historial de Transacciones de Jugadas</h3>
+                        </div>
+                        <input type="text" id="searchGameSpinsInput" oninput="window.filterGameSpinsTable()" placeholder="Buscar cliente o resultado..." class="bg-black border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-cuycito-gold w-64">
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[420px] custom-scrollbar">
+                        <table class="w-full text-left text-xs text-gray-400">
+                            <thead class="bg-black text-gray-300 uppercase tracking-wider font-extrabold text-[10px] sticky top-0">
+                                <tr>
+                                    <th class="p-3">Fecha y Hora</th>
+                                    <th class="p-3">Cliente</th>
+                                    <th class="p-3">Teléfono / Nick</th>
+                                    <th class="p-3 text-white">Saldo Apostado</th>
+                                    <th class="p-3">Resultado Obtenido</th>
+                                    <th class="p-3 text-center">¿Ganó Premio?</th>
+                                </tr>
+                            </thead>
+                            <tbody id="gameSpinsAdminTableBody" class="divide-y divide-gray-800 font-mono">
+                                <tr>
+                                    <td colspan="6" class="p-8 text-center text-gray-500 font-sans">Cargando historial de apuestas y giros...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
         </main>
 
         <aside class="w-80 bg-cuycito-dark border-l border-cuycito-red/30 p-5 overflow-y-auto shrink-0 flex flex-col gap-4 custom-scrollbar">
@@ -856,6 +1078,55 @@
             <div class="flex justify-between items-center pt-3 border-t border-gray-800">
                 <button type="button" onclick="window.deleteSubscription()" class="bg-cuycito-red hover:bg-red-600 text-white text-xs px-4 py-2.5 rounded"><i class="fa-solid fa-trash"></i> Eliminar</button>
                 <div class="flex gap-3"><button type="button" onclick="document.getElementById('editModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-4 py-2.5 rounded">Cancelar</button><button type="button" onclick="window.saveEditModal()" class="bg-cuycito-gold text-black font-black text-xs px-4 py-2.5 rounded">Actualizar</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL AÑADIR SERVICIO A RULETA -->
+    <div id="addRouletteServiceModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-cuycito-dark border-2 border-purple-500/60 rounded-3xl p-6 sm:p-7 w-full max-w-md space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 class="text-base font-black text-white uppercase flex items-center gap-2">
+                    <i class="fa-solid fa-gift text-purple-400"></i> Añadir Servicio a la Ruleta
+                </h3>
+                <button onclick="document.getElementById('addRouletteServiceModal').classList.add('hidden')" class="text-gray-500 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-gray-400 font-bold mb-1">Seleccionar o Escribir Servicio</label>
+                    <input type="text" id="newRouletteServiceName" list="rouletteServicesListDatalist" placeholder="Ej. Netflix, Spotify, Prime Video..." class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white font-bold outline-none focus:border-purple-400">
+                    <datalist id="rouletteServicesListDatalist"></datalist>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-gray-400 font-bold mb-1">Stock de Premios (Unidades)</label>
+                        <input type="number" id="newRouletteServiceStock" min="1" value="2" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white font-bold outline-none focus:border-purple-400 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 font-bold mb-1">Costo para la Casa (S/)</label>
+                        <input type="number" id="newRouletteServiceCost" step="0.5" value="10" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white font-bold outline-none focus:border-purple-400 font-mono">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-gray-400 font-bold mb-1">Color del Sector</label>
+                        <input type="color" id="newRouletteServiceColor" value="#dc2626" class="w-full h-10 bg-black border border-gray-700 rounded-xl p-1 cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 font-bold mb-1">Probabilidad Base (%)</label>
+                        <input type="number" id="newRouletteServiceProb" step="0.1" value="1.0" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white font-bold outline-none focus:border-purple-400 font-mono">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-3 border-t border-gray-800">
+                <button type="button" onclick="document.getElementById('addRouletteServiceModal').classList.add('hidden')" class="bg-gray-800 text-gray-400 hover:text-white text-xs px-4 py-2.5 rounded-xl transition">Cancelar</button>
+                <button type="button" onclick="window.confirmAddRouletteService()" class="bg-purple-600 hover:bg-purple-500 text-white font-black text-xs px-5 py-2.5 rounded-xl transition shadow">Añadir a la Ruleta</button>
             </div>
         </div>
     </div>
