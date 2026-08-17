@@ -12,7 +12,8 @@ let appState = {
     masterAccounts: [],
     clients: [], 
     catalog: [],
-    postits: []
+    postits: [],
+    recharges: []
 };
 
 let currentTargetAcc = null; 
@@ -61,6 +62,10 @@ onAuthStateChanged(auth, async (user) => {
             const postitSnap = await getDocs(collection(db, "postits"));
             appState.postits = [];
             postitSnap.forEach(d => appState.postits.push({ id: d.id, ...d.data() }));
+
+            const recSnap = await getDocs(collection(db, "recharge_orders"));
+            appState.recharges = [];
+            recSnap.forEach(d => appState.recharges.push({ id: d.id, ...d.data() }));
 
             const allServices = [...new Set([...DEFAULT_SERVICES, ...cloudServices, ...appState.subscriptions.map(s=>s.service)])].filter(Boolean);
             appState.services = allServices.sort();
@@ -145,7 +150,7 @@ window.copyInfoText = () => {
 };
 
 window.switchTab = (tabId) => {
-    ['subs', 'master', 'finance', 'clients', 'catalog'].forEach(id => {
+    ['subs', 'master', 'finance', 'clients', 'catalog', 'recharges'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const btn = document.getElementById('tab-btn-' + id);
         if(view) {
@@ -153,12 +158,17 @@ window.switchTab = (tabId) => {
             if(id === tabId) {
                 view.classList.remove('hidden');
                 if(id==='subs') view.classList.add('block');
-                if(id==='master' || id==='finance' || id==='clients' || id==='catalog') view.className = view.className.replace('hidden', 'block space-y-4');
+                if(id==='master' || id==='finance' || id==='clients' || id==='catalog' || id==='recharges') view.className = view.className.replace('hidden', 'block space-y-4');
             }
         }
-        if(btn) btn.className = (id === tabId) ? "text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition" : "text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition";
+        if(btn) {
+            btn.className = (id === tabId) 
+                ? "text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5" 
+                : "text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5";
+        }
     });
     if(tabId === 'finance') window.renderFinance();
+    if(tabId === 'recharges') window.renderRechargesTable();
 };
 
 window.updateAllServiceDropdowns = () => {
@@ -2011,6 +2021,7 @@ window.renderClients = () => {
             </td>
             <td class="p-4 font-mono text-blue-400 font-bold text-xs"><i class="fa-solid fa-mobile-screen mr-1"></i> ${c.phone}</td>
             <td class="p-4 font-mono text-cuycito-gold text-xs">${c.pass}</td>
+            <td class="p-4 font-mono font-black text-emerald-400 text-xs">$ ${(c.balance || 0).toFixed(2)}</td>
             <td class="p-4">${servicesHTML}</td>
             <td class="p-4 text-center">
                 <div class="flex items-center justify-center gap-1.5">
@@ -2152,7 +2163,208 @@ window.renderAll = () => {
     window.renderCatalog(); 
     window.renderNotifications(); 
     window.renderPostits();
+    window.renderRechargesTable();
     
     const finView = document.getElementById('view-finance');
     if (finView && !finView.classList.contains('hidden')) window.renderFinance();
+};
+
+// =====================================
+// 12. GESTIÓN Y HISTORIAL DE RECARGAS
+// =====================================
+window.renderRechargesTable = async () => {
+    try {
+        const recSnap = await getDocs(collection(db, "recharge_orders"));
+        appState.recharges = [];
+        recSnap.forEach(d => appState.recharges.push({ id: d.id, ...d.data() }));
+    } catch(e) {}
+
+    const pendingBody = document.getElementById('pendingRechargesTableBody');
+    const completedBody = document.getElementById('completedRechargesTableBody');
+    const pendingBadge = document.getElementById('pendingRechargesBadge');
+    const pendingCountEl = document.getElementById('rechargePendingCount');
+
+    const pendingOrders = appState.recharges.filter(r => r.status === 'pending' || r.status === 'pending_manual');
+    const completedOrders = appState.recharges.filter(r => r.status === 'completed' || r.status === 'credited').sort((a, b) => new Date(b.completedAt || b.createdAt) - new Date(a.completedAt || a.createdAt));
+
+    if (pendingBadge) {
+        if (pendingOrders.length > 0) {
+            pendingBadge.innerText = pendingOrders.length;
+            pendingBadge.classList.remove('hidden');
+        } else {
+            pendingBadge.classList.add('hidden');
+        }
+    }
+    if (pendingCountEl) pendingCountEl.innerText = `(${pendingOrders.length})`;
+
+    // 1. Renderizar tabla de pendientes
+    if (pendingBody) {
+        if (pendingOrders.length === 0) {
+            pendingBody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500 font-sans">No hay solicitudes de recarga pendientes por aprobar.</td></tr>`;
+        } else {
+            let html = '';
+            pendingOrders.forEach(order => {
+                const dateStr = order.createdAt ? new Date(order.createdAt).toLocaleString('es-PE') : 'N/A';
+                const isManual = order.status === 'pending_manual' || order.paymentMethod === 'Manual (WhatsApp)';
+                const methodBadge = isManual 
+                    ? `<span class="bg-blue-950/80 text-blue-400 border border-blue-500/40 text-[10px] font-black px-2 py-0.5 rounded">📱 Manual (WhatsApp)</span>`
+                    : `<span class="bg-amber-950/80 text-yellow-400 border border-yellow-500/40 text-[10px] font-black px-2 py-0.5 rounded">⚡ Lemon Cash (Auto)</span>`;
+
+                html += `
+                <tr class="hover:bg-black/50 transition">
+                    <td class="p-3 font-bold text-white">${order.userName || 'Cliente VIP'}</td>
+                    <td class="p-3 font-mono text-gray-400">${order.userPhone || 'N/A'}</td>
+                    <td class="p-3 font-bold text-white">$ ${(order.baseAmount || 0).toFixed(2)}</td>
+                    <td class="p-3 font-black text-cuycito-gold glow-gold">$ ${(order.exactAmount || order.baseAmount || 0).toFixed(2)}</td>
+                    <td class="p-3">${methodBadge}</td>
+                    <td class="p-3 text-[11px] text-gray-400 font-mono">${dateStr}</td>
+                    <td class="p-3 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="window.approveRechargeOrder('${order.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-2.5 py-1.5 rounded-lg transition shadow flex items-center gap-1" title="Aprobar y acreditar saldo al cliente">
+                                <i class="fa-solid fa-check"></i> Aprobar
+                            </button>
+                            <button onclick="window.rejectRechargeOrder('${order.id}')" class="bg-gray-800 hover:bg-red-700 text-gray-300 hover:text-white font-black text-xs px-2.5 py-1.5 rounded-lg transition" title="Rechazar solicitud">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+            pendingBody.innerHTML = html;
+        }
+    }
+
+    // 2. Renderizar tabla de historial
+    if (completedBody) {
+        if (completedOrders.length === 0) {
+            completedBody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 font-sans">Aún no hay recargas procesadas registradas.</td></tr>`;
+        } else {
+            let html = '';
+            completedOrders.forEach(order => {
+                const dateStr = (order.completedAt || order.createdAt) ? new Date(order.completedAt || order.createdAt).toLocaleString('es-PE') : 'N/A';
+                const isAuto = order.transferReference && !order.transferReference.includes('Manual');
+                const typeBadge = isAuto
+                    ? `<span class="bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1 w-max"><i class="fa-solid fa-bolt"></i> Lemon IMAP Auto</span>`
+                    : `<span class="bg-purple-950/80 text-purple-300 border border-purple-500/40 text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1 w-max"><i class="fa-solid fa-user-check"></i> Manual Admin</span>`;
+
+                html += `
+                <tr class="hover:bg-black/50 transition">
+                    <td class="p-3 text-[11px] text-gray-400 font-mono">${dateStr}</td>
+                    <td class="p-3 font-bold text-white">${order.userName || order.userId}</td>
+                    <td class="p-3 font-black text-emerald-400">$ ${(order.creditedAmount || order.exactAmount || order.baseAmount || 0).toFixed(2)} ${order.currency || 'USD'}</td>
+                    <td class="p-3">${typeBadge}</td>
+                    <td class="p-3 font-mono text-[11px] text-gray-400 truncate max-w-[150px]">${order.transferReference || 'N/A'}</td>
+                    <td class="p-3 text-center">
+                        <span class="bg-emerald-950 text-emerald-400 border border-emerald-500/50 text-[10px] font-black px-2 py-0.5 rounded">🟢 Acreditado</span>
+                    </td>
+                </tr>`;
+            });
+            completedBody.innerHTML = html;
+        }
+    }
+};
+
+window.approveRechargeOrder = async (orderId) => {
+    const order = appState.recharges.find(r => r.id === orderId);
+    if (!order) return alert("Orden no encontrada.");
+
+    const amountToCredit = parseFloat(order.exactAmount || order.baseAmount || 0);
+    if (!confirm(`¿Aprobar manualmente la recarga de $${amountToCredit.toFixed(2)} para el cliente "${order.userName || order.userId}"?`)) return;
+
+    try {
+        // 1. Buscar cliente y acreditar saldo
+        const userDocRef = doc(db, "users", order.userId);
+        const clientObj = appState.clients.find(c => c.id === order.userId);
+        const currentBal = clientObj ? parseFloat(clientObj.balance || 0) : 0;
+        const newBal = parseFloat((currentBal + amountToCredit).toFixed(2));
+
+        if (clientObj) clientObj.balance = newBal;
+        await setDoc(userDocRef, { balance: newBal, lastRechargeAt: new Date().toISOString() }, { merge: true });
+
+        // 2. Actualizar estado de la orden
+        order.status = 'completed';
+        order.completedAt = new Date().toISOString();
+        order.transferReference = 'Aprobación Manual Admin';
+        order.creditedAmount = amountToCredit;
+        await setDoc(doc(db, "recharge_orders", order.id), order);
+
+        // 3. Registrar en historial contable
+        const txId = `tx_rec_man_${Date.now()}`;
+        const newTx = {
+            id: txId,
+            date: new Date().toISOString().split('T')[0],
+            type: 'RECARGA_MANUAL',
+            person: order.userName || order.userId,
+            service: 'Recarga Saldo VIP',
+            amount: amountToCredit,
+            currency: order.currency || 'USD',
+            orderId: order.id
+        };
+        appState.history.push(newTx);
+        await setDoc(doc(db, "history", txId), newTx);
+
+        window.notifyAutoSave('Recarga Aprobada');
+        window.renderRechargesTable();
+        window.renderClients();
+        alert(`✅ ¡Recarga de $${amountToCredit.toFixed(2)} aprobada y acreditada exitosamente!`);
+
+    } catch (e) {
+        console.error(e);
+        alert("Error al aprobar la recarga en Firebase.");
+    }
+};
+
+window.rejectRechargeOrder = async (orderId) => {
+    const order = appState.recharges.find(r => r.id === orderId);
+    if (!order) return;
+    if (!confirm(`¿Rechazar y cancelar la solicitud de recarga de "${order.userName || order.userId}"?`)) return;
+
+    try {
+        order.status = 'canceled';
+        order.canceledAt = new Date().toISOString();
+        await setDoc(doc(db, "recharge_orders", order.id), order);
+        window.notifyAutoSave('Recarga Cancelada');
+        window.renderRechargesTable();
+    } catch(e) {
+        alert("Error al cancelar la orden.");
+    }
+};
+
+window.filterRechargesHistory = () => {
+    const query = document.getElementById('searchRechargesHistory')?.value.toLowerCase() || '';
+    const completedBody = document.getElementById('completedRechargesTableBody');
+    if (!completedBody) return;
+
+    const filtered = appState.recharges.filter(r => (r.status === 'completed' || r.status === 'credited') && (
+        (r.userName || '').toLowerCase().includes(query) ||
+        (r.transferReference || '').toLowerCase().includes(query) ||
+        (r.userId || '').toLowerCase().includes(query)
+    ));
+
+    if (filtered.length === 0) {
+        completedBody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 font-sans">No se encontraron recargas con "${query}".</td></tr>`;
+        return;
+    }
+
+    let html = '';
+    filtered.forEach(order => {
+        const dateStr = (order.completedAt || order.createdAt) ? new Date(order.completedAt || order.createdAt).toLocaleString('es-PE') : 'N/A';
+        const isAuto = order.transferReference && !order.transferReference.includes('Manual');
+        const typeBadge = isAuto
+            ? `<span class="bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1 w-max"><i class="fa-solid fa-bolt"></i> Lemon IMAP Auto</span>`
+            : `<span class="bg-purple-950/80 text-purple-300 border border-purple-500/40 text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1 w-max"><i class="fa-solid fa-user-check"></i> Manual Admin</span>`;
+
+        html += `
+        <tr class="hover:bg-black/50 transition">
+            <td class="p-3 text-[11px] text-gray-400 font-mono">${dateStr}</td>
+            <td class="p-3 font-bold text-white">${order.userName || order.userId}</td>
+            <td class="p-3 font-black text-emerald-400">$ ${(order.creditedAmount || order.exactAmount || order.baseAmount || 0).toFixed(2)} ${order.currency || 'USD'}</td>
+            <td class="p-3">${typeBadge}</td>
+            <td class="p-3 font-mono text-[11px] text-gray-400 truncate max-w-[150px]">${order.transferReference || 'N/A'}</td>
+            <td class="p-3 text-center">
+                <span class="bg-emerald-950 text-emerald-400 border border-emerald-500/50 text-[10px] font-black px-2 py-0.5 rounded">🟢 Acreditado</span>
+            </td>
+        </tr>`;
+    });
+    completedBody.innerHTML = html;
 };

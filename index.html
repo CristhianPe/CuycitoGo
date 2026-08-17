@@ -295,8 +295,17 @@
                 </div>
             </div>
 
+            <!-- Sección Saldo VIP (Clientes Logueados) -->
+            <div id="cartUserBalanceBox" class="hidden bg-gradient-to-r from-emerald-950/40 to-black border border-emerald-500/40 rounded-xl p-3 space-y-1.5">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-gray-400 font-bold flex items-center gap-1"><i class="fa-solid fa-wallet text-emerald-400"></i> Mi Saldo VIP:</span>
+                    <strong id="cartUserBalanceText" class="text-emerald-400 font-black font-mono">$ 0.00</strong>
+                </div>
+                <p id="cartBalanceNotice" class="text-[10px] text-gray-400"></p>
+            </div>
+
             <!-- Nombre para la orden -->
-            <div>
+            <div id="cartClientNameContainer">
                 <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">
                     Nombre para registrar tu pedido:
                 </label>
@@ -308,9 +317,17 @@
                 >
             </div>
 
-            <button onclick="window.sendOrderWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm py-3.5 rounded-xl transition shadow-lg flex items-center justify-center gap-2 uppercase tracking-wider glow-gold">
-                <i class="fa-brands fa-whatsapp text-lg"></i> Solicitar por WhatsApp
-            </button>
+            <div class="space-y-2">
+                <!-- Botón de Compra Directa con Saldo (Visible si saldo >= total) -->
+                <button id="btnPayWithBalance" onclick="window.payOrderWithBalance()" class="hidden w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm py-3.5 rounded-xl transition shadow-lg flex items-center justify-center gap-2 uppercase tracking-wider glow-gold">
+                    <i class="fa-solid fa-bolt text-yellow-300"></i> Comprar con Saldo VIP
+                </button>
+
+                <!-- Botón Solicitar por WhatsApp -->
+                <button onclick="window.sendOrderWhatsApp()" class="w-full bg-[#25D366] hover:bg-emerald-500 text-black font-black text-sm py-3.5 rounded-xl transition shadow-lg flex items-center justify-center gap-2 uppercase tracking-wider glow-gold">
+                    <i class="fa-brands fa-whatsapp text-lg"></i> Solicitar por WhatsApp
+                </button>
+            </div>
 
             <button onclick="window.clearCart()" class="w-full text-center text-xs text-gray-500 hover:text-cuycito-red transition pt-1 flex items-center justify-center gap-1">
                 <i class="fa-solid fa-trash-can"></i> Vaciar Carrito

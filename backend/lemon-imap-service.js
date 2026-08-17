@@ -7,6 +7,7 @@ export class LemonImapService {
     constructor() {
         this.isRunning = false;
         this.timer = null;
+        this.startedAt = null; // Fecha y hora exacta de encendido
     }
 
     /**
@@ -20,8 +21,10 @@ export class LemonImapService {
         }
 
         this.isRunning = true;
+        this.startedAt = new Date(); // Solo leer correos desde este instante
         console.log(`🚀 [IMAP Lemon] Iniciando servicio de lectura de correos Lemon Cash...`);
         console.log(`   Host: ${config.imap.host}:${config.imap.port} | Usuario: ${config.imap.user}`);
+        console.log(`   Filtrando correos recibidos a partir de: ${this.startedAt.toLocaleTimeString('es-PE')} (${this.startedAt.toISOString().split('T')[0]})`);
         console.log(`   Intervalo de sondeo: ${config.imap.pollIntervalMs / 1000}s`);
 
         // Ejecutar primera verificación inmediata
@@ -40,6 +43,7 @@ export class LemonImapService {
      */
     stop() {
         this.isRunning = false;
+        this.startedAt = null;
         if (this.timer) {
             clearInterval(this.timer);
             this.timer = null;
@@ -48,7 +52,7 @@ export class LemonImapService {
     }
 
     /**
-     * Conecta a la bandeja de entrada, busca correos no leídos de Lemon Cash y los procesa.
+     * Conecta a la bandeja de entrada, busca correos no leídos de Lemon Cash recibidos después del inicio del servidor y los procesa.
      */
     async checkInbox() {
         let connection = null;
@@ -68,12 +72,10 @@ export class LemonImapService {
             connection = await imaps.connect(imapConfig);
             await connection.openBox('INBOX');
 
-            // Buscar correos de los últimos 2 días para garantizar que no se pierda ninguno
-            const delayDays = 2;
-            const searchDate = new Date();
-            searchDate.setDate(searchDate.getDate() - delayDays);
+            // Filtrar mensajes desde la fecha de hoy
+            const today = new Date();
             const searchCriteria = [
-                ['SINCE', searchDate]
+                ['SINCE', today]
             ];
 
             const fetchOptions = {
@@ -100,7 +102,13 @@ export class LemonImapService {
                     const bodyText = parsed.text || '';
                     const bodyHtml = parsed.html || '';
 
-                    // 1. Filtrar remitente: ¿Pertenece al dominio oficial de Lemon Cash?
+                    // 1. Filtrar fecha: Omitir correos recibidos antes de encender el servidor
+                    const emailDate = parsed.date ? new Date(parsed.date) : new Date();
+                    if (this.startedAt && emailDate < this.startedAt) {
+                        continue;
+                    }
+
+                    // 2. Filtrar remitente: ¿Pertenece al dominio oficial de Lemon Cash?
                     const isLemonSender = config.imap.allowedSenders.some(allowed => 
                         senderEmail.includes(allowed) || 
                         senderName.toLowerCase().includes('lemon') || 
@@ -111,7 +119,7 @@ export class LemonImapService {
                         continue; // No es un correo de Lemon Cash, ignorar
                     }
 
-                    console.log(`🍋 [Correo Lemon Detectado] De: ${senderEmail} | Asunto: "${subject}" | UID: ${id}`);
+                    console.log(`🍋 [Correo Lemon Detectado] De: ${senderEmail} | Asunto: "${subject}" | Hora: ${emailDate.toLocaleTimeString('es-PE')} | UID: ${id}`);
 
                     // 2. Extraer datos con el analizador robusto de expresiones regulares
                     const extraction = this.parseLemonEmailContent(bodyText, bodyHtml, subject);

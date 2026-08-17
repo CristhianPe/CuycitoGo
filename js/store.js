@@ -1,4 +1,4 @@
-import { db, collection, getDocs } from "./firebase-config.js";
+import { db, collection, getDocs, doc, setDoc } from "./firebase-config.js";
 
 const CENTRAL_WHATSAPP_PHONE = "51991735344";
 
@@ -504,7 +504,117 @@ function updateCartUI() {
 
     container.innerHTML = html;
     if (totalEl) totalEl.innerText = `S/ ${total.toFixed(2)}`;
+
+    // Comprobar si el cliente está logueado y mostrar su saldo disponible
+    const clientSession = localStorage.getItem("cuycitoClient");
+    const balanceBox = document.getElementById('cartUserBalanceBox');
+    const balanceText = document.getElementById('cartUserBalanceText');
+    const balanceNotice = document.getElementById('cartBalanceNotice');
+    const btnPayBalance = document.getElementById('btnPayWithBalance');
+    const clientNameInput = document.getElementById('cartClientName');
+
+    if (clientSession) {
+        try {
+            const user = JSON.parse(clientSession);
+            const userBalance = parseFloat(user.balance || 0);
+            
+            if (balanceBox) balanceBox.classList.remove('hidden');
+            if (balanceText) balanceText.innerText = `$ ${userBalance.toFixed(2)} USD`;
+            if (clientNameInput && !clientNameInput.value) {
+                clientNameInput.value = `@${user.nickname || user.name}`;
+            }
+
+            // Tipo de cambio referencial USD a PEN (aprox 3.75) para comparar saldo
+            const totalInUSD = total / 3.75;
+
+            if (userBalance >= totalInUSD || userBalance >= total) {
+                if (btnPayBalance) btnPayBalance.classList.remove('hidden');
+                if (balanceNotice) {
+                    balanceNotice.innerHTML = `✨ <strong class="text-emerald-400">¡Tienes saldo suficiente!</strong> Puedes comprar de inmediato con 1 clic.`;
+                }
+            } else {
+                if (btnPayBalance) btnPayBalance.classList.add('hidden');
+                if (balanceNotice) {
+                    balanceNotice.innerHTML = `💡 Saldo disponible: $${userBalance.toFixed(2)} USD. Puedes <a href="perfil.html" class="text-cuycito-gold underline font-bold">recargar aquí</a> o solicitar por WhatsApp.`;
+                }
+            }
+        } catch (e) {}
+    } else {
+        if (balanceBox) balanceBox.classList.add('hidden');
+        if (btnPayBalance) btnPayBalance.classList.add('hidden');
+    }
 }
+
+// Compra directa descontando saldo VIP del cliente con notificación automática por WhatsApp
+window.payOrderWithBalance = async () => {
+    if (cart.length === 0) return alert("El carrito está vacío.");
+    
+    const clientSession = localStorage.getItem("cuycitoClient");
+    if (!clientSession) return alert("Debes iniciar sesión con tu cuenta de cliente para usar tu saldo.");
+
+    let user = null;
+    try {
+        user = JSON.parse(clientSession);
+    } catch(e) { return alert("Sesión inválida."); }
+
+    let total = 0;
+    let itemsText = '';
+
+    cart.forEach((item, index) => {
+        const subtotal = item.price * item.quantity;
+        total += subtotal;
+        itemsText += `  ${index + 1}. *${item.title}* x${item.quantity} (S/ ${subtotal.toFixed(2)})\n`;
+    });
+
+    const totalInUSD = parseFloat((total / 3.75).toFixed(2));
+    const currentBalance = parseFloat(user.balance || 0);
+
+    if (currentBalance < totalInUSD && currentBalance < total) {
+        return alert(`Saldo insuficiente. Tienes $${currentBalance.toFixed(2)} y el total equivale a $${totalInUSD.toFixed(2)} USD.`);
+    }
+
+    if (!confirm(`¿Confirmar compra por S/ ${total.toFixed(2)} ($${totalInUSD.toFixed(2)} USD) descontando de tu Saldo VIP?`)) return;
+
+    try {
+        const newBalance = parseFloat(Math.max(0, currentBalance - totalInUSD).toFixed(2));
+        user.balance = newBalance;
+
+        // 1. Descontar saldo en Firestore
+        await setDoc(doc(db, "users", user.id), { balance: newBalance }, { merge: true });
+        localStorage.setItem("cuycitoClient", JSON.stringify(user));
+
+        // 2. Registrar en historial contable
+        const txId = `tx_pay_${Date.now()}`;
+        const txData = {
+            id: txId,
+            date: new Date().toISOString().split('T')[0],
+            type: 'VENTA_SALDO',
+            person: user.name || user.nickname,
+            service: `Compra Carrito (${cart.length} productos)`,
+            amount: total,
+            currency: 'PEN',
+            userId: user.id
+        };
+        await setDoc(doc(db, "history", txId), txData);
+
+        // 3. Notificar automáticamente a WhatsApp con el detalle
+        const nick = user.nickname || user.name;
+        const msg = `🐹 *¡COMPRA DIRECTA CON SALDO VIP - CUYCITOGO!* 🐹\n\n👤 *Cliente:* ${user.name} (@${nick})\n📱 *Teléfono:* ${user.phone}\n\n📦 *Productos Comprados:*\n${itemsText}━━━━━━━━━━━━━━━━━━━━━\n💰 *Total Pagado con Saldo:* S/ ${total.toFixed(2)} (~$${totalInUSD.toFixed(2)} USD)\n💳 *Nuevo Saldo Restante:* $${newBalance.toFixed(2)} USD\n━━━━━━━━━━━━━━━━━━━━━\n\n¡Por favor registrar y entregar mis credenciales/pantallas en el sistema! 🙌`;
+
+        window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
+
+        window.clearCart();
+        window.toggleCartDrawer();
+        alert(`🎉 ¡Compra exitosa! Se descontaron $${totalInUSD.toFixed(2)} USD de tu saldo VIP. Revisa tu WhatsApp para la entrega de credenciales.`);
+        
+        // Redirigir a su perfil
+        window.location.href = "perfil.html";
+
+    } catch (e) {
+        console.error("Error al procesar pago con saldo:", e);
+        alert("Ocurrió un error al procesar el pago con saldo. Intenta nuevamente.");
+    }
+};
 
 // Envío del pedido a WhatsApp (+51 991735344) con detalle de productos y suma total
 window.sendOrderWhatsApp = () => {

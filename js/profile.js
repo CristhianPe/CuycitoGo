@@ -296,13 +296,102 @@ function renderClientSubscriptions(subs) {
 }
 
 // ==========================================
-// 3. RECARGA AUTOMÁTICA CON LEMON CASH
+// 3. RECARGA DUAL: LEMON CASH & MANUAL QR
 // ==========================================
-window.openRechargeModal = () => {
+window.openRechargeModal = async () => {
     const modal = document.getElementById('rechargeModal');
     if (!modal) return;
     window.resetRechargeModal();
     modal.classList.remove('hidden');
+    
+    // Verificar si el servidor y robot IMAP están en línea
+    await window.checkServerStatus();
+};
+
+window.checkServerStatus = async () => {
+    const statusNotice = document.getElementById('rechargeServerStatusNotice');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+    try {
+        const res = await fetch(`${BACKEND_API_BASE}/health`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+            const data = await res.json();
+            if (statusNotice) {
+                statusNotice.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> <strong class="text-emerald-400">Servidor En Línea:</strong> Robot IMAP Lemon Cash Activo`;
+            }
+            window.setRechargeUIMode('AUTO');
+            return true;
+        }
+    } catch (e) {
+        clearTimeout(timeoutId);
+    }
+
+    // Si no responde, activar modo manual
+    if (statusNotice) {
+        statusNotice.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> <strong class="text-amber-400">Servidor Apagado:</strong> Modo Manual por WhatsApp &amp; QR Activo`;
+    }
+    window.setRechargeUIMode('MANUAL');
+    return false;
+};
+
+window.setRechargeUIMode = (mode) => {
+    const autoCont = document.getElementById('rechargeAutoContainer');
+    const manualCont = document.getElementById('rechargeManualContainer');
+    const btnAuto = document.getElementById('btnModeAuto');
+    const btnManual = document.getElementById('btnModeManual');
+
+    if (mode === 'AUTO') {
+        if (autoCont) autoCont.classList.remove('hidden');
+        if (manualCont) manualCont.classList.add('hidden');
+        if (btnAuto) btnAuto.className = "flex-1 py-2 rounded-lg bg-emerald-600 text-black font-black transition flex items-center justify-center gap-1.5 shadow";
+        if (btnManual) btnManual.className = "flex-1 py-2 rounded-lg text-gray-400 hover:text-white transition flex items-center justify-center gap-1.5";
+    } else {
+        if (autoCont) autoCont.classList.add('hidden');
+        if (manualCont) manualCont.classList.remove('hidden');
+        if (btnManual) btnManual.className = "flex-1 py-2 rounded-lg bg-cuycito-gold text-black font-black transition flex items-center justify-center gap-1.5 shadow";
+        if (btnAuto) btnAuto.className = "flex-1 py-2 rounded-lg text-gray-400 hover:text-white transition flex items-center justify-center gap-1.5";
+    }
+};
+
+window.sendManualRechargeWhatsApp = async () => {
+    if (!currentClientUser) return alert("Sesión inválida.");
+    const input = document.getElementById('manualRechargeAmountInput');
+    const amount = parseFloat(input?.value) || 0;
+    if (amount <= 0) return alert("Por favor ingresa un monto válido a recargar.");
+
+    const orderId = `rec_man_${Date.now()}`;
+    const nick = currentClientUser.nickname || currentClientUser.name;
+
+    try {
+        const orderData = {
+            id: orderId,
+            userId: currentClientUser.id,
+            userName: currentClientUser.name,
+            userPhone: currentClientUser.phone,
+            userNickname: nick,
+            baseAmount: amount,
+            cents: 0,
+            exactAmount: amount,
+            currency: 'PEN',
+            status: 'pending_manual',
+            paymentMethod: 'Manual (WhatsApp)',
+            createdAt: new Date().toISOString()
+        };
+
+        await setDoc(doc(db, "recharge_orders", orderId), orderData);
+
+        const msg = `¡Hola CuycitoGO! 🐹👋\nSoy *${nick}* (${currentClientUser.name} - Tel: ${currentClientUser.phone}).\nAcabo de realizar una recarga manual de *S/ ${amount.toFixed(2)}* para mi saldo VIP.\nAdjunto mi comprobante para que lo validen y aprueben en el sistema. ¡Muchas gracias! 🙌`;
+        
+        window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
+        window.closeRechargeModal();
+        alert("✨ ¡Solicitud de recarga enviada! En cuanto envíes tu comprobante por WhatsApp, el administrador la aprobará en el sistema.");
+
+    } catch (e) {
+        console.error(e);
+        alert("Error al registrar la solicitud manual.");
+    }
 };
 
 window.closeRechargeModal = () => {

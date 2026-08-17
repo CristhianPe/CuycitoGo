@@ -117,6 +117,10 @@
                 <button id="tab-btn-finance" onclick="window.switchTab('finance')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition"><i class="fa-solid fa-chart-pie"></i> Finanzas</button>
                 <button id="tab-btn-clients" onclick="window.switchTab('clients')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition"><i class="fa-solid fa-address-book"></i> Accesos Tienda</button>
                 <button id="tab-btn-catalog" onclick="window.switchTab('catalog')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition"><i class="fa-solid fa-tags"></i> Catálogo Web</button>
+                <button id="tab-btn-recharges" onclick="window.switchTab('recharges')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5 relative">
+                    <i class="fa-solid fa-bolt text-yellow-400"></i> Recargas
+                    <span id="pendingRechargesBadge" class="hidden px-1.5 py-0.5 text-[10px] bg-cuycito-red text-white font-black rounded-full shadow glow-red animate-pulse">0</span>
+                </button>
             </div>
 
             <!-- TAB 1: SERVICIOS ACTIVOS -->
@@ -246,6 +250,77 @@
                 </div>
 
                 <div id="catalogGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+            </section>
+
+            <!-- TAB 6: GESTIÓN DE RECARGAS DE SALDO -->
+            <section id="view-recharges" class="hidden space-y-6 pb-10">
+                
+                <!-- Peticiones de Saldo Pendientes / Por Aprobar -->
+                <div class="bg-cuycito-dark rounded-2xl border border-yellow-500/40 overflow-hidden shadow-2xl">
+                    <div class="p-4 border-b border-gray-800 bg-gradient-to-r from-amber-950/40 to-black flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-yellow-400 text-base animate-pulse"></i>
+                            <h3 class="text-sm font-black text-white uppercase tracking-wider">
+                                Peticiones de Recarga Pendientes <span id="rechargePendingCount" class="text-yellow-400 font-bold ml-1">(0)</span>
+                            </h3>
+                        </div>
+                        <button onclick="window.renderRechargesTable()" class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-arrows-rotate"></i> Actualizar
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-gray-400">
+                            <thead class="bg-black text-gray-300 uppercase tracking-wider font-extrabold text-[10px]">
+                                <tr>
+                                    <th class="p-3">Cliente</th>
+                                    <th class="p-3">Teléfono</th>
+                                    <th class="p-3">Monto Base</th>
+                                    <th class="p-3 text-cuycito-gold">Monto Exacto (Céntimos)</th>
+                                    <th class="p-3">Método</th>
+                                    <th class="p-3">Fecha y Hora</th>
+                                    <th class="p-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingRechargesTableBody" class="divide-y divide-gray-800 font-mono">
+                                <tr>
+                                    <td colspan="7" class="p-8 text-center text-gray-500 font-sans">No hay solicitudes de recarga pendientes por aprobar.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Historial de Recargas (Aprobadas / Conciliadas) -->
+                <div class="bg-cuycito-dark rounded-2xl border border-gray-800 overflow-hidden shadow-2xl">
+                    <div class="p-4 border-b border-gray-800 bg-black/60 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-receipt text-emerald-400 text-base"></i>
+                            <h3 class="text-sm font-black text-white uppercase tracking-wider">Historial de Recargas Procesadas</h3>
+                        </div>
+                        <input type="text" id="searchRechargesHistory" oninput="window.filterRechargesHistory()" placeholder="Buscar cliente o referencia..." class="bg-black border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-cuycito-gold w-64">
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[420px] custom-scrollbar">
+                        <table class="w-full text-left text-xs text-gray-400">
+                            <thead class="bg-black text-gray-300 uppercase tracking-wider font-extrabold text-[10px] sticky top-0">
+                                <tr>
+                                    <th class="p-3">Fecha y Hora</th>
+                                    <th class="p-3">Cliente</th>
+                                    <th class="p-3 text-emerald-400">Monto Acreditado</th>
+                                    <th class="p-3">Tipo de Acreditación</th>
+                                    <th class="p-3">Referencia / Comprobante</th>
+                                    <th class="p-3 text-center">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="completedRechargesTableBody" class="divide-y divide-gray-800 font-mono">
+                                <tr>
+                                    <td colspan="6" class="p-8 text-center text-gray-500 font-sans">Cargando historial de recargas...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
         </main>
