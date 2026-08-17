@@ -1,6 +1,6 @@
 import { db, collection, getDocs, getDoc, doc, setDoc } from "./firebase-config.js";
 
-const CENTRAL_WHATSAPP_PHONE = "51991735344";
+const CENTRAL_WHATSAPP_PHONE = "";
 
 let catalogProducts = [];
 let masterAccounts = [];
@@ -91,20 +91,136 @@ async function loadStoreCatalog() {
             catalogProducts.push(data);
         });
 
+        if (catalogProducts.length === 0) {
+            catalogProducts = [
+                {
+                    id: "prod_combo_duo",
+                    title: "Combo Dúo: Netflix 4K + Crunchyroll Anime",
+                    category: "Combos",
+                    description: "Disfruta de tus plataformas favoritas en un solo combo con perfiles privados independientes, calidad 4K Ultra HD y garantía total 30 días.",
+                    price: 17.00,
+                    imageUrl: "assets/img/promo_combo_duo.jpg",
+                    promo: true,
+                    isCombo: true,
+                    stock: 12
+                },
+                {
+                    id: "prod_netflix_1p",
+                    title: "Netflix Premium 4K - 1 Perfil Privado",
+                    category: "Streaming",
+                    description: "1 Perfil Privado con PIN personalizado. Calidad 4K Ultra HD y garantía 100% durante 30 días. Descuento por apertura web.",
+                    price: 15.00,
+                    imageUrl: "assets/img/promo_netflix_4k.jpg",
+                    promo: false,
+                    stock: 8
+                },
+                {
+                    id: "prod_combo_trio",
+                    title: "Combo Trío Total: Netflix + Disney ESPN + Max",
+                    category: "Combos",
+                    description: "El paquete definitivo de entretenimiento para toda la familia con PIN privado y 4K Ultra HD.",
+                    price: 32.00,
+                    imageUrl: "assets/img/promo_combo_trio.jpg",
+                    promo: true,
+                    isCombo: true,
+                    stock: 6
+                },
+                {
+                    id: "prod_disney_1p",
+                    title: "Disney+ Premium 4K - 1 Perfil Privado",
+                    category: "Streaming",
+                    description: "1 Perfil Privado con PIN personalizado. Calidad 4K Ultra HD, ESPN y garantía 100% durante 30 días.",
+                    price: 10.00,
+                    imageUrl: "assets/img/banner_disney.svg",
+                    promo: false,
+                    stock: 15
+                },
+                {
+                    id: "prod_prime_1p",
+                    title: "Prime Video Premium 4K - 1 Perfil Privado",
+                    category: "Streaming",
+                    description: "1 Perfil Privado con PIN personalizado. Calidad 4K Ultra HD y acceso a todas las series Amazon Originals.",
+                    price: 6.00,
+                    imageUrl: "assets/img/banner_prime.svg",
+                    promo: false,
+                    stock: 12
+                },
+                {
+                    id: "prod_max_1p",
+                    title: "Max Platino 4K - 1 Perfil Privado",
+                    category: "Streaming",
+                    description: "Disfruta de HBO Max Platino en 4K Ultra HD con PIN privado.",
+                    price: 9.00,
+                    imageUrl: "assets/img/banner_max.svg",
+                    promo: false,
+                    stock: 10
+                },
+                {
+                    id: "prod_spotify_ind",
+                    title: "Spotify Premium Individual (1 Mes)",
+                    category: "Música",
+                    description: "Cuenta o renovación de tu cuenta personal Spotify Premium sin anuncios.",
+                    price: 8.00,
+                    imageUrl: "assets/img/banner_spotify.svg",
+                    promo: false,
+                    stock: 20
+                },
+                {
+                    id: "prod_crunchyroll_1p",
+                    title: "Crunchyroll Mega Fan - 1 Perfil",
+                    category: "Gaming",
+                    description: "Disfruta de todo el anime en HD sin anuncios y estrenos en simulcast.",
+                    price: 7.00,
+                    imageUrl: "assets/img/banner_crunchyroll.svg",
+                    promo: false,
+                    stock: 14
+                }
+            ];
+        }
+
         if (loadingState) loadingState.classList.add('hidden');
         renderProducts(catalogProducts);
 
     } catch (error) {
         console.error("Error al cargar el catálogo de Firebase:", error);
         if (loadingState) {
-            loadingState.innerHTML = `
-                <div class="col-span-full text-center text-red-400 py-8 bg-[#121212] rounded-3xl border border-red-500/30 p-6">
-                    <i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i>
-                    <p class="font-bold text-sm">No pudimos conectar con la base de datos.</p>
-                    <p class="text-xs text-gray-500 mt-1">Por favor recarga la página o inténtalo más tarde.</p>
-                </div>
-            `;
+            loadingState.classList.add('hidden');
         }
+        // Fallback inmediato
+        renderProducts([
+            {
+                id: "prod_combo_duo",
+                title: "Combo Dúo: Netflix 4K + Crunchyroll Anime",
+                category: "Combos",
+                description: "Disfruta de tus plataformas favoritas en un solo combo con perfiles privados independientes, calidad 4K Ultra HD y garantía total 30 días.",
+                price: 17.00,
+                imageUrl: "assets/img/promo_combo_duo.jpg",
+                promo: true,
+                isCombo: true,
+                stock: 12
+            },
+            {
+                id: "prod_netflix_1p",
+                title: "Netflix Premium 4K - 1 Perfil Privado",
+                category: "Streaming",
+                description: "1 Perfil Privado con PIN personalizado. Calidad 4K Ultra HD y garantía 100% durante 30 días.",
+                price: 15.00,
+                imageUrl: "assets/img/promo_netflix_4k.jpg",
+                promo: false,
+                stock: 8
+            },
+            {
+                id: "prod_combo_trio",
+                title: "Combo Trío Total: Netflix + Disney ESPN + Max",
+                category: "Combos",
+                description: "El paquete definitivo de entretenimiento para toda la familia con PIN privado y 4K Ultra HD.",
+                price: 32.00,
+                imageUrl: "assets/img/promo_combo_trio.jpg",
+                promo: true,
+                isCombo: true,
+                stock: 6
+            }
+        ]);
     }
 }
 
@@ -168,6 +284,46 @@ window.filterCatalog = () => {
     renderProducts(filtered);
 };
 
+function resolveProductImage(p) {
+    if (p && p.imageUrl && typeof p.imageUrl === 'string' && p.imageUrl.trim() !== '' && !p.imageUrl.includes('undefined')) {
+        if (!p.imageUrl.includes('unsplash.com') && !p.imageUrl.includes('hdqwalls') && !p.imageUrl.includes('undefined')) {
+            return p.imageUrl.trim();
+        }
+    }
+    const title = (p?.title || '').toLowerCase();
+    const cat = (p?.category || '').toLowerCase();
+
+    // 1. Combos Compartidos (Mantener el combo duo perfecto)
+    if (title.includes('trio') || title.includes('trío') || (title.includes('netflix') && title.includes('disney') && title.includes('max'))) {
+        return 'assets/img/promo_combo_trio.jpg';
+    }
+    if (title.includes('combo') || title.includes('duo') || title.includes('dúo') || cat.includes('combo')) {
+        return 'assets/img/promo_combo_duo.jpg';
+    }
+
+    // 2. Servicios Específicos Centrados en Logos
+    if (title.includes('prime') || title.includes('amazon')) {
+        return 'assets/img/banner_prime.svg';
+    }
+    if (title.includes('disney') || title.includes('star') || title.includes('espn') || title.includes('marvel')) {
+        return 'assets/img/banner_disney.svg';
+    }
+    if (title.includes('spotify') || cat.includes('music') || cat.includes('música') || title.includes('music') || title.includes('cancion')) {
+        return 'assets/img/banner_spotify.svg';
+    }
+    if (title.includes('crunchyroll') || title.includes('anime') || cat.includes('anime') || cat.includes('gaming')) {
+        return 'assets/img/banner_crunchyroll.svg';
+    }
+    if (title.includes('max') || title.includes('hbo')) {
+        return 'assets/img/banner_max.svg';
+    }
+    if (title.includes('netflix')) {
+        return 'assets/img/promo_netflix_4k.jpg';
+    }
+
+    return 'assets/img/promo_netflix_4k.jpg';
+}
+
 function renderProducts(filtered) {
     const grid = document.getElementById('catalogGrid');
     if (!grid) return;
@@ -197,28 +353,17 @@ function renderProducts(filtered) {
             ? `<span class="bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1"><i class="fa-solid fa-boxes-stacked"></i> Stock: ${stock} libres</span>`
             : `<span class="bg-red-950/80 text-red-400 border border-cuycito-red/50 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1"><i class="fa-solid fa-circle-xmark"></i> Agotado</span>`;
 
-        const imageHTML = p.imageUrl && p.imageUrl.trim() !== ''
-            ? `<img src="${p.imageUrl}" alt="${p.title}" class="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-500">`
-            : `<div class="w-full h-44 bg-gradient-to-tr from-black via-gray-900 to-${p.colorClass || 'red-950'} flex flex-col items-center justify-center text-cuycito-gold text-4xl">
-                 <i class="fa-solid ${isCombo ? 'fa-gift' : 'fa-tv'}"></i>
-                 <span class="text-[10px] text-gray-500 font-bold tracking-widest uppercase mt-2">${categoryTag}</span>
-               </div>`;
+        const finalImage = resolveProductImage(p);
+        const imageHTML = `<img src="${finalImage}" alt="${p.title}" class="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-500">`;
 
         const actionButtonsHTML = hasStock 
             ? `
-                <div class="flex items-center gap-2">
-                    <button onclick="window.quickBuy('${p.id}')" class="bg-black hover:bg-gray-900 border border-gray-800 hover:border-cuycito-gold text-gray-300 hover:text-cuycito-gold p-2.5 rounded-xl transition text-xs" title="Comprar directo por WhatsApp">
-                        <i class="fa-brands fa-whatsapp text-base text-emerald-400"></i>
-                    </button>
-                    <button onclick="window.addToCart('${p.id}')" class="bg-gradient-to-r from-cuycito-red to-cuycito-redHover hover:from-cuycito-redHover hover:to-cuycito-gold text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow glow-red">
-                        <i class="fa-solid fa-cart-plus"></i> Agregar
-                    </button>
-                </div>
+                <button onclick="window.addToCart('${p.id}')" class="bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-500 hover:from-orange-400 hover:to-emerald-400 text-black font-black text-xs px-4 py-2.5 rounded-xl transition shadow-lg glow-gold flex items-center gap-1.5 shrink-0 uppercase tracking-wider">
+                    <i class="fa-solid fa-cart-plus text-sm"></i> Añadir al Carrito
+                </button>
             `
             : `
-                <button onclick="window.requestOutOfStockWhatsApp('${p.title.replace(/'/g, "\\'")}')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white font-extrabold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5 shadow" title="Reservar por WhatsApp">
-                    <i class="fa-brands fa-whatsapp text-emerald-400"></i> Reservar
-                </button>
+                <span class="bg-gray-950 text-gray-500 border border-gray-800 font-bold text-xs px-3 py-2 rounded-xl">Agotado</span>
             `;
 
         // Renderizado especial para COMBOS
@@ -362,9 +507,11 @@ function renderProducts(filtered) {
     grid.innerHTML = html;
 }
 
-// ==========================================
-// 4. CARRITO DE COMPRAS & PEDIDOS WHATSAPP (+51 991735344)
-// ==========================================
+// 4. CARRITO DE COMPRAS & PEDIDOS WHATSAPP OFICIAL
+
+// Envío del pedido a WhatsApp Oficial con detalle de productos y suma total
+
+// Compra rápida directa para un solo producto (WhatsApp Oficial)
 window.toggleCartDrawer = () => {
     const drawer = document.getElementById('cartDrawer');
     const backdrop = document.getElementById('cartDrawerBackdrop');
@@ -628,7 +775,7 @@ window.payOrderWithBalance = async () => {
     }
 };
 
-// Envío del pedido a WhatsApp (+51 991735344) con detalle de productos y suma total
+// Envío del pedido a WhatsApp Oficial con detalle de productos y suma total
 window.sendOrderWhatsApp = () => {
     if (cart.length === 0) return alert("Tu carrito está vacío.");
 
@@ -672,7 +819,7 @@ window.sendOrderWhatsApp = () => {
     window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
 };
 
-// Compra rápida directa para un solo producto (+51 991735344)
+// Compra rápida directa para un solo producto (WhatsApp Oficial)
 window.quickBuy = (productId) => {
     const product = catalogProducts.find(p => p.id === productId);
     if (!product) return;

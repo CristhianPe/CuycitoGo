@@ -127,7 +127,7 @@
             </div>
         </section>
 
-        <!-- NAVEGACIÓN ENTRE SERVICIOS, TIENDA Y JUEGOS -->
+        <!-- NAVEGACIÓN ENTRE SERVICIOS, TIENDA, JUEGOS Y REFERIDOS -->
         <div class="flex items-center gap-3 border-b border-gray-800 pb-2 overflow-x-auto">
             <button id="tabBtnServices" onclick="window.switchProfileTab('services')" class="text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0">
                 <i class="fa-solid fa-layer-group"></i> Mis Servicios Contratados
@@ -139,6 +139,10 @@
             <button id="tabBtnRoulette" onclick="window.switchProfileTab('roulette')" class="text-gray-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0 relative">
                 <span class="text-base">🎮</span> Juegos VIP
                 <span class="bg-gradient-to-r from-cuycito-red to-amber-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow glow-red animate-pulse">S/ 1.00</span>
+            </button>
+            <button id="tabBtnReferrals" onclick="window.switchProfileTab('referrals')" class="text-gray-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0">
+                <i class="fa-solid fa-gift text-orange-400"></i> Código Referido VIP
+                <span class="bg-orange-950/80 text-orange-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-orange-500/40">+S/ 0.50</span>
             </button>
         </div>
 
@@ -383,6 +387,282 @@
             </div>
         </section>
 
+        <!-- ========================================================= -->
+        <!-- VISTA 4: SISTEMA DE CÓDIGO DE REFERIDO VIP (+S/ 0.50)      -->
+        <!-- ========================================================= -->
+        <section id="viewProfileReferrals" class="hidden space-y-6">
+            
+            <!-- Banner Dinámico de Estado VIP / Requisito -->
+            <div id="referralStatusBanner" class="bg-gradient-to-r from-amber-950/60 via-black to-[#121212] border border-amber-500/50 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-lg shadow">
+                        <i class="fa-solid fa-gift text-cuycito-gold"></i>
+                    </div>
+                    <div>
+                        <h4 id="referralStatusTitle" class="text-sm font-black text-white uppercase flex items-center gap-2">
+                            Tu Código VIP está Listo para Compartir
+                        </h4>
+                        <p id="referralStatusDescription" class="text-xs text-gray-300">
+                            Comparte tu código con amigos. Tienes <strong id="statusActiveServicesCount" class="text-cuycito-gold font-mono">0 / 4</strong> servicios activos para cobrar tus comisiones de S/ 0.50.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="referralStatusBadge" class="bg-amber-950 text-yellow-300 border border-yellow-500/40 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase">
+                        ● Código Generado
+                    </span>
+                    <button onclick="window.switchProfileTab('store')" class="bg-gradient-to-r from-cuycito-gold to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 text-black font-black text-xs px-3.5 py-1.5 rounded-xl transition shadow">
+                        <i class="fa-solid fa-cart-shopping mr-1"></i> Ver Tienda
+                    </button>
+                </div>
+            </div>
+
+            <!-- CONSOLA DE REFERIDOS PRINCIPAL -->
+            <div id="referralActiveContainer" class="space-y-6">
+                
+                <!-- Tarjeta Principal de Código VIP & Acciones Rápidas -->
+                <div class="bg-gradient-to-br from-amber-950/40 via-[#141414] to-[#0a0a0a] border-2 border-cuycito-gold/70 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(255,183,3,0.18)] glow-gold space-y-6">
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-gray-800 pb-5">
+                        <div>
+                            <span class="bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 w-fit shadow">
+                                <i class="fa-solid fa-crown text-yellow-400"></i> Miembro Referidor VIP Activo
+                            </span>
+                            <h2 class="text-xl sm:text-2xl font-black text-white mt-2">
+                                Tu Código Único & Enlace de Invitación
+                            </h2>
+                            <p class="text-xs text-gray-300 mt-1">
+                                Cada vez que un amigo use tu código al solicitar cuenta o realizar una compra, recibes <strong>+S/ 0.50 de saldo al instante</strong>.
+                            </p>
+                        </div>
+
+                        <!-- Badge de Ganancia -->
+                        <div class="bg-black/90 border-2 border-cuycito-gold/60 rounded-2xl p-4 text-right shrink-0 shadow-lg">
+                            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Bono por Cada Referido</span>
+                            <span class="text-2xl sm:text-3xl font-black text-cuycito-gold font-mono">+S/ 0.50 Sol</span>
+                        </div>
+                    </div>
+
+                    <!-- Código y Enlace de Referido -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="bg-black/90 border border-gray-800 rounded-2xl p-4 space-y-2">
+                            <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
+                                <span><i class="fa-solid fa-ticket text-cuycito-gold mr-1"></i> Código Único Vinculado a tu Cuenta:</span>
+                                <span class="text-emerald-400 font-mono text-[10px]">● Activo &amp; Verificado</span>
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <span id="displayReferralCode" class="flex-1 bg-[#121212] border border-cuycito-gold/60 rounded-xl px-4 py-3.5 text-lg font-black text-cuycito-gold font-mono tracking-widest text-center shadow-inner select-all">
+                                    VIP-CARGANDO
+                                </span>
+                                <button onclick="window.copyReferralCode()" class="bg-cuycito-gold hover:bg-yellow-400 text-black font-black text-xs px-4 py-3.5 rounded-xl transition shadow flex items-center gap-1.5 shrink-0 glow-gold" title="Copiar Código">
+                                    <i class="fa-regular fa-copy text-sm"></i> Copiar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-black/90 border border-gray-800 rounded-2xl p-4 space-y-2">
+                            <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
+                                <span><i class="fa-solid fa-link text-blue-400 mr-1"></i> Enlace Directo con Auto-Prellenado:</span>
+                                <span class="text-gray-500 text-[10px]">1-Clic para registro</span>
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="displayReferralLink" readonly class="flex-1 bg-[#121212] border border-gray-800 rounded-xl px-3 py-3 text-xs text-gray-300 font-mono outline-none select-all" value="...">
+                                <button onclick="window.copyReferralLink()" class="bg-blue-600 hover:bg-blue-500 text-white font-black text-xs px-3.5 py-3.5 rounded-xl transition shadow flex items-center gap-1 shrink-0" title="Copiar Enlace">
+                                    <i class="fa-solid fa-copy"></i> Link
+                                </button>
+                                <button onclick="window.shareReferralWhatsApp()" class="bg-[#25D366] hover:bg-emerald-500 text-black font-black text-xs px-3.5 py-3.5 rounded-xl transition shadow flex items-center gap-1 shrink-0" title="Compartir en WhatsApp">
+                                    <i class="fa-brands fa-whatsapp text-base"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botón Principal Prominente de Compartir Invitación -->
+                    <div class="pt-2">
+                        <button onclick="window.shareReferralGlobalAction()" class="w-full bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-500 hover:from-orange-400 hover:to-emerald-400 text-black font-black text-sm sm:text-base py-4 px-6 rounded-2xl shadow-xl glow-gold flex items-center justify-center gap-2.5 transform hover:scale-[1.01] transition duration-200 uppercase tracking-wider">
+                            <i class="fa-solid fa-share-nodes text-lg"></i>
+                            <span>Compartir Mi Enlace de Invitación VIP</span>
+                            <span class="bg-black/20 text-black text-xs px-2.5 py-0.5 rounded-full font-extrabold ml-1">+S/ 0.50 x amigo</span>
+                        </button>
+                    </div>
+
+                    <!-- Métricas Principales de Referidos -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                        <div class="bg-black/60 border border-gray-800 rounded-2xl p-4">
+                            <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Total Referidos</span>
+                            <p id="metricReferredCount" class="text-2xl font-black text-white font-mono mt-1">0</p>
+                        </div>
+                        <div class="bg-black/60 border border-emerald-950/60 rounded-2xl p-4">
+                            <span class="text-[10px] text-emerald-400 uppercase font-bold tracking-wider block">🟢 Efectuados en Compras</span>
+                            <p id="metricEffectuatedCount" class="text-2xl font-black text-emerald-400 font-mono mt-1">0</p>
+                        </div>
+                        <div class="bg-black/60 border border-amber-950/60 rounded-2xl p-4">
+                            <span class="text-[10px] text-cuycito-gold uppercase font-bold tracking-wider block">💰 Saldo Ganado Total</span>
+                            <p id="metricReferredEarnings" class="text-2xl font-black text-cuycito-gold font-mono mt-1">S/ 0.00</p>
+                        </div>
+                        <div class="bg-black/60 border border-gray-800 rounded-2xl p-4">
+                            <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Estado de Afiliación</span>
+                            <p class="text-xs font-black text-yellow-300 flex items-center gap-1.5 mt-2">
+                                <i class="fa-solid fa-circle-check text-emerald-400"></i> VIP Ilimitado
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 3. BARRA DE CÓDIGO EFECTUADO & ESTADO DE CANJES/COMPRAS -->
+                <div class="bg-[#121212] border border-gray-800 rounded-3xl p-6 sm:p-7 space-y-4 shadow-xl">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-800 pb-4">
+                        <div>
+                            <h3 class="text-base font-black text-white flex items-center gap-2">
+                                <i class="fa-solid fa-chart-line text-emerald-400"></i> Barra de Códigos Efectuados en Compras
+                            </h3>
+                            <p class="text-xs text-gray-400 mt-0.5">Control visual del porcentaje de amigos que usaron tu código y efectuaron su activación o compra.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="effectuatedRatioBadge" class="bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 text-xs font-black px-3 py-1.5 rounded-xl font-mono">
+                                0% Efectuado
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Visual Progress Bar -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs font-bold text-gray-400">
+                            <span id="effectuatedDetailText">0 de 0 códigos efectuados con éxito</span>
+                            <span id="effectuatedPercentText" class="text-emerald-400 font-mono font-black">0%</span>
+                        </div>
+                        <div class="w-full bg-black rounded-full h-4 overflow-hidden border border-gray-800 p-0.5">
+                            <div id="effectuatedProgressBar" class="bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400 h-full rounded-full transition-all duration-700 shadow-lg" style="width: 0%"></div>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between text-[11px] text-gray-500 pt-1">
+                            <span>⚪ Solicitud Web Ingresada</span>
+                            <span>🟡 En Verificación de Cuenta</span>
+                            <span class="text-emerald-400 font-bold">🟢 Canje / Compra Efectuada (+S/ 0.50)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. GUÍA DINÁMICA: ¿CÓMO FUNCIONA EL SISTEMA DE REFERIDOS VIP? -->
+                <div class="bg-[#121212] border border-gray-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+                    <div class="text-center max-w-xl mx-auto space-y-1">
+                        <span class="text-[11px] font-black uppercase tracking-widest text-cuycito-gold">Guía Dinámica Paso a Paso</span>
+                        <h3 class="text-xl sm:text-2xl font-black text-white">¿Cómo Funciona el Sistema de Referidos?</h3>
+                        <p class="text-xs text-gray-400">Un flujo 100% transparente y automatizado para multiplicar tu crédito.</p>
+                    </div>
+
+                    <!-- 4 Tarjetas de Pasos -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Paso 1 -->
+                        <div class="bg-black/60 border border-gray-800 hover:border-cuycito-gold/60 rounded-2xl p-5 space-y-3 transition duration-300 hover:scale-[1.02] group">
+                            <div class="flex items-center justify-between">
+                                <span class="w-8 h-8 rounded-xl bg-cuycito-gold/20 text-cuycito-gold font-black text-xs flex items-center justify-center border border-cuycito-gold/40">1</span>
+                                <i class="fa-solid fa-id-badge text-cuycito-gold text-xl group-hover:scale-110 transition"></i>
+                            </div>
+                            <h4 class="text-sm font-black text-white group-hover:text-cuycito-gold transition">Código Único VIP</h4>
+                            <p class="text-xs text-gray-400 leading-relaxed">Tu cuenta genera automáticamente un código exclusivo que identifica tus invitaciones en toda la tienda.</p>
+                        </div>
+
+                        <!-- Paso 2 -->
+                        <div class="bg-black/60 border border-gray-800 hover:border-blue-500/60 rounded-2xl p-5 space-y-3 transition duration-300 hover:scale-[1.02] group">
+                            <div class="flex items-center justify-between">
+                                <span class="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 font-black text-xs flex items-center justify-center border border-blue-500/40">2</span>
+                                <i class="fa-solid fa-paper-plane text-blue-400 text-xl group-hover:scale-110 transition"></i>
+                            </div>
+                            <h4 class="text-sm font-black text-white group-hover:text-blue-400 transition">Comparte tu Enlace</h4>
+                            <p class="text-xs text-gray-400 leading-relaxed">Envía tu enlace con 1 clic por WhatsApp, Telegram o redes sociales a amigos, familiares y grupos.</p>
+                        </div>
+
+                        <!-- Paso 3 -->
+                        <div class="bg-black/60 border border-gray-800 hover:border-orange-500/60 rounded-2xl p-5 space-y-3 transition duration-300 hover:scale-[1.02] group">
+                            <div class="flex items-center justify-between">
+                                <span class="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-400 font-black text-xs flex items-center justify-center border border-orange-500/40">3</span>
+                                <i class="fa-solid fa-cart-shopping text-orange-400 text-xl group-hover:scale-110 transition"></i>
+                            </div>
+                            <h4 class="text-sm font-black text-white group-hover:text-orange-400 transition">Solicitud &amp; Compra</h4>
+                            <p class="text-xs text-gray-400 leading-relaxed">Tu amigo solicita su cuenta gratis o realiza su compra de pantallas de streaming con tu código pre-cargado.</p>
+                        </div>
+
+                        <!-- Paso 4 -->
+                        <div class="bg-black/60 border border-gray-800 hover:border-emerald-500/60 rounded-2xl p-5 space-y-3 transition duration-300 hover:scale-[1.02] group">
+                            <div class="flex items-center justify-between">
+                                <span class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-xs flex items-center justify-center border border-emerald-500/40">4</span>
+                                <i class="fa-solid fa-sack-dollar text-emerald-400 text-xl group-hover:scale-110 transition"></i>
+                            </div>
+                            <h4 class="text-sm font-black text-white group-hover:text-emerald-400 transition">+S/ 0.50 Inmediato</h4>
+                            <p class="text-xs text-gray-400 leading-relaxed">Al efectuarse la verificación o compra, se te abonan S/ 0.50 directos a tu saldo para recargas o cuentas gratis.</p>
+                        </div>
+                    </div>
+
+                    <!-- Calculadora Interactiva de Ganancias -->
+                    <div class="bg-black/80 border border-cuycito-gold/30 rounded-2xl p-5 space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Simulador Dinámico de Ingresos</span>
+                                <h4 class="text-sm font-black text-white">¿Cuánto puedes ganar recomendando CuycitoGO?</h4>
+                            </div>
+                            <span class="text-xs text-cuycito-gold font-mono font-bold bg-amber-950/60 px-3 py-1 rounded-lg border border-cuycito-gold/30">
+                                S/ 0.50 por cada amigo
+                            </span>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center text-xs font-bold">
+                                <span class="text-gray-300">Amigos que invitas: <strong id="calcReferralFriendsCount" class="text-cuycito-gold text-sm font-mono">10 amigos</strong></span>
+                                <span class="text-emerald-400 font-black text-base font-mono">Ganancia: <strong id="calcReferralEarningsResult">S/ 5.00</strong></span>
+                            </div>
+                            <input type="range" id="calcReferralsSlider" min="1" max="50" value="10" step="1" oninput="window.updateReferralCalculator(this.value)" class="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-cuycito-gold">
+                            <div class="flex justify-between text-[10px] text-gray-500 font-mono">
+                                <span>1 amigo (S/ 0.50)</span>
+                                <span>10 amigos (S/ 5.00)</span>
+                                <span>25 amigos (S/ 12.50)</span>
+                                <span>50 amigos (S/ 25.00)</span>
+                            </div>
+                        </div>
+
+                        <p id="calcReferralEquivalenceText" class="text-xs text-emerald-300/90 font-medium italic text-center bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-500/20">
+                            ✨ ¡Con 10 amigos referidos puedes pagar casi la mitad de una cuenta completa de Max o Netflix!
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 5. FEED & HISTORIAL DE CÓDIGOS EFECTUADOS EN VIVO -->
+                <div class="bg-[#121212] border border-gray-800 rounded-3xl overflow-hidden shadow-xl space-y-4">
+                    <div class="p-5 border-b border-gray-800 bg-[#0a0a0a]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-black text-white flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-cuycito-gold"></i> Historial de Referidos &amp; Verificaciones en Vivo
+                            </h3>
+                            <p class="text-xs text-gray-400 mt-0.5">Detalle en tiempo real de los amigos que usaron tu código y sus compras efectuadas.</p>
+                        </div>
+                        <button onclick="window.loadProfileReferralProgram()" class="bg-black hover:bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5 w-fit">
+                            <i class="fa-solid fa-arrows-rotate"></i> Actualizar
+                        </button>
+                    </div>
+
+                    <div class="p-5 pt-0 overflow-x-auto">
+                        <table class="w-full text-left text-xs text-gray-300">
+                            <thead class="bg-black text-cuycito-gold uppercase tracking-wider text-[10px] font-black border-b border-gray-800">
+                                <tr>
+                                    <th class="p-3.5">Amigo Referido</th>
+                                    <th class="p-3.5">Operación / Compra</th>
+                                    <th class="p-3.5">Fecha</th>
+                                    <th class="p-3.5">Estado del Canje</th>
+                                    <th class="p-3.5 text-right">Comisión Ganada</th>
+                                </tr>
+                            </thead>
+                            <tbody id="referralHistoryTableBody" class="divide-y divide-gray-800 font-sans">
+                                <tr>
+                                    <td colspan="5" class="p-8 text-center text-gray-500 italic">Cargando historial de referidos...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
     </main>
 
     <!-- Modal para Modificar Nickname y Datos -->
@@ -551,7 +831,7 @@
                         
                         <!-- Contenedor de Imagen QR -->
                         <div id="orderQrBox" class="w-52 h-52 mx-auto bg-white p-2.5 rounded-2xl border-2 border-emerald-400 flex flex-col items-center justify-center shadow-2xl">
-                            <img id="orderQrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https://wa.me/51991735344?text=Recarga%20CuycitoGO" alt="QR Lemon Cash / Yape / Plin" class="w-44 h-44 object-contain rounded-xl">
+                            <img id="orderQrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https://cuzcitogo.pe" alt="QR Lemon Cash / Yape / Plin" class="w-44 h-44 object-contain rounded-xl">
                             <span class="text-[9px] text-black font-black uppercase tracking-wider mt-1">Yape • Plin • Lemon</span>
                         </div>
 
@@ -605,12 +885,12 @@
                     
                     <!-- QR Box -->
                     <div class="w-52 h-52 mx-auto bg-white p-2.5 rounded-2xl border-2 border-cuycito-gold flex flex-col items-center justify-center shadow-2xl">
-                        <img id="manualQrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https://wa.me/51991735344?text=Recarga%20CuycitoGO" alt="QR CuycitoGO" class="w-44 h-44 object-contain rounded-xl">
+                        <img id="manualQrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https://cuzcitogo.pe" alt="QR CuycitoGO" class="w-44 h-44 object-contain rounded-xl">
                         <span class="text-[9px] text-black font-black uppercase tracking-wider mt-1">Yape • Plin • Lemon</span>
                     </div>
 
                     <div class="bg-gray-900 border border-gray-800 rounded-xl p-2.5 text-xs text-left space-y-1 font-mono">
-                        <p class="text-gray-300"><span class="text-gray-500">Número WhatsApp:</span> <strong id="manualWhatsappDisplay" class="text-white">+51 991735344</strong></p>
+                        <p class="text-gray-300"><span class="text-gray-500">Soporte Directo:</span> <strong id="manualWhatsappDisplay" class="text-white">WhatsApp Oficial CuycitoGO</strong></p>
                         <p class="text-gray-300"><span class="text-gray-500">Titular / Lemon:</span> <strong id="manualLemonTagDisplay" class="text-cuycito-gold">$cmancocambillo</strong></p>
                     </div>
                 </div>
@@ -688,6 +968,83 @@
                 </button>
             </div>
 
+    <!-- BOTÓN FLOTANTE DEL CARRITO DE COMPRAS VIP -->
+    <div id="profileCartFloatingBtn" class="fixed bottom-6 right-6 z-40">
+        <button onclick="window.toggleProfileCartModal()" class="bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-500 hover:from-orange-400 hover:to-emerald-400 text-black font-black text-xs sm:text-sm px-5 py-3.5 rounded-full shadow-[0_0_30px_rgba(255,183,3,0.4)] glow-gold flex items-center gap-2.5 transform hover:scale-105 transition">
+            <i class="fa-solid fa-cart-shopping text-base"></i>
+            <span>Carrito</span>
+            <span id="profileCartBadge" class="bg-black text-cuycito-gold font-mono px-2 py-0.5 rounded-full text-xs font-black">0</span>
+        </button>
+    </div>
+
+    <!-- MODAL DEL CARRITO DE COMPRAS CON DESCUENTO DE REFERIDO Y SALDO -->
+    <div id="profileCartModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gradient-to-br from-[#181818] via-[#121212] to-[#0a0a0a] border-2 border-cuycito-gold/70 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl glow-gold flex flex-col max-h-[90vh]">
+            <!-- Header del Carrito -->
+            <div class="p-5 border-b border-gray-800 flex items-center justify-between bg-black/60">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-cuycito-gold/20 text-cuycito-gold flex items-center justify-center text-sm border border-cuycito-gold/40">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-black text-white uppercase tracking-wider">Tu Carrito de Compras VIP</h3>
+                        <p class="text-[11px] text-gray-400">Sumado automático y cálculo de saldo & descuento</p>
+                    </div>
+                </div>
+                <button onclick="window.toggleProfileCartModal()" class="text-gray-400 hover:text-white text-lg p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Lista de Productos en Carrito -->
+            <div id="profileCartItemsList" class="p-5 overflow-y-auto flex-1 space-y-3 divide-y divide-gray-800/60">
+                <p class="text-center text-xs text-gray-500 py-8">Tu carrito está vacío.</p>
+            </div>
+
+            <!-- Footer del Carrito con Código de Referido, Saldo y Totales -->
+            <div class="p-5 border-t border-gray-800 bg-black/80 space-y-3">
+                
+                <!-- Campo de Código de Referido (1 Solo Uso para -S/ 0.50 Sol) -->
+                <div id="referralDiscountBox" class="bg-[#141414] border border-gray-800 rounded-2xl p-3 space-y-1.5">
+                    <label class="block text-[11px] font-bold text-gray-300 uppercase tracking-wider flex items-center justify-between">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-ticket text-cuycito-gold"></i> Código Referido VIP (-S/ 0.50)</span>
+                        <span id="referralDiscountStatusBadge" class="text-[10px] text-emerald-400 font-mono font-bold">1 Uso por cliente</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="cartReferralInput" placeholder="Ingresa código VIP" class="flex-1 bg-black border border-gray-700 rounded-xl px-3 py-2 text-xs text-cuycito-gold font-mono uppercase outline-none focus:border-cuycito-gold">
+                        <button onclick="window.applyCartReferralDiscount()" class="bg-amber-950/80 hover:bg-amber-800 text-yellow-300 border border-yellow-500/40 font-bold text-xs px-3 py-2 rounded-xl transition shrink-0">
+                            Aplicar
+                        </button>
+                    </div>
+                    <p id="referralDiscountMessage" class="text-[10px] text-gray-400">Si te registraste con un código VIP, se aplica -S/ 0.50 de descuento automático en tu compra.</p>
+                </div>
+
+                <!-- Desglose de Precios -->
+                <div class="space-y-1.5 text-xs font-mono">
+                    <div class="flex justify-between text-gray-400">
+                        <span>Subtotal Productos:</span>
+                        <span id="cartSubtotalDisplay" class="font-bold text-white">S/ 0.00</span>
+                    </div>
+                    <div id="cartReferralDiscountRow" class="flex justify-between text-emerald-400 hidden font-bold">
+                        <span>Descuento Referido VIP (Uso único):</span>
+                        <span id="cartReferralDiscountDisplay">- S/ 0.50</span>
+                    </div>
+                    <div class="flex justify-between text-emerald-400">
+                        <span>Saldo Disponible Aplicado:</span>
+                        <span id="cartBalanceAppliedDisplay" class="font-bold">- S/ 0.00</span>
+                    </div>
+                    <div class="flex justify-between text-sm font-black border-t border-gray-800 pt-2 text-white">
+                        <span>TOTAL A PAGAR:</span>
+                        <span id="cartTotalPayableDisplay" class="text-cuycito-gold font-mono text-base">S/ 0.00</span>
+                    </div>
+                </div>
+
+                <!-- Botón de Confirmar Compra -->
+                <button onclick="window.confirmCartCheckout()" class="w-full bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-500 hover:from-orange-400 hover:to-emerald-400 text-black font-black text-sm py-3.5 rounded-xl shadow-xl glow-gold uppercase tracking-wider flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Confirmar y Procesar Compra</span>
+                </button>
+            </div>
         </div>
     </div>
 

@@ -16,16 +16,17 @@
 </head>
 <body class="h-full flex flex-col font-sans selection:bg-cuycito-gold selection:text-black hidden" id="mainBody">
 
-    <header class="bg-cuycito-dark border-b-2 border-cuycito-red px-6 py-3 flex items-center justify-between shrink-0 shadow-lg shadow-cuycito-red/10 z-10">
-        <div class="flex items-center gap-4">
-            <img src="assets/img/logo.png" alt="CuycitoGO" class="h-14 object-contain drop-shadow-[0_0_15px_rgba(255,183,3,0.35)]">
+    <header class="bg-cuycito-dark border-b-2 border-cuycito-red px-4 sm:px-6 py-3 flex items-center justify-between shrink-0 shadow-lg shadow-cuycito-red/10 z-10">
+        <div class="flex items-center gap-2.5 sm:gap-4">
+            <img src="assets/img/logo.png" alt="CuycitoGO" class="h-10 sm:h-14 object-contain drop-shadow-[0_0_15px_rgba(255,183,3,0.35)]">
             <div>
-                <h1 class="text-3xl font-black tracking-widest text-cuycito-gold drop-shadow-md" style="font-family: impact, sans-serif;">CuycitoGO</h1>
-                <p class="text-xs text-gray-400 uppercase tracking-widest font-bold">Admin Center PRO</p>
+                <h1 class="text-xl sm:text-3xl font-black tracking-widest text-cuycito-gold drop-shadow-md leading-none" style="font-family: impact, sans-serif;">CuycitoGO</h1>
+                <p class="text-[9px] sm:text-xs text-gray-400 uppercase tracking-widest font-bold">Admin Center PRO</p>
             </div>
         </div>
 
-        <div class="flex items-center gap-3">
+        <!-- Controles para PC (Escritorio >= 1280px) -->
+        <div class="hidden xl:flex items-center gap-3">
             <!-- Indicador único de Auto-Guardado en Nube (Interactivo) -->
             <div id="dbStatus" onclick="window.triggerManualSync()" class="cursor-pointer hover:border-emerald-400 transition text-[11px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl bg-black/90 border border-emerald-500/50 text-emerald-400 flex items-center gap-2 shadow glow-gold" title="Auto-guardado activo. Haz click para forzar sincronización inmediata.">
                 <i class="fa-solid fa-cloud-check text-emerald-400 text-sm animate-pulse"></i>
@@ -50,16 +51,48 @@
                 <i class="fa-solid fa-right-from-bracket"></i> Salir
             </button>
         </div>
+
+        <!-- Controles para Móvil & Tablets (< 1280px) -->
+        <div class="flex xl:hidden items-center gap-2">
+            <button onclick="window.toggleMobileSidebar(true)" class="bg-gradient-to-r from-cuycito-red to-orange-500 hover:from-red-600 hover:to-orange-400 text-white font-black text-xs px-3 py-2 rounded-xl transition shadow flex items-center gap-1.5 glow-red">
+                <i class="fa-solid fa-bolt text-yellow-300"></i>
+                <span class="hidden xs:inline">+ Operación</span>
+            </button>
+            
+            <button onclick="window.toggleMobileAlertsSidebar(true)" class="relative bg-gray-900 hover:bg-gray-800 border border-yellow-500/50 text-cuycito-gold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5 font-bold" title="Alertas por Vencer & Notas">
+                <i class="fa-solid fa-bell text-yellow-400"></i>
+                <span id="mobileAlertCountBadge" class="bg-cuycito-red text-white text-[10px] font-black px-1.5 py-0.2 rounded-full shadow glow-red animate-pulse">0</span>
+            </button>
+
+            <button onclick="window.toggleMobileUtilsModal(true)" class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-cuycito-gold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5 font-black" title="Menú de Utilidades">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
     </header>
 
-    <div class="flex-1 flex overflow-hidden">
+    <div class="flex-1 flex overflow-hidden relative">
         
-        <aside class="w-80 bg-cuycito-dark border-r border-cuycito-red/30 p-5 overflow-y-auto shrink-0 flex flex-col gap-4 custom-scrollbar">
-            <button onclick="document.getElementById('bulkAddModal').classList.remove('hidden'); window.generateBulkCells();" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs py-3 rounded flex justify-center items-center gap-2 font-black transition glow-gold uppercase tracking-widest border border-blue-400/50 mb-2">
+        <!-- Backdrop para móvil -->
+        <div id="sidebarBackdrop" onclick="window.toggleMobileSidebar(false)" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 xl:hidden hidden"></div>
+
+        <!-- Sidebar Adaptativo (Fijo en Desktop >= 1280px, Drawer en Móvil) -->
+        <aside id="dashboardSidebar" class="fixed xl:static inset-y-0 left-0 z-50 xl:z-auto w-80 max-w-[85vw] bg-cuycito-dark border-r border-cuycito-red/30 p-5 overflow-y-auto shrink-0 flex flex-col gap-4 custom-scrollbar transition-transform duration-300 -translate-x-full xl:translate-x-0 shadow-2xl xl:shadow-none">
+            
+            <!-- Barra de cierre en móvil -->
+            <div class="flex items-center justify-between xl:hidden border-b border-gray-800 pb-3">
+                <span class="text-xs font-black text-cuycito-gold uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-bolt text-yellow-400"></i> Operación Rápida
+                </span>
+                <button onclick="window.toggleMobileSidebar(false)" class="text-gray-400 hover:text-white text-base p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <button onclick="document.getElementById('bulkAddModal').classList.remove('hidden'); window.generateBulkCells(); window.toggleMobileSidebar(false);" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs py-3 rounded flex justify-center items-center gap-2 font-black transition glow-gold uppercase tracking-widest border border-blue-400/50 mb-2">
                 <i class="fa-solid fa-users"></i> Registro Múltiple
             </button>
 
-            <h2 class="text-sm font-black uppercase tracking-widest text-cuycito-gold border-b border-cuycito-red pb-2 flex items-center gap-2">
+            <h2 class="hidden xl:flex text-sm font-black uppercase tracking-widest text-cuycito-gold border-b border-cuycito-red pb-2 items-center gap-2">
                 <i class="fa-solid fa-bolt"></i> Operación Rápida
             </h2>
             <form id="txForm" onsubmit="window.handleFormSubmit(event)" class="space-y-4 text-xs font-medium">
@@ -111,23 +144,26 @@
 
         <main class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar relative" style="background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png'); background-color: rgba(10, 10, 10, 0.85); background-blend-mode: overlay;">
             
-            <div class="flex border-b border-gray-800 gap-6 flex-wrap">
-                <button id="tab-btn-subs" onclick="window.switchTab('subs')" class="text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition"><i class="fa-solid fa-layer-group"></i> Servicios Activos</button>
-                <button id="tab-btn-master" onclick="window.switchTab('master')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition"><i class="fa-solid fa-server"></i> Cuentas Raíz</button>
-                <button id="tab-btn-finance" onclick="window.switchTab('finance')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition"><i class="fa-solid fa-chart-pie"></i> Finanzas</button>
-                <button id="tab-btn-clients" onclick="window.switchTab('clients')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition"><i class="fa-solid fa-address-book"></i> Accesos Tienda</button>
-                <button id="tab-btn-catalog" onclick="window.switchTab('catalog')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition"><i class="fa-solid fa-tags"></i> Catálogo Web</button>
-                <button id="tab-btn-recharges" onclick="window.switchTab('recharges')" class="text-yellow-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5 relative">
+            <div class="flex border-b border-gray-800 gap-2 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth flex-nowrap pb-2 shrink-0">
+                <button id="tab-btn-subs" onclick="window.switchTab('subs')" class="text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-xs sm:text-sm transition shrink-0 whitespace-nowrap"><i class="fa-solid fa-layer-group"></i> Servicios Activos</button>
+                <button id="tab-btn-master" onclick="window.switchTab('master')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-xs sm:text-sm transition shrink-0 whitespace-nowrap"><i class="fa-solid fa-server"></i> Cuentas Raíz</button>
+                <button id="tab-btn-finance" onclick="window.switchTab('finance')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-xs sm:text-sm transition shrink-0 whitespace-nowrap"><i class="fa-solid fa-chart-pie"></i> Finanzas</button>
+                <button id="tab-btn-clients" onclick="window.switchTab('clients')" class="text-blue-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-xs sm:text-sm transition flex items-center gap-1.5 relative shrink-0 whitespace-nowrap">
+                    <i class="fa-solid fa-address-book text-blue-400"></i> Accesos Tienda
+                    <span id="pendingRegistrationsBadge" class="hidden px-1.5 py-0.5 text-[10px] bg-cuycito-red text-white font-black rounded-full shadow glow-red animate-pulse">0</span>
+                </button>
+                <button id="tab-btn-catalog" onclick="window.switchTab('catalog')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-xs sm:text-sm transition shrink-0 whitespace-nowrap"><i class="fa-solid fa-tags"></i> Catálogo Web</button>
+                <button id="tab-btn-recharges" onclick="window.switchTab('recharges')" class="text-yellow-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-xs sm:text-sm transition flex items-center gap-1.5 relative shrink-0 whitespace-nowrap">
                     <i class="fa-solid fa-bolt text-yellow-300"></i> Recargas
                     <span id="pendingRechargesBadge" class="hidden px-1.5 py-0.5 text-[10px] bg-cuycito-red text-white font-black rounded-full shadow glow-red animate-pulse">0</span>
                 </button>
-                <button id="tab-btn-games" onclick="window.switchTab('games')" class="text-purple-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5">
+                <button id="tab-btn-games" onclick="window.switchTab('games')" class="text-purple-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-xs sm:text-sm transition flex items-center gap-1.5 shrink-0 whitespace-nowrap">
                     <i class="fa-solid fa-gamepad text-purple-400"></i> Juegos
                 </button>
-                <button id="tab-btn-news" onclick="window.switchTab('news')" class="text-orange-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5">
+                <button id="tab-btn-news" onclick="window.switchTab('news')" class="text-orange-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-xs sm:text-sm transition flex items-center gap-1.5 shrink-0 whitespace-nowrap">
                     <i class="fa-solid fa-newspaper text-orange-400"></i> Noticias
                 </button>
-                <button id="tab-btn-cartelera" onclick="window.switchTab('cartelera')" class="text-cuycito-gold hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5">
+                <button id="tab-btn-cartelera" onclick="window.switchTab('cartelera')" class="text-cuycito-gold hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-xs sm:text-sm transition flex items-center gap-1.5 shrink-0 whitespace-nowrap">
                     <i class="fa-solid fa-film text-cuycito-gold"></i> Cartelera y Estreno
                 </button>
             </div>
@@ -141,7 +177,7 @@
                     <span id="activeCountBadge" class="bg-cuycito-red text-white border border-red-500/50 px-3 py-2 rounded font-black shadow-[0_0_8px_rgba(133,0,0,0.8)]">0</span>
                 </div>
                 <div class="overflow-x-auto min-h-[300px]">
-                    <table class="w-full text-left text-xs text-gray-300">
+                    <table class="w-full text-left text-xs text-gray-300 min-w-[700px]">
                         <thead class="bg-black text-cuycito-gold uppercase tracking-widest font-bold border-b border-cuycito-red/50">
                             <tr><th class="p-4">Cliente</th><th class="p-4">Servicio</th><th class="p-4">Accesos & Visibilidad</th><th class="p-4">Caduca</th><th class="p-4 text-center">Estado</th><th class="p-4 text-center">Renovar</th><th class="p-4 text-center">Acciones</th></tr>
                         </thead>
@@ -185,40 +221,138 @@
             </section>
 
             <!-- TAB 4: ACCESOS TIENDA -->
-            <section id="view-clients" class="hidden space-y-4">
+            <section id="view-clients" class="hidden space-y-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-black/50 p-4 rounded-xl border border-gray-800">
                     <div>
                         <h3 class="text-sm font-black text-white uppercase"><i class="fa-solid fa-address-book text-blue-400 mr-1.5"></i> Gestión de Accesos & Servicios de Clientes</h3>
-                        <p class="text-xs text-gray-400 mt-0.5">Crea accesos automáticos para clientes pendientes y gestiona sus credenciales.</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Verifica solicitudes de cuenta gratis, valida referidos VIP y administra credenciales de clientes.</p>
                     </div>
                     <button onclick="window.openClientModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-4 py-2.5 rounded-lg glow-gold transition flex items-center gap-2">
-                        <i class="fa-solid fa-user-plus"></i> Crear Acceso Web
+                        <i class="fa-solid fa-user-plus"></i> Crear Acceso Web Manual
                     </button>
                 </div>
 
-                <!-- Buscador de Clientes y Filtro -->
-                <div class="flex flex-wrap items-center justify-between gap-3 bg-black/40 p-3 rounded-xl border border-gray-800 text-xs">
-                    <div class="relative flex-1 min-w-[240px]">
-                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <input type="text" id="searchClientsInput" oninput="window.renderClients()" placeholder="Buscar por Nombre, Nickname, Teléfono o Servicio..." class="w-full bg-black border border-gray-700 rounded-lg pl-9 pr-3 py-2 text-white outline-none focus:border-blue-400">
-                    </div>
-                    <span id="clientsCountBadge" class="bg-blue-900/60 text-blue-300 border border-blue-500/40 px-3 py-2 rounded-lg font-bold">0 Clientes</span>
-                </div>
+                <!-- 1. SOLICITUDES DE CUENTA GRATIS / REGISTRO PENDIENTES DE VERIFICACIÓN (CON ALARMA) -->
+                <div class="bg-cuycito-dark rounded-2xl border border-orange-500/50 overflow-hidden shadow-2xl space-y-3">
+                    <div class="p-4 border-b border-gray-800 bg-gradient-to-r from-amber-950/60 via-black to-black flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/40 flex items-center justify-center text-lg shadow-md animate-pulse">
+                                <i class="fa-solid fa-bell"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                    Solicitudes de Cuenta Gratis Pendientes 
+                                    <span id="regPendingCountBadge" class="bg-cuycito-red text-white text-xs px-2.5 py-0.5 rounded-full font-black shadow glow-red animate-pulse">0</span>
+                                </h3>
+                                <p class="text-[11px] text-gray-400">Verifica clientes nuevos, asigna accesos y valida códigos de referido VIP (+S/ 0.50).</p>
+                            </div>
+                        </div>
 
-                <div class="bg-cuycito-dark rounded-xl border border-gray-800 overflow-hidden shadow-xl">
-                    <div class="overflow-x-auto min-h-[250px]">
-                        <table class="w-full text-left text-xs text-gray-300">
-                            <thead class="bg-black text-blue-400 uppercase tracking-widest font-bold border-b border-gray-800">
+                        <!-- Controles de Alarma & Actualizar -->
+                        <div class="flex items-center gap-2">
+                            <button id="btnToggleAlarmSound" onclick="window.toggleRegistrationAlarmSound()" class="bg-gray-900 hover:bg-gray-800 border border-yellow-500/40 text-yellow-300 text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 transition font-bold shadow">
+                                <i id="alarmSoundIcon" class="fa-solid fa-volume-high text-yellow-400"></i>
+                                <span id="alarmSoundText">Alarma: ACTIVA</span>
+                            </button>
+                            <button onclick="window.renderPendingRegistrationsTable()" class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-arrows-rotate"></i> Actualizar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-gray-400 min-w-[700px]">
+                            <thead class="bg-black text-orange-400 uppercase tracking-wider font-extrabold text-[10px] border-b border-gray-800">
                                 <tr>
-                                    <th class="p-4">Cliente (Nombre Real)</th>
-                                    <th class="p-4">Nickname</th>
-                                    <th class="p-4">Número (Usuario)</th>
-                                    <th class="p-4">Contraseña</th>
-                                    <th class="p-4">Servicios Activos Enlazados</th>
-                                    <th class="p-4 text-center">Acciones & Enlazado</th>
+                                    <th class="p-3.5">Cliente Solicitante</th>
+                                    <th class="p-3.5">WhatsApp / Celular</th>
+                                    <th class="p-3.5">Correo</th>
+                                    <th class="p-3.5 text-cuycito-gold">Código de Referido VIP</th>
+                                    <th class="p-3.5">Fecha / Hora</th>
+                                    <th class="p-3.5 text-center">Acciones de Verificación</th>
                                 </tr>
                             </thead>
-                            <tbody id="clientsTableBody" class="divide-y divide-gray-800"></tbody>
+                            <tbody id="pendingRegistrationsTableBody" class="divide-y divide-gray-800">
+                                <tr>
+                                    <td colspan="6" class="p-8 text-center text-gray-500 font-sans">No hay solicitudes de cuenta gratis pendientes de verificación.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 2. GESTIÓN DE ACCESOS Y CLIENTES REGISTRADOS -->
+                <div class="space-y-4 pt-2">
+                    <!-- Buscador de Clientes y Filtro -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 bg-black/40 p-3 rounded-xl border border-gray-800 text-xs">
+                        <div class="relative flex-1 min-w-[240px]">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <input type="text" id="searchClientsInput" oninput="window.renderClients()" placeholder="Buscar por Nombre, Nickname, Teléfono o Servicio..." class="w-full bg-black border border-gray-700 rounded-lg pl-9 pr-3 py-2 text-white outline-none focus:border-blue-400">
+                        </div>
+                        <span id="clientsCountBadge" class="bg-blue-900/60 text-blue-300 border border-blue-500/40 px-3 py-2 rounded-lg font-bold">0 Clientes</span>
+                    </div>
+
+                    <div class="bg-cuycito-dark rounded-xl border border-gray-800 overflow-hidden shadow-xl">
+                        <div class="overflow-x-auto min-h-[250px]">
+                            <table class="w-full text-left text-xs text-gray-300 min-w-[700px]">
+                                <thead class="bg-black text-blue-400 uppercase tracking-widest font-bold border-b border-gray-800">
+                                    <tr>
+                                        <th class="p-4">Cliente (Nombre Real)</th>
+                                        <th class="p-4">Nickname</th>
+                                        <th class="p-4">Número (Usuario)</th>
+                                        <th class="p-4">Contraseña</th>
+                                        <th class="p-4">Servicios Activos Enlazados</th>
+                                        <th class="p-4 text-center">Acciones & Enlazado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clientsTableBody" class="divide-y divide-gray-800"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. AUDITORÍA & HISTORIAL DE CÓDIGOS DE REFERIDOS VIP (+S/ 0.50) -->
+                <div class="bg-cuycito-dark rounded-2xl border border-yellow-500/40 overflow-hidden shadow-xl space-y-3">
+                    <div class="p-4 border-b border-gray-800 bg-gradient-to-r from-amber-950/40 via-black to-black flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl bg-cuycito-gold/20 text-cuycito-gold border border-cuycito-gold/40 flex items-center justify-center text-base">
+                                <i class="fa-solid fa-gift"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                    Auditoría de Códigos de Referidos VIP
+                                </h3>
+                                <p class="text-[11px] text-gray-400">Control de códigos canjeados, bonos de S/ 0.50 acreditados y compras efectuadas por referidos.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <span id="adminReferralTotalBonus" class="bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 text-xs font-black px-3 py-1.5 rounded-xl font-mono">
+                                Total Bonos: S/ 0.00
+                            </span>
+                            <button onclick="window.renderAdminReferralLogsTable()" class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-1.5 rounded-xl transition">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-gray-400 min-w-[700px]">
+                            <thead class="bg-black text-cuycito-gold uppercase tracking-wider font-extrabold text-[10px] border-b border-gray-800">
+                                <tr>
+                                    <th class="p-3.5">Referidor VIP (Beneficiario)</th>
+                                    <th class="p-3.5">Código Usado</th>
+                                    <th class="p-3.5">Amigo Referido (Nuevo Cliente)</th>
+                                    <th class="p-3.5">Operación / Compra</th>
+                                    <th class="p-3.5">Fecha</th>
+                                    <th class="p-3.5 text-right">Bono Acreditado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminReferralLogsTableBody" class="divide-y divide-gray-800">
+                                <tr>
+                                    <td colspan="6" class="p-6 text-center text-gray-500 font-sans">No hay movimientos de referidos registrados todavía.</td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -285,7 +419,7 @@
                         <!-- Vista Previa QR -->
                         <div class="bg-black/70 border border-gray-800 rounded-2xl p-4 flex flex-col items-center justify-center text-center space-y-2">
                             <div class="w-36 h-36 bg-white p-2 rounded-xl border border-cuycito-gold/60 flex items-center justify-center shadow-md">
-                                <img id="dashboardQrPreview" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://wa.me/51991735344?text=Recarga%20CuycitoGO" alt="QR Vista Previa" class="w-32 h-32 object-contain rounded-lg">
+                                <img id="dashboardQrPreview" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://cuzcitogo.pe" alt="QR Vista Previa" class="w-32 h-32 object-contain rounded-lg">
                             </div>
                             <span class="text-[10px] text-gray-400 font-mono">Vista previa del QR activo</span>
                         </div>
@@ -310,7 +444,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-gray-400 font-bold mb-1 uppercase text-[10px]">Teléfono WhatsApp de Pagos:</label>
-                                    <input type="text" id="settingWhatsappPhoneInput" value="+51 991735344" placeholder="+51 991735344" class="w-full bg-black border border-gray-700 rounded-xl px-3 py-2 text-white font-mono text-xs outline-none focus:border-cuycito-gold">
+                                    <input type="text" id="settingWhatsappPhoneInput" value="" placeholder="Ingresa tu número de WhatsApp para cobros" class="w-full bg-black border border-gray-700 rounded-xl px-3 py-2 text-white font-mono text-xs outline-none focus:border-cuycito-gold">
                                 </div>
                             </div>
                         </div>
@@ -332,7 +466,7 @@
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs text-gray-400">
+                        <table class="w-full text-left text-xs text-gray-400 min-w-[700px]">
                             <thead class="bg-black text-gray-300 uppercase tracking-wider font-extrabold text-[10px]">
                                 <tr>
                                     <th class="p-3">Cliente</th>
@@ -364,7 +498,7 @@
                     </div>
 
                     <div class="overflow-x-auto max-h-[420px] custom-scrollbar">
-                        <table class="w-full text-left text-xs text-gray-400">
+                        <table class="w-full text-left text-xs text-gray-400 min-w-[700px]">
                             <thead class="bg-black text-gray-300 uppercase tracking-wider font-extrabold text-[10px] sticky top-0">
                                 <tr>
                                     <th class="p-3">Fecha y Hora</th>
@@ -460,7 +594,7 @@
                     </p>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs text-gray-400">
+                        <table class="w-full text-left text-xs text-gray-400 min-w-[700px]">
                             <thead class="bg-black text-gray-300 uppercase tracking-wider font-extrabold text-[10px]">
                                 <tr>
                                     <th class="p-3">Servicio en Ruleta</th>
@@ -491,7 +625,7 @@
                     </div>
 
                     <div class="overflow-x-auto max-h-[420px] custom-scrollbar">
-                        <table class="w-full text-left text-xs text-gray-400">
+                        <table class="w-full text-left text-xs text-gray-400 min-w-[700px]">
                             <thead class="bg-black text-gray-300 uppercase tracking-wider font-extrabold text-[10px] sticky top-0">
                                 <tr>
                                     <th class="p-3">Fecha y Hora</th>
@@ -584,11 +718,24 @@
                     </div>
                 </div>
             </section>
-
-            </section>
         </main>
 
-        <aside class="w-80 bg-cuycito-dark border-l border-cuycito-red/30 p-5 overflow-y-auto shrink-0 flex flex-col gap-4 custom-scrollbar">
+        <!-- Backdrop para Alertas en móvil -->
+        <div id="alertsBackdrop" onclick="window.toggleMobileAlertsSidebar(false)" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 xl:hidden hidden"></div>
+
+        <!-- Sidebar Derecho Adaptativo (Fijo en PC >= 1280px, Drawer en Móvil) -->
+        <aside id="alertsSidebar" class="fixed xl:static inset-y-0 right-0 z-50 xl:z-auto w-80 max-w-[85vw] bg-cuycito-dark border-l border-cuycito-red/30 p-5 overflow-y-auto shrink-0 flex flex-col gap-4 custom-scrollbar transition-transform duration-300 translate-x-full xl:translate-x-0 shadow-2xl xl:shadow-none">
+            
+            <!-- Barra de cierre en móvil -->
+            <div class="flex items-center justify-between xl:hidden border-b border-gray-800 pb-3">
+                <span class="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-bell text-cuycito-gold"></i> Alertas &amp; Notas Posit
+                </span>
+                <button onclick="window.toggleMobileAlertsSidebar(false)" class="text-gray-400 hover:text-white text-base p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
             <!-- 1. ALERTAS: PRÓXIMOS A VENCER -->
             <div>
                 <h2 class="text-sm font-black uppercase tracking-widest text-white flex items-center justify-between border-b border-cuycito-red pb-2 mb-3">
@@ -1378,6 +1525,63 @@
             <h3 class="text-lg font-black text-[#0ea5e9] uppercase border-b border-gray-800 pb-2"><i class="fa-solid fa-receipt"></i> Detalle</h3>
             <textarea id="infoText" rows="10" class="w-full bg-black border border-gray-700 rounded p-3 text-xs font-mono text-gray-300"></textarea>
             <div class="flex justify-end gap-3"><button onclick="document.getElementById('infoModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-4 py-2 rounded">Cerrar</button><button onclick="window.copyInfoText()" class="bg-[#0ea5e9] text-black font-black text-xs px-4 py-2 rounded"><i class="fa-regular fa-copy"></i> Copiar</button></div>
+        </div>
+    </div>
+
+    <!-- BOTÓN FLOTANTE RÁPIDO PARA MÓVIL (+ OPERACIÓN) -->
+    <button onclick="window.toggleMobileSidebar(true)" class="fixed bottom-6 right-6 z-30 lg:hidden bg-gradient-to-r from-cuycito-red via-red-600 to-orange-500 hover:from-red-600 hover:to-orange-400 text-white font-black text-xs px-4 py-3.5 rounded-full shadow-[0_0_25px_rgba(220,38,38,0.5)] glow-red flex items-center gap-2 border border-red-400/40">
+        <i class="fa-solid fa-bolt text-yellow-300 text-sm"></i>
+        <span>+ Operación</span>
+    </button>
+
+    <!-- MODAL DE UTILIDADES PARA MÓVIL (< 1024px) -->
+    <div id="mobileUtilsModal" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4 z-50 lg:hidden">
+        <div class="bg-gradient-to-br from-[#181818] via-[#121212] to-[#0a0a0a] border-2 border-cuycito-gold/60 rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-2xl glow-gold">
+            <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <img src="assets/img/logo.png" alt="CuycitoGO" class="h-8 object-contain">
+                    <h3 class="text-sm font-black text-cuycito-gold uppercase tracking-wider">Menú de Utilidades</h3>
+                </div>
+                <button onclick="window.toggleMobileUtilsModal(false)" class="text-gray-400 hover:text-white text-lg p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Estado de Nube -->
+            <div onclick="window.triggerManualSync(); window.toggleMobileUtilsModal(false);" class="cursor-pointer bg-black/80 border border-emerald-500/50 rounded-2xl p-3 flex items-center justify-between shadow">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-cloud-check text-emerald-400 text-base animate-pulse"></i>
+                    <div>
+                        <span class="text-xs font-bold text-white block">Estado de Nube</span>
+                        <span class="text-[10px] text-emerald-400 font-mono">Toca para forzar sync</span>
+                    </div>
+                </div>
+                <span class="text-[10px] bg-emerald-950 text-emerald-300 font-bold px-2 py-1 rounded-lg border border-emerald-500/30">Activo</span>
+            </div>
+
+            <!-- Selector de Moneda -->
+            <div class="bg-black/80 border border-gray-800 rounded-2xl p-3 space-y-2">
+                <span class="text-[11px] font-bold text-gray-400 uppercase block">Moneda Global:</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="window.setGlobalCurrency('PEN'); window.toggleMobileUtilsModal(false);" class="py-2 text-xs font-bold rounded-xl bg-cuycito-gold text-black transition shadow">PEN (S/)</button>
+                    <button onclick="window.setGlobalCurrency('USD'); window.toggleMobileUtilsModal(false);" class="py-2 text-xs font-bold rounded-xl bg-gray-900 text-gray-300 hover:text-white border border-gray-800 transition">USD ($)</button>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="space-y-2 pt-1">
+                <button onclick="document.getElementById('pwdGenModal').classList.remove('hidden'); window.generatePassword(); window.toggleMobileUtilsModal(false);" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2 transition shadow">
+                    <i class="fa-solid fa-key"></i> Generador de Contraseñas
+                </button>
+                
+                <button onclick="document.getElementById('jsonModal').classList.remove('hidden'); window.toggleMobileUtilsModal(false);" class="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white text-xs py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition">
+                    <i class="fa-solid fa-code text-cuycito-red"></i> Backup / Restaurar JSON
+                </button>
+                
+                <button onclick="window.logoutApp()" class="w-full bg-red-950/80 hover:bg-red-800 border border-red-500/40 text-red-300 font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2 transition">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+                </button>
+            </div>
         </div>
     </div>
 

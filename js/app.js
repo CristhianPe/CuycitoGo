@@ -1,7 +1,7 @@
 import { auth, db, storage, onAuthStateChanged, signOut, collection, getDocs, getDoc, doc, setDoc, deleteDoc, ref, uploadBytes, getDownloadURL } from "./firebase-config.js";
 
 const DEFAULT_SERVICES = ["Netflix", "Spotify", "HBO Max", "Disney+", "Crunchyroll", "Prime Video"];
-const CENTRAL_WHATSAPP_PHONE = "51991735344";
+const CENTRAL_WHATSAPP_PHONE = "";
 
 let appState = {
     globalCurrency: 'PEN',
@@ -24,6 +24,131 @@ let chartPlatformInstance = null;
 let chartAnnualInstance = null;
 let activeManagingClient = null;
 let currentComboRows = [];
+
+function resolveProductImage(p) {
+    if (p && p.imageUrl && typeof p.imageUrl === 'string' && p.imageUrl.trim() !== '' && !p.imageUrl.includes('undefined')) {
+        if (!p.imageUrl.includes('unsplash.com') && !p.imageUrl.includes('hdqwalls') && !p.imageUrl.includes('undefined')) {
+            return p.imageUrl.trim();
+        }
+    }
+    const title = (p?.title || '').toLowerCase();
+    const cat = (p?.category || '').toLowerCase();
+
+    // 1. Combos Compartidos (Mantener el combo duo perfecto)
+    if (title.includes('trio') || title.includes('trío') || (title.includes('netflix') && title.includes('disney') && title.includes('max'))) {
+        return 'assets/img/promo_combo_trio.jpg';
+    }
+    if (title.includes('combo') || title.includes('duo') || title.includes('dúo') || cat.includes('combo')) {
+        return 'assets/img/promo_combo_duo.jpg';
+    }
+
+    // 2. Servicios Específicos Centrados en Logos
+    if (title.includes('prime') || title.includes('amazon')) {
+        return 'assets/img/banner_prime.svg';
+    }
+    if (title.includes('disney') || title.includes('star') || title.includes('espn') || title.includes('marvel')) {
+        return 'assets/img/banner_disney.svg';
+    }
+    if (title.includes('spotify') || cat.includes('music') || cat.includes('música') || title.includes('music') || title.includes('cancion')) {
+        return 'assets/img/banner_spotify.svg';
+    }
+    if (title.includes('crunchyroll') || title.includes('anime') || cat.includes('anime') || cat.includes('gaming')) {
+        return 'assets/img/banner_crunchyroll.svg';
+    }
+    if (title.includes('max') || title.includes('hbo')) {
+        return 'assets/img/banner_max.svg';
+    }
+    if (title.includes('netflix')) {
+        return 'assets/img/promo_netflix_4k.jpg';
+    }
+
+    return 'assets/img/promo_netflix_4k.jpg';
+}
+
+const DEFAULT_CATALOG_ITEMS = [
+    {
+        id: "prod_combo_duo",
+        title: "Combo Dúo: Netflix 4K + Crunchyroll Anime",
+        category: "Combos",
+        description: "Disfruta de tus plataformas favoritas en un solo combo con perfiles privados independientes, calidad 4K Ultra HD y garantía total 30 días.",
+        price: 17.00,
+        imageUrl: "assets/img/promo_combo_duo.jpg",
+        promo: true,
+        isCombo: true,
+        stock: 12
+    },
+    {
+        id: "prod_netflix_1p",
+        title: "Netflix Premium 4K - 1 Perfil Privado",
+        category: "Pantallas / Perfil",
+        description: "1 Perfil Privado con PIN personalizado. Calidad 4K Ultra HD y garantía 100% durante 30 días. Descuento por apertura web.",
+        price: 15.00,
+        imageUrl: "assets/img/promo_netflix_4k.jpg",
+        promo: false,
+        stock: 8
+    },
+    {
+        id: "prod_combo_trio",
+        title: "Combo Trío Total: Netflix + Disney ESPN + Max",
+        category: "Combos",
+        description: "El paquete definitivo de entretenimiento para toda la familia con PIN privado y 4K Ultra HD.",
+        price: 32.00,
+        imageUrl: "assets/img/promo_combo_trio.jpg",
+        promo: true,
+        isCombo: true,
+        stock: 6
+    },
+    {
+        id: "prod_disney_1p",
+        title: "Disney+ Premium 4K - 1 Perfil Privado",
+        category: "Pantallas / Perfil",
+        description: "1 Perfil Privado con PIN personalizado. Calidad 4K Ultra HD, ESPN y garantía 100% durante 30 días.",
+        price: 10.00,
+        imageUrl: "assets/img/banner_disney.svg",
+        promo: false,
+        stock: 15
+    },
+    {
+        id: "prod_prime_1p",
+        title: "Prime Video Premium 4K - 1 Perfil Privado",
+        category: "Pantallas / Perfil",
+        description: "1 Perfil Privado con PIN personalizado. Calidad 4K Ultra HD y acceso a todas las series Amazon Originals.",
+        price: 6.00,
+        imageUrl: "assets/img/banner_prime.svg",
+        promo: false,
+        stock: 12
+    },
+    {
+        id: "prod_max_1p",
+        title: "Max Platino 4K - 1 Perfil Privado",
+        category: "Pantallas / Perfil",
+        description: "Disfruta de HBO Max Platino en 4K Ultra HD con PIN privado.",
+        price: 9.00,
+        imageUrl: "assets/img/banner_max.svg",
+        promo: false,
+        stock: 10
+    },
+    {
+        id: "prod_spotify_ind",
+        title: "Spotify Premium Individual (1 Mes)",
+        category: "Música",
+        description: "Cuenta o renovación de tu cuenta personal Spotify Premium sin anuncios.",
+        price: 8.00,
+        imageUrl: "assets/img/banner_spotify.svg",
+        promo: false,
+        stock: 20
+    },
+    {
+        id: "prod_crunchyroll_1p",
+        title: "Crunchyroll Mega Fan - 1 Perfil",
+        category: "Gaming",
+        description: "Disfruta de todo el anime en HD sin anuncios y estrenos en simulcast.",
+        price: 7.00,
+        imageUrl: "assets/img/banner_crunchyroll.svg",
+        promo: false,
+        stock: 14
+    }
+];
 
 if (typeof Chart !== 'undefined') { Chart.defaults.color = '#9ca3af'; }
 
@@ -59,7 +184,17 @@ onAuthStateChanged(auth, async (user) => {
 
             const catalogSnap = await getDocs(collection(db, "store_catalog"));
             appState.catalog = []; 
-            catalogSnap.forEach(d => appState.catalog.push(d.data()));
+            catalogSnap.forEach(d => {
+                const item = d.data();
+                if (!item.imageUrl || item.imageUrl.trim() === '') {
+                    item.imageUrl = resolveProductImage(item);
+                }
+                appState.catalog.push(item);
+            });
+
+            if (appState.catalog.length === 0) {
+                appState.catalog = [...DEFAULT_CATALOG_ITEMS];
+            }
 
             const postitSnap = await getDocs(collection(db, "postits"));
             appState.postits = [];
@@ -68,6 +203,10 @@ onAuthStateChanged(auth, async (user) => {
             const recSnap = await getDocs(collection(db, "recharge_orders"));
             appState.recharges = [];
             recSnap.forEach(d => appState.recharges.push({ id: d.id, ...d.data() }));
+
+            const regSnap = await getDocs(collection(db, "pending_registrations"));
+            appState.pendingRegistrations = [];
+            regSnap.forEach(d => appState.pendingRegistrations.push({ id: d.id, ...d.data() }));
 
             const allServices = [...new Set([...DEFAULT_SERVICES, ...cloudServices, ...appState.subscriptions.map(s=>s.service)])].filter(Boolean);
             appState.services = allServices.sort();
@@ -178,6 +317,11 @@ window.switchTab = (tabId) => {
         }
     });
     if(tabId === 'finance') window.renderFinance();
+    if(tabId === 'clients') {
+        window.renderClients();
+        window.renderPendingRegistrationsTable();
+        window.renderAdminReferralLogsTable();
+    }
     if(tabId === 'recharges') {
         window.renderRechargesTable();
         window.loadPaymentQRSettings();
@@ -352,6 +496,46 @@ window.handleFormSubmit = async (e) => {
     try {
         await setDoc(doc(db, "subscriptions", id), newSub);
         await setDoc(doc(db, "history", txId), newTx);
+
+        // Si es una Venta a un cliente con código de referido, registrar compra efectuada
+        if (type === 'VENTA') {
+            const client = appState.clients.find(c => (c.name || '').trim().toLowerCase() === person.toLowerCase() || (c.nickname || '').trim().toLowerCase() === person.toLowerCase());
+            if (client && (client.referredCodeUsed || client.referredBy)) {
+                const refCodeUsed = client.referredCodeUsed || client.referredBy;
+                const referrer = appState.clients.find(c => {
+                    if (!c) return false;
+                    const assignedCode = (c.referralCode || '').trim().toUpperCase();
+                    const nickCode = ('VIP-' + (c.nickname || c.name || '')).toUpperCase();
+                    const phoneCode = ('VIP-' + (c.phone || '')).toUpperCase();
+                    const rawNick = (c.nickname || c.name || '').toUpperCase();
+                    const codeUpper = refCodeUsed.toUpperCase();
+                    return (assignedCode && codeUpper === assignedCode) || codeUpper === nickCode || codeUpper === phoneCode || codeUpper === rawNick || c.id === client.referredBy;
+                });
+
+                if (referrer) {
+                    const purchaseLog = {
+                        id: "ref_log_" + Date.now(),
+                        referrerId: referrer.id,
+                        referrerName: referrer.nickname || referrer.name,
+                        referrerPhone: referrer.phone,
+                        referrerCode: refCodeUsed,
+                        referredName: person,
+                        referredPhone: client.phone || '',
+                        service: service,
+                        action: "purchase_effectuated",
+                        amountEarned: 0.50,
+                        status: "completed",
+                        createdAt: new Date().toISOString()
+                    };
+                    await setDoc(doc(db, "referral_logs", purchaseLog.id), purchaseLog, { merge: true });
+                    try {
+                        let localLogs = JSON.parse(localStorage.getItem("cuycito_referral_logs") || "[]");
+                        localLogs.unshift(purchaseLog);
+                        localStorage.setItem("cuycito_referral_logs", JSON.stringify(localLogs));
+                    } catch(e) {}
+                }
+            }
+        }
     } catch(err) { console.error("Error guardando en Firestore:", err); }
 
     document.getElementById('txForm').reset();
@@ -2088,6 +2272,441 @@ window.renderClients = () => {
     });
 };
 
+// =====================================
+// 10.1. GESTIÓN DE SOLICITUDES DE CUENTA GRATIS & CÓDIGO DE REFERIDO VIP (+S/ 0.50)
+// =====================================
+window.isRegistrationAlarmEnabled = true;
+
+// Sonido sintetizado de alarma con Web Audio API (Chime de dos tonos)
+window.playRegistrationAlarmSound = () => {
+    if (!window.isRegistrationAlarmEnabled) return;
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        osc1.frequency.setValueAtTime(880, ctx.currentTime + 0.15); // A5
+        
+        gain1.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+        
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        
+        osc1.start();
+        osc1.stop(ctx.currentTime + 0.5);
+    } catch(e) {}
+};
+
+window.toggleRegistrationAlarmSound = () => {
+    window.isRegistrationAlarmEnabled = !window.isRegistrationAlarmEnabled;
+    const btn = document.getElementById('btnToggleAlarmSound');
+    const icon = document.getElementById('alarmSoundIcon');
+    const text = document.getElementById('alarmSoundText');
+    
+    if (window.isRegistrationAlarmEnabled) {
+        if (btn) btn.className = "bg-gray-900 hover:bg-gray-800 border border-yellow-500/40 text-yellow-300 text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 transition font-bold shadow";
+        if (icon) icon.className = "fa-solid fa-volume-high text-yellow-400";
+        if (text) text.innerText = "Alarma: ACTIVA";
+        window.playRegistrationAlarmSound();
+    } else {
+        if (btn) btn.className = "bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-400 text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 transition font-bold shadow";
+        if (icon) icon.className = "fa-solid fa-volume-xmark text-gray-500";
+        if (text) text.innerText = "Alarma: SILENCIADA";
+    }
+};
+
+window.renderPendingRegistrationsTable = async () => {
+    const tbody = document.getElementById('pendingRegistrationsTableBody');
+    const badge = document.getElementById('pendingRegistrationsBadge');
+    const countBadge = document.getElementById('regPendingCountBadge');
+
+    try {
+        const regSnap = await getDocs(collection(db, "pending_registrations"));
+        appState.pendingRegistrations = [];
+        regSnap.forEach(d => appState.pendingRegistrations.push({ id: d.id, ...d.data() }));
+    } catch(e) {}
+
+    // Fallback local
+    try {
+        let localReqs = JSON.parse(localStorage.getItem("cuycito_pending_registrations") || "[]");
+        localReqs.forEach(lr => {
+            if (!appState.pendingRegistrations.some(r => r.id === lr.id)) {
+                appState.pendingRegistrations.push(lr);
+            }
+        });
+    } catch(e) {}
+
+    const pendingList = (appState.pendingRegistrations || []).filter(r => r.status === 'pending' || !r.status);
+
+    if (badge) {
+        if (pendingList.length > 0) {
+            badge.innerText = pendingList.length;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    if (countBadge) {
+        countBadge.innerText = `${pendingList.length} Pendientes`;
+        if (pendingList.length > 0) {
+            countBadge.className = "bg-cuycito-red text-white text-xs px-2.5 py-0.5 rounded-full font-black shadow glow-red animate-pulse";
+        } else {
+            countBadge.className = "bg-gray-800 text-gray-400 text-xs px-2.5 py-0.5 rounded-full font-bold";
+        }
+    }
+
+    if (!tbody) return;
+
+    if (pendingList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 font-sans">No hay solicitudes de cuenta gratis pendientes de verificación.</td></tr>`;
+        return;
+    }
+
+    // Si hay pendientes, emitir sonido suave de alerta
+    window.playRegistrationAlarmSound();
+
+    tbody.innerHTML = '';
+    pendingList.forEach(req => {
+        const dateStr = req.createdAt ? new Date(req.createdAt).toLocaleString('es-PE') : 'Reciente';
+
+        // Validar código de referido
+        let referralHTML = `<span class="text-gray-500 italic text-[11px]">Sin código</span>`;
+        let referrerClient = null;
+        let isVipReferrer = false;
+
+        if (req.referralCode) {
+            const codeNorm = req.referralCode.trim().toUpperCase();
+            referrerClient = appState.clients.find(c => {
+                if (!c) return false;
+                const assignedCode = (c.referralCode || '').trim().toUpperCase();
+                const nickCode = ('VIP-' + (c.nickname || c.name || '')).toUpperCase();
+                const phoneCode = ('VIP-' + (c.phone || '')).toUpperCase();
+                const rawNick = (c.nickname || c.name || '').toUpperCase();
+                return (assignedCode && codeNorm === assignedCode) || codeNorm === nickCode || codeNorm === phoneCode || codeNorm === rawNick;
+            });
+
+            if (referrerClient) {
+                const refClientNameNorm = (referrerClient.name || '').trim().toLowerCase();
+                const activeSubs = appState.subscriptions.filter(s => 
+                    s.person && s.person.trim().toLowerCase() === refClientNameNorm && window.getDaysRemaining(s.endDate) >= 0
+                );
+                isVipReferrer = activeSubs.length > 3;
+
+                if (isVipReferrer) {
+                    referralHTML = `
+                        <div class="space-y-0.5">
+                            <span class="bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded-md flex items-center gap-1 w-fit shadow">
+                                <i class="fa-solid fa-crown text-yellow-400"></i> VIP Válido: @${referrerClient.nickname || referrerClient.name}
+                            </span>
+                            <span class="text-[9px] text-emerald-300 font-mono block">Tiene ${activeSubs.length} servicios • Recibirá +S/ 0.50</span>
+                        </div>
+                    `;
+                } else {
+                    referralHTML = `
+                        <div class="space-y-0.5">
+                            <span class="bg-amber-950/80 text-yellow-400 border border-yellow-500/40 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 w-fit">
+                                <i class="fa-solid fa-triangle-exclamation"></i> ${req.referralCode}
+                            </span>
+                            <span class="text-[9px] text-gray-400 font-mono block">Cliente @${referrerClient.nickname || referrerClient.name} tiene ${activeSubs.length}/4 serv.</span>
+                        </div>
+                    `;
+                }
+            } else {
+                referralHTML = `
+                    <span class="bg-gray-800 text-gray-400 border border-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                        ❓ ${req.referralCode} (No encontrado)
+                    </span>
+                `;
+            }
+        }
+
+        tbody.innerHTML += `
+            <tr class="hover:bg-gray-800/60 transition">
+                <td class="p-3.5">
+                    <div class="font-black text-white text-xs">${req.name}</div>
+                    <div class="flex items-center gap-1.5 mt-1">
+                        <span class="text-[9px] text-yellow-400 font-mono bg-yellow-950/60 px-1.5 py-0.5 rounded border border-yellow-500/30">Solicitante Web</span>
+                        <span class="text-[9px] text-emerald-300 font-mono bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/40 font-bold flex items-center gap-0.5"><i class="fa-solid fa-coins text-yellow-400 text-[8px]"></i> +S/ 1.00 Crédito</span>
+                    </div>
+                </td>
+                <td class="p-3.5 font-mono text-blue-400 font-bold text-xs">
+                    <i class="fa-solid fa-mobile-screen mr-1"></i> ${req.phone}
+                </td>
+                <td class="p-3.5 text-gray-400 text-xs font-mono">
+                    ${req.email || '<span class="text-gray-600">No especificado</span>'}
+                </td>
+                <td class="p-3.5">
+                    ${referralHTML}
+                </td>
+                <td class="p-3.5 text-gray-400 font-mono text-[11px]">
+                    ${dateStr}
+                </td>
+                <td class="p-3.5 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                        <button onclick="window.approveRegistrationRequest('${req.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-3 py-1.5 rounded-lg transition shadow flex items-center gap-1 glow-gold" title="Aprobar y Crear Acceso">
+                            <i class="fa-solid fa-circle-check"></i> Aprobar
+                        </button>
+                        <button onclick="window.rejectRegistrationRequest('${req.id}')" class="bg-red-950/80 hover:bg-red-800 text-red-300 border border-red-500/40 text-xs font-bold p-1.5 rounded-lg transition" title="Rechazar solicitud">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                        <a href="https://wa.me/${req.phone.replace(/[^0-9]/g, '')}?text=Hola%20${encodeURIComponent(req.name)},%20te%20saludamos%20de%20CuycitoGO%20para%20confirmar%20tu%20cuenta" target="_blank" class="bg-emerald-950/80 hover:bg-emerald-800 text-emerald-300 border border-emerald-500/40 text-xs font-bold p-1.5 rounded-lg transition" title="Contactar por WhatsApp">
+                            <i class="fa-brands fa-whatsapp"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+};
+
+window.approveRegistrationRequest = async (reqId) => {
+    const req = (appState.pendingRegistrations || []).find(r => r.id === reqId);
+    if (!req) return;
+
+    if (!confirm(`¿Deseas verificar y activar la cuenta para ${req.name} (${req.phone})?`)) return;
+
+    const newUserId = "user_" + req.phone.replace(/[^0-9]/g, '');
+    const defaultPass = "cuycito123";
+
+    // 1. Validar y premiar al referidor si califica (>3 servicios activos)
+    let referrerBonusGiven = false;
+    let referrerName = '';
+
+    if (req.referralCode) {
+        const codeNorm = req.referralCode.trim().toUpperCase();
+        const referrer = appState.clients.find(c => {
+            if (!c) return false;
+            const assignedCode = (c.referralCode || '').trim().toUpperCase();
+            const nickCode = ('VIP-' + (c.nickname || c.name || '')).toUpperCase();
+            const phoneCode = ('VIP-' + (c.phone || '')).toUpperCase();
+            const rawNick = (c.nickname || c.name || '').toUpperCase();
+            return (assignedCode && codeNorm === assignedCode) || codeNorm === nickCode || codeNorm === phoneCode || codeNorm === rawNick;
+        });
+
+        if (referrer) {
+            const refClientNameNorm = (referrer.name || '').trim().toLowerCase();
+            const activeSubs = appState.subscriptions.filter(s => 
+                s.person && s.person.trim().toLowerCase() === refClientNameNorm && window.getDaysRemaining(s.endDate) >= 0
+            );
+
+            if (activeSubs.length > 3) {
+                // Bono de 0.50 PEN
+                const oldBal = referrer.balance || 0;
+                const newBal = parseFloat((oldBal + 0.50).toFixed(2));
+                referrer.balance = newBal;
+                referrer.referredCount = (referrer.referredCount || 0) + 1;
+                referrer.referralEarnings = parseFloat(((referrer.referralEarnings || 0) + 0.50).toFixed(2));
+
+                try {
+                    await setDoc(doc(db, "users", referrer.id), { 
+                        balance: newBal,
+                        referredCount: referrer.referredCount,
+                        referralEarnings: referrer.referralEarnings
+                    }, { merge: true });
+
+                    // Registrar en historial
+                    const histItem = {
+                        id: "bonus_" + Date.now(),
+                        person: referrer.name,
+                        service: "Bono Referido VIP (+S/ 0.50)",
+                        cost: 0,
+                        price: 0.50,
+                        startDate: new Date().toISOString().split('T')[0],
+                        endDate: new Date().toISOString().split('T')[0],
+                        timestamp: new Date().toISOString()
+                    };
+                    await setDoc(doc(db, "history", histItem.id), histItem, { merge: true });
+
+                    // Registrar en referral_logs para la barra de canjes y auditoría
+                    const refLogItem = {
+                        id: "ref_log_" + Date.now(),
+                        referrerId: referrer.id,
+                        referrerName: referrer.nickname || referrer.name,
+                        referrerPhone: referrer.phone,
+                        referrerCode: req.referralCode,
+                        referredName: req.name,
+                        referredPhone: req.phone,
+                        service: "Activación Cuenta Gratis VIP",
+                        action: "account_approved",
+                        amountEarned: 0.50,
+                        status: "completed",
+                        createdAt: new Date().toISOString()
+                    };
+                    await setDoc(doc(db, "referral_logs", refLogItem.id), refLogItem, { merge: true });
+
+                    try {
+                        let localLogs = JSON.parse(localStorage.getItem("cuycito_referral_logs") || "[]");
+                        localLogs.unshift(refLogItem);
+                        localStorage.setItem("cuycito_referral_logs", JSON.stringify(localLogs));
+                    } catch(e) {}
+                } catch(e) {}
+
+                referrerBonusGiven = true;
+                referrerName = referrer.nickname || referrer.name;
+            }
+        }
+    }
+
+    // 2. Crear usuario en Firebase y appState con S/ 1.00 de Crédito de Bienvenida
+    const newUser = {
+        id: newUserId,
+        name: req.name,
+        nickname: req.name.split(' ')[0],
+        phone: req.phone,
+        email: req.email || '',
+        pass: defaultPass,
+        balance: 1.00, // 🎉 S/ 1.00 Sol de Regalo de Apertura
+        referredCodeUsed: req.referralCode || '',
+        createdAt: new Date().toISOString()
+    };
+
+    try {
+        await setDoc(doc(db, "users", newUserId), newUser, { merge: true });
+        
+        // Registrar abono de S/ 1.00 en historial
+        const welcomeHistItem = {
+            id: "welc_" + Date.now(),
+            person: req.name,
+            service: "Crédito Bienvenida Apertura (+S/ 1.00)",
+            cost: 0,
+            price: 1.00,
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: new Date().toISOString().split('T')[0],
+            timestamp: new Date().toISOString()
+        };
+        await setDoc(doc(db, "history", welcomeHistItem.id), welcomeHistItem, { merge: true });
+    } catch(e) {}
+
+    // Actualizar appState.clients
+    const clientIdx = appState.clients.findIndex(c => c.phone === req.phone);
+    if (clientIdx >= 0) {
+        appState.clients[clientIdx] = newUser;
+    } else {
+        appState.clients.push(newUser);
+    }
+
+    // 3. Marcar solicitud como aprobada
+    req.status = 'approved';
+    req.approvedAt = new Date().toISOString();
+
+    try {
+        await setDoc(doc(db, "pending_registrations", reqId), { 
+            status: 'approved', 
+            approvedAt: req.approvedAt 
+        }, { merge: true });
+    } catch(e) {}
+
+    // Actualizar localStorage
+    try {
+        let localReqs = JSON.parse(localStorage.getItem("cuycito_pending_registrations") || "[]");
+        localReqs = localReqs.map(r => r.id === reqId ? { ...r, status: 'approved' } : r);
+        localStorage.setItem("cuycito_pending_registrations", JSON.stringify(localReqs));
+    } catch(e) {}
+
+    window.renderPendingRegistrationsTable();
+    window.renderClients();
+    window.renderAdminReferralLogsTable();
+
+    let bonusMsg = referrerBonusGiven 
+        ? `\n\n🎉 ¡Se abonó +S/ 0.50 céntimos de saldo al referidor VIP @${referrerName}!` 
+        : '';
+
+    const whatsappMsg = `¡Hola ${req.name}! 🐹🎉\n\nTu solicitud de *Cuenta Gratis VIP* en CuycitoGO ha sido *VERIFICADA Y ACTIVADA* con éxito:\n\n📱 *Usuario:* ${req.phone}\n🔑 *Contraseña:* ${defaultPass}\n💰 *Crédito de Bienvenida:* S/ 1.00 Sol (Abonado a tu saldo)\n🌐 *Acceso:* https://cuzcitogo.pe/login-cliente.html\n\nYa puedes ingresar a tu panel para ver tu tienda y usar tu crédito. ¡Bienvenido a CuycitoGO! 🙌`;
+
+    if (confirm(`✅ ¡Cuenta creada exitosamente para ${req.name} con S/ 1.00 de Crédito de Regalo!${bonusMsg}\n\n¿Deseas abrir WhatsApp para enviarle sus credenciales y confirmar su saldo?`)) {
+        window.open(`https://wa.me/${req.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(whatsappMsg)}`, '_blank');
+    }
+};
+
+window.rejectRegistrationRequest = async (reqId) => {
+    const req = (appState.pendingRegistrations || []).find(r => r.id === reqId);
+    if (!req) return;
+    if (!confirm(`¿Seguro que deseas rechazar la solicitud de ${req.name}?`)) return;
+
+    req.status = 'rejected';
+    try {
+        await setDoc(doc(db, "pending_registrations", reqId), { status: 'rejected' }, { merge: true });
+    } catch(e) {}
+
+    try {
+        let localReqs = JSON.parse(localStorage.getItem("cuycito_pending_registrations") || "[]");
+        localReqs = localReqs.map(r => r.id === reqId ? { ...r, status: 'rejected' } : r);
+        localStorage.setItem("cuycito_pending_registrations", JSON.stringify(localReqs));
+    } catch(e) {}
+
+    window.renderPendingRegistrationsTable();
+    window.renderAdminReferralLogsTable();
+};
+
+window.renderAdminReferralLogsTable = async () => {
+    const tbody = document.getElementById('adminReferralLogsTableBody');
+    const totalBonusBadge = document.getElementById('adminReferralTotalBonus');
+
+    let allLogs = [];
+    try {
+        const snap = await getDocs(collection(db, "referral_logs"));
+        snap.forEach(d => allLogs.push({ id: d.id, ...d.data() }));
+    } catch(e) {}
+
+    try {
+        let localLogs = JSON.parse(localStorage.getItem("cuycito_referral_logs") || "[]");
+        localLogs.forEach(ll => {
+            if (!allLogs.some(l => l.id === ll.id)) {
+                allLogs.push(ll);
+            }
+        });
+    } catch(e) {}
+
+    // Ordenar por fecha descendente
+    allLogs.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    const totalBonus = allLogs.reduce((sum, l) => sum + (parseFloat(l.amountEarned) || 0), 0);
+    if (totalBonusBadge) {
+        totalBonusBadge.innerText = `Total Bonos: S/ ${totalBonus.toFixed(2)}`;
+    }
+
+    if (!tbody) return;
+
+    if (allLogs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500 font-sans">No hay movimientos de referidos registrados todavía.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = allLogs.map(log => {
+        const dateStr = log.createdAt ? new Date(log.createdAt).toLocaleString('es-PE') : 'Reciente';
+        return `
+            <tr class="hover:bg-gray-800/50 transition">
+                <td class="p-3.5">
+                    <div class="font-black text-white text-xs">${log.referrerName || 'Referidor VIP'}</div>
+                    <div class="text-[10px] text-gray-500 font-mono">${log.referrerPhone || ''}</div>
+                </td>
+                <td class="p-3.5 font-mono text-cuycito-gold font-bold text-xs">
+                    <span class="bg-amber-950/60 px-2 py-0.5 rounded border border-cuycito-gold/30">${log.referrerCode || 'N/A'}</span>
+                </td>
+                <td class="p-3.5">
+                    <div class="font-bold text-gray-300 text-xs">${log.referredName || 'Cliente'}</div>
+                    <div class="text-[10px] text-blue-400 font-mono">${log.referredPhone || ''}</div>
+                </td>
+                <td class="p-3.5 text-xs text-gray-300">
+                    <span class="bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-bold">
+                        <i class="fa-solid fa-circle-check mr-1"></i> ${log.service || 'Activación VIP'}
+                    </span>
+                </td>
+                <td class="p-3.5 text-gray-400 font-mono text-[11px]">${dateStr}</td>
+                <td class="p-3.5 text-right font-mono font-black text-emerald-400 text-xs">
+                    +S/ ${(parseFloat(log.amountEarned) || 0.50).toFixed(2)}
+                </td>
+            </tr>
+        `;
+    }).join('');
+};
+
 window.renderCatalog = () => {
     const grid = document.getElementById('catalogGrid');
     if(!grid) return;
@@ -2138,12 +2757,13 @@ window.renderCatalog = () => {
             ? `<span class="bg-emerald-950 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1"><i class="fa-solid fa-boxes-stacked"></i> Stock: ${displayStock} libres</span>`
             : `<span class="bg-red-950 text-red-400 border border-cuycito-red/40 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1"><i class="fa-solid fa-circle-xmark"></i> Agotado</span>`;
 
-        const hexColor = (p.color && p.color.startsWith('#')) ? p.color : (p.colorClass && p.colorClass.startsWith('#') ? p.colorClass : '#ffb703');
-        const imgHTML = p.imageUrl && p.imageUrl.trim() !== '' 
-            ? `<img src="${p.imageUrl}" class="w-full h-36 object-cover" alt="Producto">` 
-            : `<div class="w-full h-36 flex flex-col items-center justify-center text-4xl shadow-inner border-b border-gray-800" style="background: radial-gradient(circle at center, ${hexColor}30 0%, #0a0a0a 100%); color: ${hexColor};">
-                <i class="fa-solid ${isCombo ? 'fa-gift text-cuycito-gold' : 'fa-tv'}"></i>
-               </div>`;
+        const finalImage = resolveProductImage(p);
+        const imgHTML = `
+            <div class="w-full h-36 relative overflow-hidden bg-black/60 border-b border-gray-800">
+                <img src="${finalImage}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="${p.title}">
+                <div class="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent"></div>
+            </div>
+        `;
 
         let comboServicesBreakdownHTML = '';
         if (isCombo && p.comboServices && p.comboServices.length > 0) {
@@ -2191,6 +2811,8 @@ window.renderNotifications = () => {
     const exp = appState.subscriptions.filter(s => window.getDaysRemaining(s.endDate) <= 3 && window.getDaysRemaining(s.endDate) >= 0);
     const alertCount = document.getElementById('alertCount');
     if(alertCount) alertCount.innerText = exp.length;
+    const mobileAlertBadge = document.getElementById('mobileAlertCountBadge');
+    if(mobileAlertBadge) mobileAlertBadge.innerText = exp.length;
     
     if (exp.length === 0) {
         cont.innerHTML = `<div class="p-3 bg-black/40 border border-gray-800/80 rounded-xl text-center text-gray-500 text-xs italic"><i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> No hay cuentas por vencer</div>`;
@@ -2503,7 +3125,7 @@ window.handleQrFileUpload = (e) => {
 window.savePaymentQRSettings = async () => {
     const qrUrl = document.getElementById('settingQrUrlInput')?.value.trim() || '';
     const lemonTag = document.getElementById('settingLemonTagInput')?.value.trim() || '$cmancocambillo';
-    const whatsappPhone = document.getElementById('settingWhatsappPhoneInput')?.value.trim() || '+51 991735344';
+    const whatsappPhone = document.getElementById('settingWhatsappPhoneInput')?.value.trim() || '';
 
     try {
         await setDoc(doc(db, "settings", "general"), {
@@ -3346,4 +3968,52 @@ window.deleteAdminCarteleraItem = async () => {
     document.getElementById('carteleraItemEditModal').classList.add('hidden');
     window.renderAdminCarteleraList();
     alert("🗑️ Título eliminado.");
+};
+
+// ==========================================
+// CONTROL RESPONSIVE PARA MÓVIL (DASHBOARD)
+// ==========================================
+window.toggleMobileSidebar = (forceOpen) => {
+    const sidebar = document.getElementById('dashboardSidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    if (!sidebar) return;
+
+    const isCurrentlyClosed = sidebar.classList.contains('-translate-x-full');
+    const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : isCurrentlyClosed;
+
+    if (shouldOpen) {
+        sidebar.classList.remove('-translate-x-full');
+        if (backdrop) backdrop.classList.remove('hidden');
+    } else {
+        sidebar.classList.add('-translate-x-full');
+        if (backdrop) backdrop.classList.add('hidden');
+    }
+};
+
+window.toggleMobileAlertsSidebar = (forceOpen) => {
+    const sidebar = document.getElementById('alertsSidebar');
+    const backdrop = document.getElementById('alertsBackdrop');
+    if (!sidebar) return;
+
+    const isCurrentlyClosed = sidebar.classList.contains('translate-x-full');
+    const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : isCurrentlyClosed;
+
+    if (shouldOpen) {
+        sidebar.classList.remove('translate-x-full');
+        if (backdrop) backdrop.classList.remove('hidden');
+    } else {
+        sidebar.classList.add('translate-x-full');
+        if (backdrop) backdrop.classList.add('hidden');
+    }
+};
+
+window.toggleMobileUtilsModal = (forceOpen) => {
+    const modal = document.getElementById('mobileUtilsModal');
+    if (!modal) return;
+    if (typeof forceOpen === 'boolean') {
+        if (forceOpen) modal.classList.remove('hidden');
+        else modal.classList.add('hidden');
+    } else {
+        modal.classList.toggle('hidden');
+    }
 };

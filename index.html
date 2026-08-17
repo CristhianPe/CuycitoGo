@@ -110,18 +110,67 @@
                     </a>
                 </nav>
 
-                <!-- Botón de Acceso a Clientes / Miembros -->
+                <!-- Área de Usuario / CTA de Conversión -->
                 <div class="flex items-center gap-3">
-                    <div id="navAuthContainer">
-                        <a href="login-cliente.html" class="bg-gradient-to-r from-cuycito-redDark via-cuycito-red to-cuycito-redHover hover:from-cuycito-red hover:to-cuycito-gold text-white text-xs font-black px-4 py-2.5 rounded-xl transition shadow-lg glow-red flex items-center gap-2 uppercase tracking-wider">
-                            <i class="fa-solid fa-right-to-bracket"></i>
-                            <span class="hidden sm:inline">Portal Clientes</span>
+                    <div id="navAuthContainer" class="flex items-center gap-3">
+                        <a href="login-cliente.html" class="text-xs font-bold text-gray-300 hover:text-white transition px-2.5 py-1.5 flex items-center gap-1.5">
+                            <i class="fa-solid fa-arrow-right-to-bracket text-gray-400"></i>
+                            <span>Iniciar Sesión</span>
+                        </a>
+                        <a href="login-cliente.html?tab=register" class="bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-500 hover:from-orange-400 hover:to-emerald-400 text-black font-black text-xs px-4 py-2.5 rounded-xl shadow-lg glow-gold transition duration-300 flex items-center gap-1.5 hover:scale-105 transform uppercase tracking-wider">
+                            <i class="fa-solid fa-bolt"></i>
+                            <span>Solicitar Cuenta Gratis</span>
                         </a>
                     </div>
                 </div>
             </div>
         </div>
     </header>
+
+    <!-- ========================================================= -->
+    <!-- 2.1. NUEVO HERO BANNER: PROPUESTA DE VALOR (CRO)          -->
+    <!-- ========================================================= -->
+    <section class="relative bg-gradient-to-b from-[#141414] via-[#0f141c] to-[#0a0a0a] border-b border-gray-800/80 overflow-hidden py-12 sm:py-16">
+        <!-- Patrón de fondo sutil sin interferir con la legibilidad -->
+        <div class="absolute inset-0 opacity-15 pointer-events-none" style="background-image: radial-gradient(#ffb703 1px, transparent 1px), radial-gradient(#ef233c 1px, transparent 1px); background-size: 36px 36px; background-position: 0 0, 18px 18px;"></div>
+        <div class="absolute -top-20 left-1/2 -translate-x-1/2 w-[550px] h-[300px] bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+            <!-- Badge de Confianza -->
+            <div class="inline-flex items-center gap-2 bg-black/70 border border-cuycito-gold/40 text-cuycito-gold text-[11px] font-black px-4 py-1.5 rounded-full shadow-lg backdrop-blur-sm uppercase tracking-widest">
+                <i class="fa-solid fa-shield-halved text-emerald-400"></i> Plataforma Líder en Optimización de Streaming
+            </div>
+
+            <!-- H1 Principal -->
+            <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tight drop-shadow-md max-w-4xl mx-auto">
+                Controla todos tus gastos de <span class="bg-gradient-to-r from-orange-400 via-cuycito-gold to-amber-300 bg-clip-text text-transparent">streaming</span> en un solo lugar.
+            </h1>
+
+            <!-- Subtítulo -->
+            <p class="text-sm sm:text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed font-normal">
+                Únete a CuycitoGO, optimiza tus suscripciones y deja de pagar de más. Acceso garantizado con PIN privado, calidad 4K UHD y soporte en tiempo real.
+            </p>
+
+            <!-- CTA Central & Métricas -->
+            <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="login-cliente.html?tab=register" class="w-full sm:w-auto bg-gradient-to-r from-orange-500 via-cuycito-gold to-emerald-500 hover:from-orange-400 hover:to-emerald-400 text-black font-black text-sm px-8 py-4 rounded-2xl shadow-2xl glow-gold transition duration-300 flex items-center justify-center gap-2.5 hover:scale-105 transform uppercase tracking-wider">
+                    <i class="fa-solid fa-rocket"></i>
+                    <span>Empieza tu gestión hoy</span>
+                </a>
+                <a href="#precios-oficiales" class="w-full sm:w-auto bg-[#141414] hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-700 font-bold text-xs px-6 py-4 rounded-2xl transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-cuycito-gold"></i>
+                    <span>Comparar Tarifas Oficiales</span>
+                </a>
+            </div>
+
+            <!-- Micro-beneficios -->
+            <div class="pt-4 flex flex-wrap items-center justify-center gap-6 text-xs text-gray-400 font-semibold">
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-check text-emerald-400"></i> Sin contratos ni permanencia</span>
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-check text-emerald-400"></i> Ahorra hasta un 70% mensual</span>
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-check text-emerald-400"></i> Activación instantánea con PIN</span>
+            </div>
+        </div>
+    </section>
 
     <!-- ========================================================= -->
     <!-- 3. ESQUEMA EDITORIAL PRINCIPAL (ESTILO REVISTA DIGITAL)    -->
@@ -394,27 +443,69 @@
                     </div>
                 </div>
 
-                <!-- 3. CAJA DE SUSCRIPCIÓN NEWSLETTER -->
-                <div class="bg-gradient-to-br from-[#0e2a47] via-[#0c1f33] to-[#0a0a0a] border border-blue-500/40 rounded-3xl p-6 shadow-2xl space-y-3">
-                    <span class="text-xs font-black text-blue-300 uppercase tracking-widest block">SUSCRÍBETE</span>
-                    <h4 class="text-base font-black text-white leading-snug">
-                        Recibe Alertas de Tarifas y Estrenos Semanales
-                    </h4>
-                    <p class="text-[11px] text-gray-300 leading-relaxed">
-                        Entérate antes que nadie de nuevos lanzamientos, cambios de precios y análisis técnicos de streaming.
-                    </p>
-                    <form onsubmit="window.handleNewsletterSubscribe(event)" class="flex gap-2 pt-1">
+                <!-- 3. LEAD MAGNET: CALCULADORA DE AHORRO STREAMING -->
+                <div id="leadMagnetCard" class="bg-gradient-to-br from-[#1c1808] via-[#121212] to-[#0a0a0a] border-2 border-cuycito-gold/50 rounded-3xl p-6 shadow-2xl space-y-4 glow-gold relative overflow-hidden">
+                    <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-amber-500/10 rounded-full blur-xl pointer-events-none"></div>
+
+                    <!-- Mockup Visual / Badge del Recurso -->
+                    <div class="flex items-center justify-between">
+                        <span class="bg-cuycito-gold text-black text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow">
+                            🎁 RECURSO GRATUITO
+                        </span>
+                        <span class="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                            <i class="fa-solid fa-file-excel"></i> Excel + PDF
+                        </span>
+                    </div>
+
+                    <!-- Mockup / Icono Gráfico -->
+                    <div class="bg-black/60 border border-gray-800 rounded-2xl p-3 flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-xl bg-cuycito-gold/20 border border-cuycito-gold/40 text-cuycito-gold flex items-center justify-center text-xl shrink-0 shadow">
+                            <i class="fa-solid fa-calculator"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-gray-400 block font-semibold">Plantilla Interactiva 2026</span>
+                            <strong class="text-xs text-white font-black leading-tight block">Simulador de Costos y Ahorro</strong>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <h4 class="text-sm sm:text-base font-black text-white leading-snug">
+                            Descarga la Calculadora de Ahorro Streaming
+                        </h4>
+                        <p class="text-[11px] text-gray-300 leading-relaxed font-normal">
+                            Calcula exactamente cuánto puedes ahorrar al mes combinando tus cuentas en planes compartidos con PIN privado.
+                        </p>
+                    </div>
+
+                    <!-- Formulario de Captación de Lead -->
+                    <form id="leadMagnetForm" onsubmit="window.handleLeadMagnetDownload(event)" class="space-y-2 pt-1">
                         <input 
                             type="email" 
-                            id="newsletterEmail" 
+                            id="leadMagnetEmail" 
                             required 
-                            placeholder="Enviar un email..." 
-                            class="w-full bg-black/80 border border-blue-400/40 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cuycito-gold"
+                            placeholder="Ingresa tu correo aquí..." 
+                            class="w-full bg-black border border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cuycito-gold transition"
                         >
-                        <button type="submit" class="bg-orange-500 hover:bg-orange-600 text-white font-black text-xs px-4 py-2 rounded-xl transition shadow glow-gold shrink-0">
-                            Enviar
+                        <button type="submit" class="w-full bg-gradient-to-r from-orange-500 via-cuycito-gold to-yellow-400 hover:from-orange-400 hover:to-yellow-300 text-black font-black text-xs py-3 px-4 rounded-xl transition shadow-lg glow-gold flex items-center justify-center gap-2 uppercase tracking-wider">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Descargar Gratis</span>
                         </button>
                     </form>
+
+                    <!-- Estado de Éxito (Oculto inicialmente) -->
+                    <div id="leadMagnetSuccess" class="hidden text-center py-4 space-y-3">
+                        <div class="w-12 h-12 mx-auto rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 flex items-center justify-center text-2xl animate-bounce">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <h5 class="text-sm font-black text-white">¡Descarga Lista!</h5>
+                            <p class="text-[11px] text-gray-300">Hemos enviado la Calculadora a tu correo. También puedes abrirla directamente:</p>
+                        </div>
+                        <button onclick="window.downloadCalculatorDemo()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs py-2.5 rounded-xl transition shadow flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-file-arrow-down"></i> Abrir Hoja de Cálculo
+                        </button>
+                    </div>
+
                 </div>
 
                 <!-- 4. MULTIMEDIA & TRAILERS -->

@@ -719,17 +719,49 @@ function stopHeroAutoplay() {
     if (heroSlideInterval) clearInterval(heroSlideInterval);
 }
 
-// 9. SUSCRIPCIÓN NEWSLETTER
-window.handleNewsletterSubscribe = (e) => {
+// 9. LEAD MAGNET: CALCULADORA DE AHORRO STREAMING
+window.handleLeadMagnetDownload = (e) => {
     e.preventDefault();
-    const emailInput = document.getElementById('newsletterEmail');
+    const emailInput = document.getElementById('leadMagnetEmail');
+    const form = document.getElementById('leadMagnetForm');
+    const successBox = document.getElementById('leadMagnetSuccess');
+
     if (!emailInput || !emailInput.value.trim()) return;
 
-    alert(`¡Gracias por suscribirte con ${emailInput.value.trim()}! Recibirás los reportajes semanales y alertas de estrenos de streaming.`);
-    emailInput.value = "";
+    const email = emailInput.value.trim();
+
+    // Guardar lead localmente
+    try {
+        let leads = JSON.parse(localStorage.getItem("cuycito_leads") || "[]");
+        leads.push({ email, source: "lead_magnet_calculadora", date: new Date().toISOString() });
+        localStorage.setItem("cuycito_leads", JSON.stringify(leads));
+    } catch(e) {}
+
+    if (form) form.classList.add('hidden');
+    if (successBox) successBox.classList.remove('hidden');
 };
 
-// 10. MODAL LECTOR DE ARTÍCULOS EDITORIALES
+window.downloadCalculatorDemo = () => {
+    // Generar un CSV interactivo de simulación de ahorro de streaming
+    const csvContent = "data:text/csv;charset=utf-8," + 
+        "Plataforma,Precio Oficial Mensual (PEN),Precio CuycitoGO VIP (PEN),Ahorro Mensual (PEN),Ahorro Anual (PEN)\n" +
+        "Netflix 4K UHD,58.90,13.00,45.90,550.80\n" +
+        "Disney+ Premium con ESPN,68.90,12.00,56.90,682.80\n" +
+        "Max Platino HBO 4K,49.90,11.00,38.90,466.80\n" +
+        "Crunchyroll Mega Fan,14.99 USD (~56.00 PEN),9.00,47.00,564.00\n" +
+        "Spotify Premium,29.90,8.00,21.90,262.80\n" +
+        "TOTAL GASTO MENSUAL,263.60 PEN,53.00 PEN,210.60 PEN,2527.20 PEN AL AÑO";
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "Calculadora_Ahorro_Streaming_CuycitoGO_2026.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+// 10. MODAL LECTOR DE ARTÍCULOS EDITORIALES CON BLOQUE DINÁMICO IN-ARTICLE
 window.openArticleModal = (articleId) => {
     const article = defaultPortalArticles[articleId];
     if (!article) return;
@@ -763,11 +795,77 @@ window.openArticleModal = (articleId) => {
             <div class="border-t border-gray-800 pt-5 text-gray-200">
                 ${article.content}
             </div>
+
+            <!-- ========================================================= -->
+            <!-- 3. BLOQUE DINÁMICO IN-ARTICLE (PROBLEMA-SOLUCIÓN / CRO)   -->
+            <!-- ========================================================= -->
+            <div class="mt-8 pt-6 border-t border-gray-800">
+                <div id="inArticleCtaCard" class="bg-gradient-to-br from-amber-950/40 via-[#161616] to-[#0d0d0d] border-2 border-cuycito-gold/60 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 glow-gold relative overflow-hidden">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-cuycito-red to-orange-500 text-white flex items-center justify-center text-xl shrink-0 shadow-lg glow-red">
+                            <i class="fa-solid fa-piggy-bank"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-[10px] font-black text-cuycito-gold uppercase tracking-widest block">💡 SOLUCIÓN AL ALZA DE TARIFAS</span>
+                            <h3 class="text-base sm:text-lg font-black text-white leading-tight">
+                                ¿Te afecta esta subida de precios? No pagues de más. Regístrate en CuycitoGO y optimiza tus cuentas.
+                            </h3>
+                            <p class="text-xs text-gray-300 leading-relaxed font-normal">
+                                Obtén pantallas privadas con PIN exclusivo, calidad 4K UHD real y ahorra hasta un 70% en tus suscripciones.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form id="inArticleCtaForm" onsubmit="window.handleInArticleLeadSubmit(event)" class="flex flex-col sm:flex-row gap-2.5 pt-1">
+                        <input 
+                            type="email" 
+                            id="inArticleEmail" 
+                            required 
+                            placeholder="Ingresa tu correo para optimizar tus cuentas..." 
+                            class="flex-1 bg-black border border-gray-700 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cuycito-gold transition"
+                        >
+                        <button type="submit" class="bg-gradient-to-r from-orange-500 via-cuycito-gold to-emerald-500 hover:from-orange-400 hover:to-emerald-400 text-black font-black text-xs px-6 py-3 rounded-xl transition shadow-lg glow-gold flex items-center justify-center gap-2 uppercase tracking-wider shrink-0">
+                            <i class="fa-solid fa-arrow-trend-down"></i>
+                            <span>Quiero Ahorrar</span>
+                        </button>
+                    </form>
+
+                    <div id="inArticleSuccess" class="hidden bg-emerald-950/70 border border-emerald-500/50 rounded-2xl p-4 text-center space-y-2">
+                        <span class="text-emerald-400 font-black text-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-circle-check text-base"></i> ¡Cupo de Ahorro Reservado!
+                        </span>
+                        <p class="text-xs text-gray-200">Te hemos enviado las instrucciones de activación. Redirigiendo al portal de registro...</p>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
 
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+};
+
+window.handleInArticleLeadSubmit = (e) => {
+    e.preventDefault();
+    const emailInput = document.getElementById('inArticleEmail');
+    const form = document.getElementById('inArticleCtaForm');
+    const successBox = document.getElementById('inArticleSuccess');
+
+    if (!emailInput || !emailInput.value.trim()) return;
+    const email = emailInput.value.trim();
+
+    try {
+        let leads = JSON.parse(localStorage.getItem("cuycito_leads") || "[]");
+        leads.push({ email, source: "in_article_cta", date: new Date().toISOString() });
+        localStorage.setItem("cuycito_leads", JSON.stringify(leads));
+    } catch(e) {}
+
+    if (form) form.classList.add('hidden');
+    if (successBox) successBox.classList.remove('hidden');
+
+    setTimeout(() => {
+        window.location.href = `login-cliente.html?tab=register&email=${encodeURIComponent(email)}`;
+    }, 1600);
 };
 
 window.closeArticleModal = () => {
@@ -806,10 +904,16 @@ function initPortalAuth() {
     }
 
     authContainer.innerHTML = `
-        <a href="login-cliente.html" class="bg-gradient-to-r from-cuycito-redDark via-cuycito-red to-cuycito-redHover hover:from-cuycito-red hover:to-cuycito-gold text-white text-xs font-black px-4 py-2.5 rounded-xl transition shadow-lg glow-red flex items-center gap-2 uppercase tracking-wider">
-            <i class="fa-solid fa-right-to-bracket"></i>
-            <span>Iniciar Sesión</span>
-        </a>
+        <div class="flex items-center gap-3">
+            <a href="login-cliente.html" class="text-xs font-bold text-gray-300 hover:text-white transition px-2.5 py-1.5 flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-right-to-bracket text-gray-400"></i>
+                <span>Iniciar Sesión</span>
+            </a>
+            <a href="login-cliente.html?tab=register" class="bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-500 hover:from-orange-400 hover:to-emerald-400 text-black font-black text-xs px-4 py-2.5 rounded-xl shadow-lg glow-gold transition duration-300 flex items-center gap-1.5 hover:scale-105 transform uppercase tracking-wider">
+                <i class="fa-solid fa-bolt"></i>
+                <span>Solicitar Cuenta Gratis</span>
+            </a>
+        </div>
     `;
 }
 

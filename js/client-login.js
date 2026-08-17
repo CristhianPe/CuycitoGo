@@ -28,7 +28,7 @@ window.togglePasswordVisibility = () => {
     }
 };
 
-// Manejo del formulario de Login
+// 1. Manejo del formulario de Login
 const form = document.getElementById('clientLoginForm');
 if (form) {
     form.addEventListener('submit', async (e) => {
@@ -53,12 +53,13 @@ if (form) {
                     phone: "cuycitogodemo",
                     email: "demo@cuycitogo.pe",
                     pass: "cuycito123",
-                    balance: 999999.00,
+                    balance: 50.00, // S/ 50.00 de saldo para probar compras y descuentos
                     isDemo: true,
+                    referredCodeUsed: "VIP-JUAN-7K9A",
+                    referralDiscountUsed: false,
                     createdAt: new Date().toISOString()
                 };
 
-                // Asegurar registro de cuenta Demo y 3 suscripciones activas en Firestore para desbloquear juegos
                 try {
                     await setDoc(doc(db, "users", demoUser.id), demoUser, { merge: true });
 
@@ -149,3 +150,108 @@ if (form) {
     });
 }
 
+// 2. Control de Pestañas (Iniciar Sesión vs Solicitar Cuenta Gratis)
+window.switchAuthTab = (tab) => {
+    const loginForm = document.getElementById('clientLoginForm');
+    const registerForm = document.getElementById('clientRegisterForm');
+    const tabLoginBtn = document.getElementById('tabAuthLoginBtn');
+    const tabRegBtn = document.getElementById('tabAuthRegisterBtn');
+
+    if (tab === 'register') {
+        if (loginForm) loginForm.classList.add('hidden');
+        if (registerForm) registerForm.classList.remove('hidden');
+        if (tabLoginBtn) tabLoginBtn.className = "flex-1 pb-3 text-gray-500 hover:text-white border-b-2 border-transparent flex items-center justify-center gap-1.5 transition";
+        if (tabRegBtn) tabRegBtn.className = "flex-1 pb-3 text-orange-400 border-b-2 border-orange-400 flex items-center justify-center gap-1.5 transition font-black";
+    } else {
+        if (loginForm) loginForm.classList.remove('hidden');
+        if (registerForm) registerForm.classList.add('hidden');
+        if (tabLoginBtn) tabLoginBtn.className = "flex-1 pb-3 text-cuycito-gold border-b-2 border-cuycito-gold flex items-center justify-center gap-1.5 transition font-black";
+        if (tabRegBtn) tabRegBtn.className = "flex-1 pb-3 text-gray-500 hover:text-white border-b-2 border-transparent flex items-center justify-center gap-1.5 transition";
+    }
+};
+
+// 3. Manejo de Solicitud de Cuenta Gratis VIP con Código de Referido
+window.handleClientRegisterSubmit = async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('regName').value.trim();
+    const phone = document.getElementById('regPhone').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const referralCode = document.getElementById('regReferralCode') ? document.getElementById('regReferralCode').value.trim().toUpperCase() : '';
+    const btn = document.getElementById('btnRegisterSubmit');
+    const alertBox = document.getElementById('registerAlertBox');
+
+    if (!name || !phone) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando solicitud a verificación...';
+
+    const reqId = "req_" + Date.now();
+    const newRequest = {
+        id: reqId,
+        name: name,
+        phone: phone,
+        email: email || '',
+        referralCode: referralCode || '',
+        status: 'pending', // 'pending', 'approved', 'rejected'
+        createdAt: new Date().toISOString()
+    };
+
+    // 1. Guardar en Firestore colección 'pending_registrations'
+    try {
+        await setDoc(doc(db, "pending_registrations", reqId), newRequest, { merge: true });
+    } catch(errSync) {
+        console.warn("Error guardando solicitud en Firestore (usando fallback local):", errSync);
+    }
+
+    // 2. Guardar en localStorage de respaldo
+    try {
+        let requests = JSON.parse(localStorage.getItem("cuycito_pending_registrations") || "[]");
+        requests.unshift(newRequest);
+        localStorage.setItem("cuycito_pending_registrations", JSON.stringify(requests));
+    } catch(err) {}
+
+    // 3. Guardar en leads
+    try {
+        let leads = JSON.parse(localStorage.getItem("cuycito_leads") || "[]");
+        leads.push({ name, phone, email, referralCode, source: "register_form", date: new Date().toISOString() });
+        localStorage.setItem("cuycito_leads", JSON.stringify(leads));
+    } catch(err) {}
+
+    // Mensaje WhatsApp
+    const msg = `¡Hola CuycitoGO! 🐹👋\n\nHe enviado una solicitud de *Cuenta Gratis VIP*:\n- *Nombre:* ${name}\n- *Celular:* ${phone}${email ? `\n- *Email:* ${email}` : ''}${referralCode ? `\n- *Código Referido:* ${referralCode}` : ''}\n\nQuedo a la espera de la verificación de mi cuenta en el dashboard. ¡Gracias! 🙌`;
+    
+    alertBox.innerHTML = `
+        <div class="space-y-1 text-center">
+            <div class="flex items-center justify-center gap-1.5 text-emerald-400 font-black text-sm">
+                <i class="fa-solid fa-circle-check text-base"></i>
+                <span>¡Solicitud enviada al Dashboard!</span>
+            </div>
+            <p class="text-xs text-gray-200">Tu petición está en estado <b>Pendiente de Verificación</b>. El administrador validará tus accesos en breve.</p>
+        </div>
+    `;
+    alertBox.classList.remove('hidden');
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Notificar también por WhatsApp';
+    btn.onclick = () => {
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    };
+};
+
+// 4. Auto-selección por parámetro URL (?tab=register, ?email=..., ?ref=...)
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'register') {
+        window.switchAuthTab('register');
+    }
+    if (params.get('email')) {
+        const regEmail = document.getElementById('regEmail');
+        if (regEmail) regEmail.value = params.get('email');
+    }
+    const refParam = params.get('ref') || params.get('referral') || params.get('codigo');
+    if (refParam) {
+        const regRef = document.getElementById('regReferralCode');
+        if (regRef) regRef.value = refParam.toUpperCase();
+        window.switchAuthTab('register');
+    }
+});
