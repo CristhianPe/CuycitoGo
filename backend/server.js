@@ -3,6 +3,9 @@ import cors from 'cors';
 import { config } from './config.js';
 import { RechargeController } from './recharge-controller.js';
 import { lemonImapService } from './lemon-imap-service.js';
+import { GameController, DEFAULT_ROULETTE_SETTINGS } from './game-controller.js';
+import { verifyRequestIntegrity, createRateLimiter } from './security-middleware.js';
+import { SecurityAuditLogger } from './audit-logger.js';
 
 const app = express();
 
@@ -10,9 +13,37 @@ const app = express();
 app.use(cors({
     origin: '*', // Permitir conexión desde frontend local y en producción
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Cuycito-Timestamp', 'X-Cuycito-Nonce', 'X-Cuycito-Signature']
 }));
 app.use(express.json());
+
+// Limitadores de Tasa
+const spinRateLimiter = createRateLimiter(6, 60000); // Max 6 giros/minuto
+const rechargeRateLimiter = createRateLimiter(5, 60000); // Max 5 órdenes de recarga/minuto
+
+// ==============================================================================
+// RUTAS DE SEGURIDAD Y TELEMETRÍA ANTI-CHEAT
+// ==============================================================================
+app.post('/api/security/report-tamper', async (req, res) => {
+    try {
+        const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '0.0.0.0';
+        const { userId, userName, anomalyType, details } = req.body;
+
+        await SecurityAuditLogger.logSecurityAnomaly({
+            eventType: anomalyType || 'CLIENT_SIDE_ANOMALY',
+            severity: 'CRITICAL',
+            userId,
+            userName,
+            ip: clientIp,
+            endpoint: '/api/security/report-tamper',
+            details: details || {}
+        });
+
+        res.json({ success: true, acknowledged: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 // ==============================================================================
 // RUTAS DE LA API DE RECARGAS
@@ -28,10 +59,10 @@ app.get('/health', (req, res) => {
     });
 });
 
-// 2. Crear nueva solicitud de recarga con céntimos únicos
-app.post('/api/recharges/create', async (req, res) => {
+// 2. Crear nueva solicitud de recarga (Protegido con Integridad Criptográfica y Rate Limiter)
+app.post('/api/recharges/create', rechargeRateLimiter, verifyRequestIntegrity, async (req, res) => {
     try {
-        const { userId, amount, currency = 'USD', userInfo = {} } = req.body;
+        const { userId, amount, currency = 'PEN', userInfo = {} } = req.body;
         if (!userId || !amount) {
             return res.status(400).json({ error: "userId y amount son requeridos." });
         }
@@ -107,8 +138,6 @@ app.post('/api/recharges/force-check-imap', async (req, res) => {
     }
 });
 
-import { GameController, DEFAULT_ROULETTE_SETTINGS } from './game-controller.js';
-
 // ==============================================================================
 // RUTAS DE LA API DEL MÓDULO DE JUEGOS (RULETA VIP)
 // ==============================================================================
@@ -133,8 +162,8 @@ app.post('/api/games/roulette/settings', async (req, res) => {
     }
 });
 
-// 8. Girar la Ruleta (Validación 3 servicios + Descuento 1 Sol + Algoritmo 30% House Edge)
-app.post('/api/games/spin', async (req, res) => {
+// 8. Girar la Ruleta (Protegido con Integridad Criptográfica, Rate Limiter y Estado Autoritativo)
+app.post('/api/games/spin', spinRateLimiter, verifyRequestIntegrity, async (req, res) => {
     try {
         const { userId, userName } = req.body;
         if (!userId) {

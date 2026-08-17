@@ -477,20 +477,26 @@ window.generateRechargeOrder = async () => {
     const step2 = document.getElementById('rechargeStep2');
 
     try {
-        // 1. Llamar al backend API de recargas
+        // 1. Llamar al backend API de recargas con cabeceras de integridad criptográfica
+        const payload = {
+            userId: currentClientUser.id,
+            amount: amount,
+            currency: 'PEN',
+            userInfo: {
+                name: currentClientUser.name,
+                nickname: currentClientUser.nickname || currentClientUser.name,
+                phone: currentClientUser.phone
+            }
+        };
+
+        const secHeaders = window.SecurityGuard 
+            ? await window.SecurityGuard.signPayload(payload) 
+            : { 'Content-Type': 'application/json' };
+
         const response = await fetch(`${BACKEND_API_BASE}/api/recharges/create`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: currentClientUser.id,
-                amount: amount,
-                currency: 'PEN',
-                userInfo: {
-                    name: currentClientUser.name,
-                    nickname: currentClientUser.nickname || currentClientUser.name,
-                    phone: currentClientUser.phone
-                }
-            })
+            headers: secHeaders,
+            body: JSON.stringify(payload)
         });
 
         const data = await response.json();
@@ -929,6 +935,10 @@ window.spinRouletteWheel = async () => {
         return alert("Saldo insuficiente. Necesitas al menos S/ 1.00 de saldo para girar la Ruleta. Recarga saldo a tu cuenta en la tienda o por WhatsApp.");
     }
 
+    if (window.SecurityGuard && !window.SecurityGuard.checkSpinInterval(4000)) {
+        return alert("⚠️ Por favor espera a que termine la animación del giro actual.");
+    }
+
     const btnSpin = document.getElementById('btnSpinRoulette');
     if (btnSpin) btnSpin.disabled = true;
     isRouletteSpinning = true;
@@ -936,13 +946,19 @@ window.spinRouletteWheel = async () => {
     try {
         let spinResult = null;
         try {
+            const spinPayload = {
+                userId: currentClientUser.id,
+                userName: currentClientUser.name
+            };
+
+            const secHeaders = window.SecurityGuard 
+                ? await window.SecurityGuard.signPayload(spinPayload) 
+                : { 'Content-Type': 'application/json' };
+
             const res = await fetch(`${BACKEND_API_BASE}/api/games/spin`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: currentClientUser.id,
-                    userName: currentClientUser.name
-                })
+                headers: secHeaders,
+                body: JSON.stringify(spinPayload)
             });
 
             if (res.ok) {
