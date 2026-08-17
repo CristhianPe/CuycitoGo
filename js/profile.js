@@ -889,13 +889,85 @@ window.filterProfileCatalog = (category) => {
     const buttons = document.querySelectorAll('.profile-category-btn');
     buttons.forEach(btn => {
         if (btn.dataset.category === category) {
-            btn.className = "profile-category-btn bg-emerald-600 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow glow-gold";
+            btn.className = "profile-category-btn bg-cuycito-gold text-black text-xs font-black px-4 py-2 rounded-xl transition shadow glow-gold";
         } else {
             btn.className = "profile-category-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition";
         }
     });
     renderProfileCatalog();
 };
+
+function getPlatformThemeData(p) {
+    const rawCat = (p.category || '').toUpperCase();
+    const title = (p.title || '').toLowerCase();
+    const isOffer = p.promo === true || p.isOffer === true || rawCat === 'OFERTA' || rawCat === 'COMBOS' || title.includes('combo') || title.includes('oferta') || title.includes('pack');
+
+    let hex = '#ffb703';
+    let icon = 'fa-solid fa-tv';
+    let platformLabel = p.category || 'Streaming VIP';
+    let borderAccent = 'border-gray-800 hover:border-cuycito-gold/60';
+    let glowClass = 'glow-gold';
+
+    if (title.includes('netflix')) {
+        hex = '#e50914';
+        icon = 'fa-solid fa-play';
+        platformLabel = 'Netflix 4K UHD';
+        borderAccent = 'border-red-950/60 hover:border-red-600/80';
+        glowClass = 'glow-red';
+    } else if (title.includes('max') || title.includes('hbo')) {
+        hex = '#8b5cf6';
+        icon = 'fa-solid fa-film';
+        platformLabel = 'Max Platino 4K';
+        borderAccent = 'border-purple-950/60 hover:border-purple-500/80';
+        glowClass = 'shadow-[0_0_20px_rgba(139,92,246,0.3)]';
+    } else if (title.includes('disney')) {
+        hex = '#3b82f6';
+        icon = 'fa-solid fa-clapperboard';
+        platformLabel = 'Disney+ Premium ESPN';
+        borderAccent = 'border-blue-950/60 hover:border-blue-500/80';
+        glowClass = 'shadow-[0_0_20px_rgba(59,130,246,0.3)]';
+    } else if (title.includes('crunchyroll') || rawCat === 'ANIME' || rawCat === 'GAMING' || title.includes('anime')) {
+        hex = '#f97316';
+        icon = 'fa-solid fa-dragon';
+        platformLabel = 'Crunchyroll Mega Fan';
+        borderAccent = 'border-orange-950/60 hover:border-orange-500/80';
+        glowClass = 'shadow-[0_0_20px_rgba(249,115,22,0.3)]';
+    } else if (title.includes('spotify') || rawCat === 'MÚSICA' || rawCat === 'MUSICA' || title.includes('music')) {
+        hex = '#10b981';
+        icon = 'fa-solid fa-music';
+        platformLabel = 'Spotify Hi-Fi';
+        borderAccent = 'border-emerald-950/60 hover:border-emerald-500/80';
+        glowClass = 'shadow-[0_0_20px_rgba(16,185,129,0.3)]';
+    } else if (title.includes('prime') || title.includes('amazon')) {
+        hex = '#06b6d4';
+        icon = 'fa-solid fa-cube';
+        platformLabel = 'Prime Video';
+        borderAccent = 'border-cyan-950/60 hover:border-cyan-500/80';
+        glowClass = 'shadow-[0_0_20px_rgba(6,182,212,0.3)]';
+    } else if (title.includes('combo') || rawCat === 'COMBOS') {
+        hex = '#ffb703';
+        icon = 'fa-solid fa-gift';
+        platformLabel = 'Combo Ahorro VIP';
+        borderAccent = 'border-amber-950/60 hover:border-amber-500/80';
+        glowClass = 'glow-gold';
+    }
+
+    if (p.color && p.color.startsWith('#')) hex = p.color;
+    else if (p.colorClass) {
+        const map = {
+            'red-600': '#e50914',
+            'purple-600': '#8b5cf6',
+            'blue-600': '#3b82f6',
+            'orange-500': '#f97316',
+            'emerald-600': '#10b981',
+            'cuycito-gold': '#ffb703',
+            'sky-600': '#06b6d4'
+        };
+        if (map[p.colorClass]) hex = map[p.colorClass];
+    }
+
+    return { hex, icon, platformLabel, isOffer, borderAccent, glowClass };
+}
 
 function renderProfileCatalog() {
     const grid = document.getElementById('profileCatalogGrid');
@@ -904,9 +976,104 @@ function renderProfileCatalog() {
     const searchEl = document.getElementById('profileCatalogSearch');
     const searchTerm = (searchEl?.value || '').toLowerCase().trim();
 
-    let filtered = profileCatalogProducts.filter(p => {
-        const matchesCategory = profileActiveCategory === 'ALL' || p.category === profileActiveCategory;
-        const matchesSearch = !searchTerm || (p.title || '').toLowerCase().includes(searchTerm) || (p.description || '').toLowerCase().includes(searchTerm);
+    // Catálogo de respaldo si no hay productos cargados en base de datos
+    let productsList = profileCatalogProducts;
+    if (!productsList || productsList.length === 0) {
+        productsList = [
+            {
+                id: "vip-netflix",
+                title: "Netflix 4K UHD Ultra HD",
+                category: "Streaming",
+                price: 13.00,
+                description: "Perfil privado con PIN personal, calidad 4K UHD real y soporte continuo.",
+                color: "#e50914",
+                icon: "fa-solid fa-play",
+                promo: false
+            },
+            {
+                id: "vip-max",
+                title: "Max Platino 4K + Dolby Atmos",
+                category: "Streaming",
+                price: 11.00,
+                description: "Acceso completo a todo HBO, Warner Bros, Discovery y deportes en vivo.",
+                color: "#8b5cf6",
+                icon: "fa-solid fa-film",
+                promo: false
+            },
+            {
+                id: "vip-disney",
+                title: "Disney+ Premium con ESPN",
+                category: "Streaming",
+                price: 12.00,
+                description: "Incluye todos los canales ESPN, fútbol en vivo, Disney, Pixar, Marvel y Star.",
+                color: "#3b82f6",
+                icon: "fa-solid fa-clapperboard",
+                promo: false
+            },
+            {
+                id: "vip-crunchyroll",
+                title: "Crunchyroll Mega Fan Simulcast",
+                category: "Gaming",
+                price: 9.00,
+                description: "Estrenos simultáneos desde Japón sin anuncios en Full HD y descargas offline.",
+                color: "#f97316",
+                icon: "fa-solid fa-dragon",
+                promo: false
+            },
+            {
+                id: "vip-spotify",
+                title: "Spotify Premium Individual",
+                category: "Música",
+                price: 8.00,
+                description: "Música ilimitada sin anuncios a tu propia cuenta o perfil nuevo garantizado.",
+                color: "#10b981",
+                icon: "fa-solid fa-music",
+                promo: false
+            },
+            {
+                id: "vip-combo-cine",
+                title: "Combo Dúo Cine: Netflix 4K + Max Platino",
+                category: "Combos",
+                price: 22.00,
+                description: "¡Super Ahorro! Llévate los 2 gigantes del cine y series con PIN privado.",
+                color: "#ffb703",
+                icon: "fa-solid fa-gift",
+                promo: true
+            },
+            {
+                id: "vip-combo-trio",
+                title: "Combo Trío Total: Netflix + Disney ESPN + Max",
+                category: "Combos",
+                price: 32.00,
+                description: "El paquete definitivo de entretenimiento para toda la familia.",
+                color: "#ffb703",
+                icon: "fa-solid fa-fire",
+                promo: true
+            }
+        ];
+    }
+
+    let filtered = productsList.filter(p => {
+        const cat = (p.category || '').toUpperCase();
+        const title = (p.title || '').toLowerCase();
+        const isOffer = p.promo === true || p.isOffer === true || cat === 'OFERTA' || cat === 'COMBOS' || title.includes('combo') || title.includes('oferta');
+
+        let matchesCategory = false;
+        if (profileActiveCategory === 'ALL') {
+            matchesCategory = true;
+        } else if (profileActiveCategory === 'OFERTA') {
+            matchesCategory = isOffer;
+        } else if (profileActiveCategory === 'STREAMING') {
+            matchesCategory = cat === 'STREAMING' || cat === 'PANTALLAS / PERFIL' || cat === 'CUENTAS RAÍZ' || title.includes('netflix') || title.includes('max') || title.includes('disney') || title.includes('prime');
+        } else if (profileActiveCategory === 'COMBOS') {
+            matchesCategory = cat === 'COMBOS' || title.includes('combo');
+        } else if (profileActiveCategory === 'MUSICA') {
+            matchesCategory = cat === 'MÚSICA' || cat === 'MUSICA' || title.includes('spotify') || title.includes('music') || title.includes('apple');
+        } else if (profileActiveCategory === 'GAMING') {
+            matchesCategory = cat === 'GAMING' || cat === 'ANIME' || title.includes('crunchyroll') || title.includes('game') || title.includes('steam');
+        }
+
+        const matchesSearch = !searchTerm || title.includes(searchTerm) || (p.description || '').toLowerCase().includes(searchTerm) || cat.includes(searchTerm);
         return matchesCategory && matchesSearch;
     });
 
@@ -914,7 +1081,8 @@ function renderProfileCatalog() {
         grid.innerHTML = `
             <div class="col-span-full text-center py-16 text-gray-500 space-y-3">
                 <i class="fa-solid fa-box-open text-4xl text-gray-600"></i>
-                <p class="text-sm font-medium">No se encontraron productos disponibles en esta categoría.</p>
+                <p class="text-sm font-bold text-gray-400">No se encontraron productos con los filtros seleccionados.</p>
+                <button onclick="window.filterProfileCatalog('ALL')" class="text-xs text-cuycito-gold underline font-bold">Ver catálogo completo</button>
             </div>
         `;
         return;
@@ -922,47 +1090,58 @@ function renderProfileCatalog() {
 
     grid.innerHTML = filtered.map(prod => {
         const price = parseFloat(prod.price || 0).toFixed(2);
-        const icon = prod.icon || 'fa-solid fa-tv';
-        const isOffer = prod.isOffer || prod.category === 'OFERTA';
-        const color = prod.color || '#ffb703';
+        const theme = getPlatformThemeData(prod);
 
         return `
-            <div class="bg-[#141414] border border-gray-800 rounded-3xl p-6 flex flex-col justify-between hover:border-cuycito-gold/50 transition duration-300 shadow-xl relative overflow-hidden group">
-                ${isOffer ? '<span class="absolute top-4 right-4 bg-cuycito-red text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow glow-red animate-pulse">Oferta VIP</span>' : ''}
+            <div class="bg-[#121212] border ${theme.borderAccent} rounded-3xl p-6 flex flex-col justify-between transition duration-300 shadow-2xl relative overflow-hidden group">
                 
+                ${theme.isOffer ? `
+                    <div class="absolute top-3 right-3 z-10">
+                        <span class="bg-gradient-to-r from-cuycito-red to-orange-500 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-lg glow-red animate-pulse flex items-center gap-1">
+                            <i class="fa-solid fa-fire text-yellow-200"></i> OFERTA VIP
+                        </span>
+                    </div>
+                ` : ''}
+
                 <div class="space-y-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-lg border border-white/10" style="background-color: ${color}20; color: ${color};">
-                            <i class="${icon}"></i>
+                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-lg shrink-0 border border-white/10" style="background-color: ${theme.hex}25; color: ${theme.hex}; border-color: ${theme.hex}50;">
+                            <i class="${theme.icon}"></i>
                         </div>
                         <div>
-                            <span class="text-[10px] uppercase font-black tracking-widest text-gray-400 block">${prod.category || 'Streaming'}</span>
-                            <h3 class="text-lg font-black text-white group-hover:text-cuycito-gold transition">${prod.title || 'Servicio Digital'}</h3>
+                            <span class="text-[10px] uppercase font-black tracking-widest block" style="color: ${theme.hex};">
+                                ${theme.platformLabel}
+                            </span>
+                            <h3 class="text-base font-black text-white group-hover:text-cuycito-gold transition leading-snug">
+                                ${prod.title || 'Servicio Digital'}
+                            </h3>
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap gap-1.5 text-[10px] font-black uppercase">
-                        <span class="bg-gray-900/90 text-gray-300 px-2 py-0.5 rounded border border-gray-800 flex items-center gap-1">
-                            <i class="fa-solid fa-users text-sky-400"></i> Cuenta Compartida
+                    <div class="flex flex-wrap gap-1.5 text-[9px] font-black uppercase">
+                        <span class="bg-black/80 text-gray-300 px-2 py-0.5 rounded-lg border border-gray-800 flex items-center gap-1">
+                            <i class="fa-solid fa-users text-sky-400"></i> Pantalla Privada
                         </span>
-                        <span class="bg-gray-900/90 text-gray-300 px-2 py-0.5 rounded border border-gray-800 flex items-center gap-1">
-                            <i class="fa-solid fa-lock text-amber-400"></i> PIN Privado
+                        <span class="bg-black/80 text-gray-300 px-2 py-0.5 rounded-lg border border-gray-800 flex items-center gap-1">
+                            <i class="fa-solid fa-lock text-amber-400"></i> PIN Exclusivo
                         </span>
-                        <span class="bg-gray-900/90 text-gray-300 px-2 py-0.5 rounded border border-gray-800 flex items-center gap-1">
-                            <i class="fa-solid fa-tv text-emerald-400"></i> 1 Pantalla
+                        <span class="bg-black/80 text-gray-300 px-2 py-0.5 rounded-lg border border-gray-800 flex items-center gap-1">
+                            <i class="fa-solid fa-tv text-emerald-400"></i> 4K UHD
                         </span>
                     </div>
 
-                    <p class="text-xs text-gray-400 leading-relaxed font-normal">${prod.description || 'Acceso garantizado y privado con soporte VIP.'}</p>
+                    <p class="text-xs text-gray-300 leading-relaxed font-normal">
+                        ${prod.description || 'Acceso garantizado y privado con soporte VIP.'}
+                    </p>
                 </div>
 
-                <div class="pt-6 border-t border-gray-800/80 mt-4 flex items-center justify-between gap-3">
+                <div class="pt-5 border-t border-gray-800/80 mt-5 flex items-center justify-between gap-3">
                     <div>
                         <span class="text-[10px] text-gray-400 block uppercase font-bold">Precio VIP:</span>
                         <span class="text-2xl font-black text-cuycito-gold font-mono">S/ ${price}</span>
                     </div>
 
-                    <button onclick="window.orderServiceDirect('${encodeURIComponent(prod.title || 'Servicio')}', '${price}')" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black px-4 py-3 rounded-2xl transition shadow-lg glow-gold flex items-center gap-2">
+                    <button onclick="window.orderServiceDirect('${encodeURIComponent(prod.title || 'Servicio')}', '${price}')" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black px-4 py-2.5 rounded-xl transition shadow-lg glow-gold flex items-center gap-1.5 shrink-0">
                         <i class="fa-brands fa-whatsapp text-sm"></i>
                         <span>Solicitar</span>
                     </button>

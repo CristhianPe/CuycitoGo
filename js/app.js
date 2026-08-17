@@ -152,7 +152,7 @@ window.copyInfoText = () => {
 };
 
 window.switchTab = (tabId) => {
-    ['subs', 'master', 'finance', 'clients', 'catalog', 'recharges', 'games', 'news'].forEach(id => {
+    ['subs', 'master', 'finance', 'clients', 'catalog', 'recharges', 'games', 'news', 'cartelera'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const btn = document.getElementById('tab-btn-' + id);
         if(view) {
@@ -160,12 +160,20 @@ window.switchTab = (tabId) => {
             if(id === tabId) {
                 view.classList.remove('hidden');
                 if(id==='subs') view.classList.add('block');
-                if(id==='master' || id==='finance' || id==='clients' || id==='catalog' || id==='recharges' || id==='games' || id==='news') view.className = view.className.replace('hidden', 'block space-y-4');
+                if(id==='master' || id==='finance' || id==='clients' || id==='catalog' || id==='recharges' || id==='games' || id==='news' || id==='cartelera') {
+                    view.className = view.className.replace('hidden', 'block space-y-4');
+                }
             }
         }
         if(btn) {
+            let activeColorClass = "text-cuycito-gold border-b-2 border-cuycito-gold";
+            if (id === 'news') activeColorClass = "text-orange-400 border-b-2 border-orange-400";
+            if (id === 'cartelera') activeColorClass = "text-cuycito-gold border-b-2 border-cuycito-gold";
+            if (id === 'games') activeColorClass = "text-purple-400 border-b-2 border-purple-400";
+            if (id === 'recharges') activeColorClass = "text-yellow-400 border-b-2 border-yellow-400";
+
             btn.className = (id === tabId) 
-                ? "text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5" 
+                ? `${activeColorClass} pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5` 
                 : "text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5";
         }
     });
@@ -179,7 +187,10 @@ window.switchTab = (tabId) => {
         window.renderGamesSection();
     }
     if(tabId === 'news') {
-        window.initNewsManager();
+        window.renderAdminNewsList();
+    }
+    if(tabId === 'cartelera') {
+        window.renderAdminCarteleraList();
     }
 };
 
@@ -1171,7 +1182,7 @@ window.openCatalogModal = (catId = null) => {
         document.getElementById('catDesc').value = '';
         document.getElementById('catPrice').value = '';
         document.getElementById('catStock').value = '5';
-        document.getElementById('catColor').value = 'red-600';
+        document.getElementById('catColor').value = '#e50914';
         document.getElementById('catPromo').checked = false;
         document.getElementById('catOldImage').value = '';
         document.getElementById('catLinkedMasterId').value = '';
@@ -1186,8 +1197,15 @@ window.openCatalogModal = (catId = null) => {
         document.getElementById('catDesc').value = p.description || '';
         document.getElementById('catPrice').value = p.price;
         document.getElementById('catStock').value = p.stock !== undefined ? p.stock : 5;
-        document.getElementById('catColor').value = p.colorClass || 'red-600';
-        document.getElementById('catPromo').checked = p.promo || false;
+        
+        let colorVal = p.color || p.colorClass || '#e50914';
+        if (!colorVal.startsWith('#')) {
+            const colorMap = { 'red-600': '#e50914', 'purple-500': '#8b5cf6', 'purple-600': '#8b5cf6', 'blue-500': '#3b82f6', 'blue-600': '#3b82f6', 'orange-500': '#f97316', 'emerald-500': '#10b981', 'emerald-600': '#10b981', 'yellow-500': '#ffb703', 'cuycito-gold': '#ffb703' };
+            colorVal = colorMap[colorVal] || '#e50914';
+        }
+        document.getElementById('catColor').value = colorVal;
+
+        document.getElementById('catPromo').checked = p.promo || p.isOffer || false;
         document.getElementById('catOldImage').value = p.imageUrl || '';
         document.getElementById('catLinkedMasterId').value = p.linkedMasterId || '';
         document.getElementById('catLinkedService').value = p.linkedService || '';
@@ -1307,7 +1325,22 @@ window.saveCatalogItem = async () => {
         return;
     }
 
-    const newItem = { id, title, category, description: desc, price, stock, linkedMasterId, linkedService, colorClass: color, promo, imageUrl, isCombo: false };
+    const newItem = { 
+        id, 
+        title, 
+        category, 
+        description: desc, 
+        price, 
+        stock, 
+        linkedMasterId, 
+        linkedService, 
+        colorClass: color, 
+        color: color, 
+        promo, 
+        isOffer: promo, 
+        imageUrl, 
+        isCombo: false 
+    };
 
     const index = appState.catalog.findIndex(c => c.id === id);
     if(index > -1) appState.catalog[index] = newItem;
@@ -2105,9 +2138,12 @@ window.renderCatalog = () => {
             ? `<span class="bg-emerald-950 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1"><i class="fa-solid fa-boxes-stacked"></i> Stock: ${displayStock} libres</span>`
             : `<span class="bg-red-950 text-red-400 border border-cuycito-red/40 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1"><i class="fa-solid fa-circle-xmark"></i> Agotado</span>`;
 
+        const hexColor = (p.color && p.color.startsWith('#')) ? p.color : (p.colorClass && p.colorClass.startsWith('#') ? p.colorClass : '#ffb703');
         const imgHTML = p.imageUrl && p.imageUrl.trim() !== '' 
             ? `<img src="${p.imageUrl}" class="w-full h-36 object-cover" alt="Producto">` 
-            : `<div class="w-full h-36 bg-gradient-to-br from-black via-gray-900 to-${p.colorClass || 'red-600'} flex flex-col items-center justify-center text-white/30 text-4xl"><i class="fa-solid ${isCombo ? 'fa-gift text-cuycito-gold' : 'fa-box'}"></i></div>`;
+            : `<div class="w-full h-36 flex flex-col items-center justify-center text-4xl shadow-inner border-b border-gray-800" style="background: radial-gradient(circle at center, ${hexColor}30 0%, #0a0a0a 100%); color: ${hexColor};">
+                <i class="fa-solid ${isCombo ? 'fa-gift text-cuycito-gold' : 'fa-tv'}"></i>
+               </div>`;
 
         let comboServicesBreakdownHTML = '';
         if (isCombo && p.comboServices && p.comboServices.length > 0) {
@@ -2836,36 +2872,36 @@ window.renderAdminNewsList = () => {
     if (!newsList || newsList.length === 0) {
         newsList = [
             {
-                id: "alzas-tarifas",
+                id: "reporte-agosto-2026",
                 category: "ANÁLISIS DE MERCADO",
                 categoryColor: "bg-red-600",
-                readTime: "6 min de lectura",
-                date: "Actualizado Hoy",
-                title: "El Mapa del Streaming en Perú: Alzas de Tarifas Oficiales y Restricciones de Pantallas en 2026",
+                readTime: "7 min de lectura",
+                date: "Agosto 2026",
+                title: "📺 Reporte de Streaming: Novedades, Subida de Precios en Crunchyroll, Disney+, Apple y Cambios de Suscripciones",
                 image: "assets/img/news1.jpg",
-                excerpt: "Las multinacionales continúan actualizando sus planes para Perú. Conoce la estructura de costos con Netflix hasta S/ 58.90 y Disney+ Premium en S/ 68.90.",
+                excerpt: "Crunchyroll sube a $11.99/$14.99, Disney+ consolida su plan en 15,99 € y Netflix refuerza el bloqueo de cuentas compartidas.",
                 isHero: true
             },
             {
-                id: "anime-gaming",
-                category: "ANIME & GAMING",
-                categoryColor: "bg-orange-500",
+                id: "jojo-steel-ball-run",
+                category: "ANIME BOMBAZO",
+                categoryColor: "bg-purple-600",
                 readTime: "5 min de lectura",
-                date: "Tendencias",
-                title: "Crunchyroll y el Fenómeno del Simulcast Global en Alta Definición",
-                image: "assets/img/news2.jpg",
-                excerpt: "Cómo el streaming simultáneo de animes desde Japón cambió los hábitos de consumo y la demanda de servidores de alta velocidad.",
+                date: "Agosto 2026",
+                title: "⚔️ STEEL BALL RUN: JoJo's Bizarre Adventure - ¡Netflix Anuncia Nuevos Episodios para Septiembre!",
+                image: "assets/img/poster_jojo.jpg",
+                excerpt: "La icónica carrera por Norteamérica de Johnny Joestar y Gyro Zeppeli llega a su 2nd STAGE en streaming mundial con popularidad extrema.",
                 isHero: false
             },
             {
-                id: "audio-hifi",
-                category: "AUDIO & HI-FI",
-                categoryColor: "bg-emerald-600",
-                readTime: "4 min de lectura",
-                date: "Tecnología de Sonido",
-                title: "Spotify vs Apple Music vs Tidal: ¿Realmente se Nota la Calidad Lossless?",
-                image: "assets/img/news3.jpg",
-                excerpt: "Un análisis comparativo sobre frecuencias de audio, compresión AAC a 320kbps y sonido espacial Dolby Atmos.",
+                id: "cien-anos-soledad-noticia",
+                category: "CINE & SERIES",
+                categoryColor: "bg-amber-600",
+                readTime: "6 min de lectura",
+                date: "Agosto 2026",
+                title: "🍿 Cien Años de Soledad (Parte 2): La Superproducción de Netflix Basada en Gabriel García Márquez",
+                image: "assets/img/poster_ciensoledad.jpg",
+                excerpt: "Los siete nuevos episodios llegan este 5 de agosto retomando la historia de los Buendía con el gran final pautado para el 26 de agosto.",
                 isHero: false
             }
         ];
@@ -3090,12 +3126,16 @@ window.renderAdminCarteleraList = () => {
 
     if (!list || list.length === 0) {
         list = [
+            { id: "cien-anos-soledad-2", title: "Cien Años de Soledad (Parte 2)", platform: "NETFLIX", type: "estrenos", tag: "Superproducción García Márquez", tagColor: "bg-red-600", rating: "9.8", releaseDate: "5 Ago (Final 26 Ago)", image: "assets/img/poster_ciensoledad.jpg", quality: "4K UHD • Dolby Atmos", synopsis: "Los siete nuevos episodios retoman la historia de los Buendía tras el armisticio." },
+            { id: "jojo-steel-ball-run-title", title: "JoJo's Bizarre Adventure: Steel Ball Run", platform: "NETFLIX", type: "estrenos", tag: "Bombazo Anime 2nd STAGE", tagColor: "bg-purple-600", rating: "10.0", releaseDate: "Septiembre 2026", image: "assets/img/poster_jojo.jpg", quality: "4K HDR • David Production", synopsis: "Johnny Joestar y Gyro Zeppeli en la gran carrera continental." },
+            { id: "mi-vida-chicos-walter-3", title: "Mi Vida con los Chicos Walter (T3)", platform: "NETFLIX", type: "estrenos", tag: "Drama Adolescente", tagColor: "bg-red-600", rating: "8.9", releaseDate: "6 de Agosto 2026", image: "assets/img/poster_walter.jpg", quality: "4K HDR", synopsis: "El regreso de Jackie Howard a Silver Falls tras su estancia en Nueva York." },
+            { id: "muertos-sl-4", title: "Muertos S.L. (Temporada 4 Final)", platform: "NETFLIX", type: "estrenos", tag: "Comedia Funeraria", tagColor: "bg-purple-600", rating: "8.8", releaseDate: "7 de Agosto 2026", image: "assets/img/poster_walter.jpg", quality: "1080p HD", synopsis: "Temporada final de la disparatada Funeraria Torregrosa con Carlos Areces." },
+            { id: "the-ribbon-hero", title: "The Ribbon Hero (La Princesa Caballero)", platform: "NETFLIX", type: "estrenos", tag: "Película Anime Twin Engine", tagColor: "bg-red-600", rating: "9.3", releaseDate: "8 de Agosto 2026", image: "assets/img/poster_ribbon.jpg", quality: "4K UHD", synopsis: "Inspirada en el clásico de Osamu Tezuka con animación de vanguardia." },
+            { id: "pokemon-liga-indigo", title: "Pokémon: La Liga Índigo (Clásicos)", platform: "DISNEY", type: "cartelera", tag: "Clásico Nostalgia HD", tagColor: "bg-blue-600", rating: "9.7", releaseDate: "7 de Agosto 2026", image: "assets/img/poster1.jpg", quality: "Remasterizado HD", synopsis: "La primera temporada de Ash y Pikachu en Kanto con doblaje latino." },
             { id: "stranger-things", title: "Stranger Things 5: Temporada Final", platform: "NETFLIX", type: "ambos", tag: "Temporada Final", tagColor: "bg-red-600", rating: "9.5", releaseDate: "Diciembre 2026", image: "assets/img/poster3.jpg", quality: "4K UHD • Dolby Vision", synopsis: "La batalla final por Hawkins." },
             { id: "the-last-of-us-2", title: "The Last of Us: Temporada 2", platform: "MAX", type: "ambos", tag: "Serie Platino HBO", tagColor: "bg-purple-600", rating: "9.6", releaseDate: "Estreno Mundial 2026", image: "assets/img/poster4.jpg", quality: "4K Platino • Dolby Atmos", synopsis: "Joel y Ellie en las ruinas de Seattle." },
             { id: "demon-slayer-castillo", title: "Demon Slayer: El Castillo Infinito", platform: "CRUNCHYROLL", type: "ambos", tag: "Trilogía de Cine", tagColor: "bg-orange-600", rating: "9.9", releaseDate: "Simulcast 2026", image: "assets/img/poster2.jpg", quality: "1080p 60fps", synopsis: "Tanjiro y los Pilares entran al laberinto dimensional." },
-            { id: "the-boys-5", title: "The Boys: Temporada 5 Final", platform: "PRIME", type: "ambos", tag: "Acción & Sátira", tagColor: "bg-amber-600", rating: "9.2", releaseDate: "Temporada Final 2026", image: "assets/img/poster5.jpg", quality: "4K HDR", synopsis: "La guerra entre Carnicero y Patriota." },
-            { id: "avatar-fuego", title: "Avatar 3: Fuego y Cenizas", platform: "DISNEY", type: "estrenos", tag: "Superproducción Disney+", tagColor: "bg-blue-600", rating: "9.4", releaseDate: "Diciembre 2026", image: "assets/img/poster6.jpg", quality: "IMAX Enhanced 4K", synopsis: "James Cameron expande el universo de Pandora." },
-            { id: "daredevil-born-again", title: "Daredevil: Born Again", platform: "DISNEY", type: "cartelera", tag: "Marvel Studios", tagColor: "bg-red-700", rating: "9.3", releaseDate: "Marvel Television", image: "assets/img/poster1.jpg", quality: "4K UHD", synopsis: "Matt Murdock regresa a Hell's Kitchen." }
+            { id: "the-boys-5", title: "The Boys: Temporada 5 Final", platform: "PRIME", type: "ambos", tag: "Acción & Sátira", tagColor: "bg-amber-600", rating: "9.2", releaseDate: "Temporada Final 2026", image: "assets/img/poster5.jpg", quality: "4K HDR", synopsis: "La guerra entre Carnicero y Patriota." }
         ];
         localStorage.setItem("cuycito_portal_cartelera", JSON.stringify(list));
     }

@@ -3,7 +3,96 @@
 // ========================================================
 
 // 1. BASE DE DATOS DE ARTÍCULOS EDITORIALES (REVISTA DIGITAL)
-const portalArticles = {
+const defaultPortalArticles = {
+    "reporte-agosto-2026": {
+        category: "ANÁLISIS DE MERCADO",
+        categoryColor: "bg-red-600",
+        readTime: "7 min de lectura",
+        date: "Agosto 2026",
+        title: "📺 Reporte de Streaming: Novedades, Subida de Precios y Cambios en Suscripciones",
+        image: "assets/img/news1.jpg",
+        content: `
+            <p class="text-sm text-gray-300 leading-relaxed font-normal">
+                El encarecimiento del ocio digital es el tema del año 2026. La guerra por la rentabilidad está haciendo que todas las plataformas multinacionales ajusten sus tarifas de forma significativa en Latinoamérica y el mundo.
+            </p>
+
+            <h4 class="text-lg font-black text-white mt-6 mb-2">💰 1. Subida de Precios y Cambios en Suscripciones</h4>
+            <div class="space-y-3 text-xs text-gray-300">
+                <div class="bg-black/60 border border-orange-900/40 p-3.5 rounded-xl">
+                    <strong class="text-orange-400 font-bold block mb-1 text-sm"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Crunchyroll:</strong>
+                    Después de mantener sus precios estables desde 2019, han aplicado una fuerte subida este 2026. El plan <strong>Fan básico subió a $11.99/mes</strong> (antes $9.99), y el plan <strong>Mega Fan a $14.99/mes</strong>.
+                </div>
+
+                <div class="bg-black/60 border border-blue-900/40 p-3.5 rounded-xl">
+                    <strong class="text-blue-400 font-bold block mb-1 text-sm"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Disney+ y Apple TV+:</strong>
+                    Lideran el salto a tarifas más premium en el año. Disney+ consolidó su plan <strong>Estándar en 10,99 € (S/ 49.90 en Perú)</strong> y el <strong>Premium con ESPN en 15,99 € (S/ 68.90 en Perú)</strong>, siendo actualmente de las plataformas más costosas si se quiere evitar la publicidad.
+                </div>
+
+                <div class="bg-black/60 border border-red-900/40 p-3.5 rounded-xl">
+                    <strong class="text-red-400 font-bold block mb-1 text-sm"><i class="fa-solid fa-lock mr-1"></i> Netflix:</strong>
+                    Aunque ha moderado las subidas directas masivas este último trimestre, su estrategia ha sido forzar la adopción de su plan con anuncios y limitar drásticamente las cuentas compartidas fuera del hogar.
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-amber-950/40 to-black border border-amber-500/40 p-4 rounded-xl mt-6">
+                <h5 class="text-xs font-black text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <i class="fa-solid fa-fire text-amber-400"></i> Termómetro de Popularidad (Alta)
+                </h5>
+                <p class="text-xs text-gray-300 mt-1 leading-relaxed">
+                    Las noticias de aumento de precios siempre generan picos de indignación y debate en redes sociales. Es un contenido que garantiza clics y reflexiones sobre si vale la pena pagar individualmente o recurrir a compras comunitarias compartidas en clubes VIP.
+                </p>
+            </div>
+        `
+    },
+    "jojo-steel-ball-run": {
+        category: "ANIME BOMBAZO",
+        categoryColor: "bg-purple-600",
+        readTime: "5 min de lectura",
+        date: "Agosto 2026",
+        title: "⚔️ STEEL BALL RUN: JoJo's Bizarre Adventure - Netflix Anuncia Nuevos Episodios para Septiembre",
+        image: "assets/img/poster_jojo.jpg",
+        content: `
+            <p class="text-sm text-gray-300 leading-relaxed font-normal">
+                ¡El anuncio del año para los fanáticos de la animación japonesa! La icónica carrera de caballos a través de Norteamérica protagonizada por <strong>Johnny Joestar y Gyro Zeppeli</strong> estrena nuevos episodios (<strong>2nd STAGE</strong>) este septiembre en Netflix, y las redes están en llamas con los nuevos tráilers y revelaciones de personajes.
+            </p>
+
+            <h4 class="text-lg font-black text-white mt-6 mb-2">Detalles de Producción</h4>
+            <p class="text-xs text-gray-300 leading-relaxed">
+                Animada por David Production, la adaptación de la Parte 7 del manga de Hirohiko Araki contará con resolución 4K HDR y audio espacial en streaming global.
+            </p>
+
+            <div class="bg-gradient-to-r from-purple-950/40 to-black border border-purple-500/40 p-4 rounded-xl mt-4">
+                <h5 class="text-xs font-black text-purple-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <i class="fa-solid fa-bolt text-purple-300"></i> Termómetro de Popularidad (Extrema)
+                </h5>
+                <p class="text-xs text-gray-300 mt-1 leading-relaxed">
+                    La comunidad de JoJo's Bizarre Adventure es de las más activas y ruidosas de internet. El análisis del tráiler y del manga original de Steel Ball Run garantiza el mayor tráfico orgánico del trimestre.
+                </p>
+            </div>
+        `
+    },
+    "cien-anos-soledad-noticia": {
+        category: "CINE & SERIES",
+        categoryColor: "bg-amber-600",
+        readTime: "6 min de lectura",
+        date: "Agosto 2026",
+        title: "🍿 Cien Años de Soledad (Parte 2): La Superproducción de Netflix Basada en García Márquez",
+        image: "assets/img/poster_ciensoledad.jpg",
+        content: `
+            <p class="text-sm text-gray-300 leading-relaxed font-normal">
+                El 5 de agosto llegan los siete nuevos episodios de esta monumental superproducción basada en la obra cumbre de Gabriel García Márquez. La trama retoma la historia de la familia Buendía tras el armisticio, culminando con el gran final de la serie pautado para el <strong>26 de agosto</strong>.
+            </p>
+
+            <div class="bg-gradient-to-r from-red-950/40 to-black border border-red-500/40 p-4 rounded-xl mt-4">
+                <h5 class="text-xs font-black text-red-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <i class="fa-solid fa-rocket text-red-400"></i> Termómetro de Popularidad (Muy Alta)
+                </h5>
+                <p class="text-xs text-gray-300 mt-1 leading-relaxed">
+                    La segunda parte de Cien años de soledad es un evento televisivo masivo en toda Hispanoamérica, destacando por su fotografía cinematográfica y fidelidad narrativa.
+                </p>
+            </div>
+        `
+    },
     "alzas-tarifas": {
         category: "ANÁLISIS DE MERCADO",
         categoryColor: "bg-red-600",
@@ -12,52 +101,8 @@ const portalArticles = {
         title: "El Mapa del Streaming en Perú: Alzas de Tarifas Oficiales y Nuevas Políticas de Hogar en 2026",
         image: "assets/img/news1.jpg",
         content: `
-            <p class="text-sm text-gray-300 leading-relaxed">
-                El mercado del streaming en Perú y Latinoamérica ha experimentado una serie de ajustes económicos durante los últimos meses. Las principales multinacionales como Netflix, The Walt Disney Company y Warner Bros. Discovery han reestructurado sus tarifas de suscripción mensual para hacer frente a los costes de producción y la compra de derechos deportivos exclusivos.
-            </p>
-            <h4 class="text-lg font-black text-white mt-6 mb-2">1. Nuevas Tarifas Oficiales y Miembros Extra en Netflix</h4>
-            <p class="text-xs text-gray-300 leading-relaxed">
-                En Perú, el plan más completo de <strong>Netflix (Premium 4K UHD con audio espacial)</strong> se ubica actualmente en <strong>S/ 52.90</strong> al mes (y hasta <strong>S/ 58.90</strong> con cargos bancarios o membresía complementaria). Asimismo, la adición de un "Miembro Extra" fuera del hogar principal representa un pago adicional mensual de <strong>S/ 7.90</strong> por perfil.
-            </p>
-            <h4 class="text-lg font-black text-white mt-6 mb-2">2. La Fusión de Disney+ y Star+ (Planes con ESPN)</h4>
-            <p class="text-xs text-gray-300 leading-relaxed">
-                Tras la integración total del catálogo de Star+ y ESPN dentro de Disney+, el servicio ofrece dos niveles principales en territorio peruano: el plan <strong>Estándar (S/ 49.90 / mes)</strong> y el plan <strong>Premium 4K con acceso deportivo total (S/ 68.90 / mes)</strong>, posicionándose como una de las opciones más costosas pero completas del mercado.
-            </p>
-            <h4 class="text-lg font-black text-white mt-6 mb-2">3. Consejos para optimizar tu gasto mensual</h4>
-            <ul class="list-disc list-inside text-xs text-gray-300 space-y-1.5 pt-2 font-medium">
-                <li>Evalúa qué servicios consumes con frecuencia semanal y rota suscripciones mes a mes.</li>
-                <li>Verifica si tus televisores soportan resolución 4K real antes de pagar el plan más alto.</li>
-                <li>Si perteneces a una comunidad o club de streaming como <strong>CuycitoGO</strong>, aprovecha la gestión de perfiles compartidos con PIN privado para ahorrar significativamente.</li>
-            </ul>
-        `
-    },
-    "the-last-of-us-slide": {
-        category: "SERIES HBO",
-        categoryColor: "bg-purple-600",
-        readTime: "4 min de lectura",
-        date: "Hace 2 horas",
-        title: "The Last of Us Temporada 2: Pedro Pascal y Bella Ramsey Regresan con Nuevos Desafíos en Seattle",
-        image: "assets/img/poster4.jpg",
-        content: `
-            <p class="text-sm text-gray-300 leading-relaxed">
-                HBO Max confirma los detalles clave de la segunda temporada de <em>The Last of Us</em>. La trama adapta los turbulentos eventos del segundo videojuego, introduciendo al personaje de Abby y mostrando la supervivencia en las peligrosas facciones de Seattle.
-            </p>
-            <h4 class="text-lg font-black text-white mt-4 mb-2">Detalles Técnicos y Emisión</h4>
-            <p class="text-xs text-gray-300 leading-relaxed">
-                La serie se transmitirá en formato <strong>4K UHD nativo con Dolby Vision y audio espacial Dolby Atmos</strong>, disponible para suscriptores del Plan Platino de Max.
-            </p>
-        `
-    },
-    "demon-slayer-slide": {
-        category: "ANIME GLOBAL",
-        categoryColor: "bg-orange-600",
-        readTime: "5 min de lectura",
-        date: "Hace 3 horas",
-        title: "Demon Slayer: Ufotable Revela la Trilogía del Castillo Infinito para Cines y Streaming",
-        image: "assets/img/poster2.jpg",
-        content: `
-            <p class="text-sm text-gray-300 leading-relaxed">
-                El fenómeno mundial del anime alcanza su punto más alto con la confirmación de la trilogía cinematográfica de <em>Kimetsu no Yaiba: Castillo Infinito</em>. Crunchyroll transmitirá los largometrajes en formato Simulcast en alta definición para todos los fanáticos de Latinoamérica.
+            <p class="text-sm text-gray-300 leading-relaxed font-normal">
+                Análisis exhaustivo sobre las tarifas de Netflix (S/ 52.90 a S/ 58.90), Disney+ Premium (S/ 68.90) y los cargos por miembros extra en territorio peruano.
             </p>
         `
     },
@@ -69,8 +114,8 @@ const portalArticles = {
         title: "Nuevo Códec AV1: Plataformas Logran Reducir 30% el Consumo de Datos en Streaming 4K",
         image: "assets/img/news5.jpg",
         content: `
-            <p class="text-sm text-gray-300 leading-relaxed">
-                La alianza de gigantes tecnológicos (AOMedia) ha implementado el estándar de compresión de video AV1 en las aplicaciones de streaming para televisores y dispositivos móviles. Esto permite transmitir video en resolución 4K HDR consumiendo un 30% menos de ancho de banda y reduciendo tiempos de carga a cero.
+            <p class="text-sm text-gray-300 leading-relaxed font-normal">
+                La implementación del estándar AV1 permite reproducir películas en 4K Ultra HD ahorrando hasta un 30% de megas en la red Wi-Fi del hogar.
             </p>
         `
     },
@@ -82,8 +127,8 @@ const portalArticles = {
         title: "Disney+ y ESPN Centralizan Todos los Torneos de Fútbol y Deportes en Vivo",
         image: "assets/img/news6.jpg",
         content: `
-            <p class="text-sm text-gray-300 leading-relaxed">
-                La integración de Star+ dentro de la aplicación principal de Disney+ permite a los usuarios en Perú sintonizar la UEFA Champions League, Premier League, Copa Libertadores y F1 desde una sola interfaz con transmisiones en vivo en alta resolución.
+            <p class="text-sm text-gray-300 leading-relaxed font-normal">
+                Transmisiones simultáneas de la Champions League, Premier League y Copa Libertadores integradas en la aplicación de Disney+.
             </p>
         `
     },
@@ -95,8 +140,8 @@ const portalArticles = {
         title: "Spotify vs Apple Music: ¿Vale la Pena Pagar por Audio Lossless Sin Pérdidas?",
         image: "assets/img/news3.jpg",
         content: `
-            <p class="text-sm text-gray-300 leading-relaxed">
-                Analizamos las diferencias acústicas entre el formato estándar de compresión OGG/AAC a 320 kbps y las pistas de estudio a 24-bit/192kHz sin pérdida (Lossless).
+            <p class="text-sm text-gray-300 leading-relaxed font-normal">
+                Comparativa de compresión acústica y sonido espacial Dolby Atmos entre plataformas de música digital.
             </p>
         `
     },
@@ -108,8 +153,8 @@ const portalArticles = {
         title: "Salas IMAX y Estudios de Cine Desarrollan Nuevos Modos de Imagen para Smart TVs",
         image: "assets/img/news4.jpg",
         content: `
-            <p class="text-sm text-gray-300 leading-relaxed">
-                El modo <em>IMAX Enhanced</em> y <em>Filmmaker Mode</em> garantizan que las películas vistas en el televisor mantengan la relación de aspecto original de 1.90:1 y calibración de color cinematográfica.
+            <p class="text-sm text-gray-300 leading-relaxed font-normal">
+                Configuración de aspecto 1.90:1 y colores cinematográficos en televisores Ultra HD.
             </p>
         `
     },
@@ -121,8 +166,8 @@ const portalArticles = {
         title: "Stranger Things 5: Tráiler Final y Adelanto del Mundo del Revés",
         image: "assets/img/poster3.jpg",
         content: `
-            <p class="text-sm text-gray-300 leading-relaxed">
-                Disfruta del avance oficial de la temporada final de Stranger Things. Hawkins bajo asedio y la confrontación definitiva contra Vecna en resolución 4K HDR.
+            <p class="text-sm text-gray-300 leading-relaxed font-normal">
+                Avance oficial de la batalla final por Hawkins en 4K HDR.
             </p>
         `
     },
@@ -134,15 +179,110 @@ const portalArticles = {
         title: "The Last of Us T2: Teaser Tráiler de la Segunda Entrega de HBO",
         image: "assets/img/poster4.jpg",
         content: `
-            <p class="text-sm text-gray-300 leading-relaxed">
-                Primer vistazo al viaje de Ellie a través de las facciones de Seattle. Serie dirigida por Craig Mazin con fecha de estreno confirmada en Max.
+            <p class="text-sm text-gray-300 leading-relaxed font-normal">
+                Adelanto del viaje de Ellie por Seattle en calidad 4K Platino.
             </p>
         `
     }
 };
 
-// 2. BASE DE DATOS DE CARTELERA & PRÓXIMOS ESTRENOS (PÓSTERS PROPORCIÓN 2:3)
+// 2. BASE DE DATOS DE CARTELERA & ESTRENOS CLASIFICADOS (AGOSTO - SEPTIEMBRE 2026)
 const defaultCarteleraList = [
+    // --- ESTRENOS DE SERIES Y PELÍCULAS AGOSTO 2026 ---
+    {
+        id: "cien-anos-soledad-2",
+        title: "Cien Años de Soledad (Parte 2)",
+        platform: "NETFLIX",
+        type: "estrenos",
+        tag: "Superproducción Latinoamericana",
+        tagColor: "bg-red-600",
+        rating: "9.8",
+        releaseDate: "5 de Agosto 2026 (Final: 26 Ago)",
+        image: "assets/img/poster_ciensoledad.jpg",
+        quality: "4K UHD • Dolby Atmos",
+        director: "Alex García López & Laura Mora",
+        cast: "Claudio Cataño, Susana Morales, Marco González",
+        synopsis: "Los siete nuevos episodios retoman la historia de la familia Buendía tras el armisticio. Macondo se transforma en el epicentro de pasiones, guerra y misticismo en el cierre monumental de la obra de Gabriel García Márquez."
+    },
+    {
+        id: "mi-vida-chicos-walter-3",
+        title: "Mi Vida con los Chicos Walter (T3)",
+        platform: "NETFLIX",
+        type: "estrenos",
+        tag: "Drama & Romance",
+        tagColor: "bg-red-600",
+        rating: "8.9",
+        releaseDate: "6 de Agosto 2026",
+        image: "assets/img/poster_walter.jpg",
+        quality: "4K HDR • 5.1 Surround",
+        director: "Melanie Halsall",
+        cast: "Nikki Rodriguez, Sarah Rafferty, Marc Blucas",
+        synopsis: "Continúa el drama juvenil con el regreso de Jackie Howard a Silver Falls, enfrentando nuevas decisiones románticas y desafíos familiares tras su estancia en Nueva York."
+    },
+    {
+        id: "muertos-sl-4",
+        title: "Muertos S.L. (Temporada 4 Final)",
+        platform: "NETFLIX",
+        type: "estrenos",
+        tag: "Comedia Funeraria",
+        tagColor: "bg-purple-600",
+        rating: "8.8",
+        releaseDate: "7 de Agosto 2026",
+        image: "assets/img/poster_walter.jpg",
+        quality: "1080p HD • Dolby Digital",
+        director: "Laura Caballero & Alberto Caballero",
+        cast: "Carlos Areces, Ascen López, Salva Reina, Aitziber Garmendia",
+        synopsis: "La comedia de la Funeraria Torregrosa estrena su temporada final con enredos disparatados por el control del negocio familiar y situaciones cómicas al límite."
+    },
+
+    // --- ANIME Y BOMBAZOS 2026 ---
+    {
+        id: "jojo-steel-ball-run-title",
+        title: "JoJo's Bizarre Adventure: Steel Ball Run",
+        platform: "NETFLIX",
+        type: "estrenos",
+        tag: "Bombazo Anime 2nd STAGE",
+        tagColor: "bg-purple-600",
+        rating: "10.0",
+        releaseDate: "Septiembre 2026",
+        image: "assets/img/poster_jojo.jpg",
+        quality: "4K HDR • Audio Japonés / Español Latino",
+        director: "David Production",
+        cast: "Johnny Joestar, Gyro Zeppeli, Diego Brando, Funny Valentine",
+        synopsis: "La icónica carrera de caballos a través de Norteamérica llega a su 2nd STAGE. Johnny Joestar y Gyro Zeppeli desvelan el misterio del Cuerpo Santo mientras compiten contra los jinetes más letales del mundo."
+    },
+    {
+        id: "the-ribbon-hero",
+        title: "The Ribbon Hero (La Princesa Caballero)",
+        platform: "NETFLIX",
+        type: "estrenos",
+        tag: "Película Anime Original",
+        tagColor: "bg-red-600",
+        rating: "9.3",
+        releaseDate: "8 de Agosto 2026",
+        image: "assets/img/poster_ribbon.jpg",
+        quality: "4K UHD • Studio Twin Engine",
+        director: "Studio Twin Engine",
+        cast: "Voces Originales Japonesas",
+        synopsis: "Película original inspirada en el legendario clásico 'La princesa caballero' de Osamu Tezuka. Una reinvención moderna con animación deslumbrante sobre valentía y honor."
+    },
+    {
+        id: "pokemon-liga-indigo",
+        title: "Pokémon: La Liga Índigo (Clásicos)",
+        platform: "DISNEY",
+        type: "cartelera",
+        tag: "Clásico Nostalgia",
+        tagColor: "bg-blue-600",
+        rating: "9.7",
+        releaseDate: "7 de Agosto 2026",
+        image: "assets/img/poster1.jpg",
+        quality: "Remasterizado HD • Audio Latino",
+        director: "Kunihiko Yuyama",
+        cast: "Ash Ketchum, Pikachu, Misty, Brock",
+        synopsis: "La primera e histórica temporada del viaje de Ash y Pikachu por la región de Kanto llega a Disney+ y Crunchyroll con remasterización de imagen en alta definición."
+    },
+
+    // --- CARTELERA POPULAR EN STREAMING ---
     {
         id: "stranger-things",
         title: "Stranger Things 5: Temporada Final",
@@ -156,7 +296,7 @@ const defaultCarteleraList = [
         quality: "4K UHD • Dolby Vision • Dolby Atmos",
         director: "Hermanos Duffer",
         cast: "Millie Bobby Brown, Finn Wolfhard, Winona Ryder, David Harbour",
-        synopsis: "La amenaza del Mundo del Revés invade Hawkins en una escala sin precedentes. Once y sus amigos deberán librar la batalla definitiva para salvar su realidad y poner fin al reinado de Vecna."
+        synopsis: "La amenaza del Mundo del Revés invade Hawkins en una escala sin precedentes. Once y sus amigos deberán librar la batalla definitiva para poner fin al reinado de Vecna."
     },
     {
         id: "the-last-of-us-2",
@@ -171,22 +311,22 @@ const defaultCarteleraList = [
         quality: "4K Platino • HDR10+ • Dolby Atmos",
         director: "Craig Mazin & Neil Druckmann",
         cast: "Pedro Pascal, Bella Ramsey, Kaitlyn Dever, Isabela Merced",
-        synopsis: "Cinco años después de su peligroso viaje por los Estados Unidos postapocalípticos, Joel y Ellie intentan asentarse en Jackson, Wyoming. Sin embargo, un evento trágico desencadena una vorágine de venganza en las ruinas de Seattle."
+        synopsis: "Joel y Ellie intentan asentarse en Jackson, Wyoming. Sin embargo, un evento trágico desencadena una vorágine de venganza en las ruinas de Seattle."
     },
     {
         id: "demon-slayer-castillo",
         title: "Demon Slayer: El Castillo Infinito",
         platform: "CRUNCHYROLL",
         type: "ambos",
-        tag: "Trilogía de Cine",
+        tag: "Trilogía de Cine & Simulcast",
         tagColor: "bg-orange-600",
         rating: "9.9",
         releaseDate: "Simulcast 2026",
         image: "assets/img/poster2.jpg",
-        quality: "1080p 60fps • Audio Japonés / Español Latino",
-        director: "Haruo Sotozaki (Studio Ufotable)",
-        cast: "Natsuki Hanae, Akari Kito, Hiro Shimono, Yoshitsugu Matsuoka",
-        synopsis: "El Cuerpo de Cazadores de Demonios cae en la trampa dimensional de Muzan Kibutsuji. Tanjiro y los Pilares restantes deberán librar batallas a muerte contra las tres Lunas Superiores más poderosas."
+        quality: "1080p 60fps • Studio Ufotable",
+        director: "Haruo Sotozaki",
+        cast: "Natsuki Hanae, Akari Kito, Hiro Shimono",
+        synopsis: "El Cuerpo de Cazadores de Demonios cae en la trampa dimensional de Muzan Kibutsuji. Batallas a muerte contra las tres Lunas Superiores más poderosas."
     },
     {
         id: "the-boys-5",
@@ -198,10 +338,10 @@ const defaultCarteleraList = [
         rating: "9.2",
         releaseDate: "Temporada Final 2026",
         image: "assets/img/poster5.jpg",
-        quality: "4K UHD • HDR • 5.1 Surround",
+        quality: "4K HDR",
         director: "Eric Kripke",
-        cast: "Karl Urban, Antony Starr, Jack Quaid, Erin Moriarty",
-        synopsis: "Con Patriota controlando las más altas esferas del gobierno y Carnicero decidido a erradicar a todos los superhéroes con un virus genético, los muchachos libran su guerra de desgaste más sangrienta."
+        cast: "Karl Urban, Antony Starr, Jack Quaid",
+        synopsis: "Con Patriota controlando las más altas esferas del gobierno, los muchachos libran su guerra definitiva."
     },
     {
         id: "avatar-fuego",
@@ -213,25 +353,10 @@ const defaultCarteleraList = [
         rating: "9.4",
         releaseDate: "Diciembre 2026",
         image: "assets/img/poster6.jpg",
-        quality: "IMAX Enhanced 4K • Dolby Atmos",
+        quality: "IMAX Enhanced 4K",
         director: "James Cameron",
-        cast: "Sam Worthington, Zoe Saldaña, Sigourney Weaver, Michelle Yeoh",
-        synopsis: "Jake Sully y Neytiri exploran una nueva región volcánica de Pandora habitada por el Pueblo de la Ceniza, una facción de los Na'vi con una filosofía mucho más hostil y agresiva."
-    },
-    {
-        id: "daredevil-born-again",
-        title: "Daredevil: Born Again",
-        platform: "DISNEY",
-        type: "cartelera",
-        tag: "Marvel Studios",
-        tagColor: "bg-red-700",
-        rating: "9.3",
-        releaseDate: "Marvel Television",
-        image: "assets/img/poster1.jpg",
-        quality: "4K UHD • Dolby Vision",
-        director: "Dario Scardapane",
-        cast: "Charlie Cox, Vincent D'Onofrio, Jon Bernthal, Deborah Ann Woll",
-        synopsis: "Matt Murdock vuelve a defender las calles de Hell's Kitchen como el Hombre sin Miedo mientras Wilson Fisk asume la alcaldía de Nueva York iniciando una cacería implacable contra los justicieros callejeros."
+        cast: "Sam Worthington, Zoe Saldaña",
+        synopsis: "Jake Sully y Neytiri exploran una nueva región volcánica de Pandora habitada por el Pueblo de la Ceniza."
     }
 ];
 
@@ -247,7 +372,7 @@ function getCarteleraData() {
     return defaultCarteleraList;
 }
 
-// 3. RENDERIZADO DE CARTELERA EN PÁGINA DEDICADA (cartelera.html)
+// 3. RENDERIZADO EN CARTELERA DEDICADA (cartelera.html)
 window.renderCarteleraPage = (filterPlatform = 'ALL', searchTerm = '') => {
     const grid = document.getElementById('carteleraDedicatedGrid');
     if (!grid) return;
@@ -264,7 +389,8 @@ window.renderCarteleraPage = (filterPlatform = 'ALL', searchTerm = '') => {
             item.title.toLowerCase().includes(query) ||
             (item.cast && item.cast.toLowerCase().includes(query)) ||
             (item.director && item.director.toLowerCase().includes(query)) ||
-            item.platform.toLowerCase().includes(query)
+            item.platform.toLowerCase().includes(query) ||
+            (item.tag && item.tag.toLowerCase().includes(query))
         );
     }
 
@@ -272,7 +398,7 @@ window.renderCarteleraPage = (filterPlatform = 'ALL', searchTerm = '') => {
         grid.innerHTML = `
             <div class="col-span-full py-16 text-center text-gray-500 space-y-2">
                 <i class="fa-solid fa-film text-4xl text-gray-700"></i>
-                <p class="text-sm font-bold text-gray-400">No se encontraron títulos con los criterios seleccionados.</p>
+                <p class="text-sm font-bold text-gray-400">No se encontraron producciones en este filtro.</p>
                 <button onclick="window.filterCarteleraPage('ALL')" class="text-xs text-cuycito-gold underline font-bold">Restablecer filtros</button>
             </div>
         `;
@@ -290,7 +416,7 @@ window.renderCarteleraPage = (filterPlatform = 'ALL', searchTerm = '') => {
                 </span>
 
                 <span class="absolute top-3 right-3 bg-black/80 backdrop-blur-sm border border-yellow-500/40 text-cuycito-gold text-xs font-black px-2 py-0.5 rounded-lg flex items-center gap-1 shadow">
-                    <i class="fa-solid fa-star text-[10px]"></i> ${item.rating}
+                    ★ ${item.rating}
                 </span>
 
                 <div class="absolute bottom-3 left-3 right-3">
@@ -314,10 +440,10 @@ window.renderCarteleraPage = (filterPlatform = 'ALL', searchTerm = '') => {
                 </div>
 
                 <div class="pt-3 border-t border-gray-800/80 flex items-center justify-between">
-                    <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                    <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider truncate mr-2">
                         <i class="fa-regular fa-calendar text-gray-400 mr-1"></i> ${item.releaseDate || 'Disponible'}
                     </span>
-                    <button onclick="window.openCarteleraModal('${item.id}')" class="bg-gray-900 hover:bg-cuycito-gold text-gray-300 hover:text-black text-[11px] font-black px-3.5 py-1.5 rounded-xl border border-gray-700 hover:border-cuycito-gold transition flex items-center gap-1">
+                    <button onclick="window.openCarteleraModal('${item.id}')" class="bg-gray-900 hover:bg-cuycito-gold text-gray-300 hover:text-black text-[11px] font-black px-3.5 py-1.5 rounded-xl border border-gray-700 hover:border-cuycito-gold transition flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-circle-info"></i> Ficha
                     </button>
                 </div>
@@ -326,7 +452,7 @@ window.renderCarteleraPage = (filterPlatform = 'ALL', searchTerm = '') => {
     `).join('');
 };
 
-// 4. RENDERIZADO DE ESTRENOS EN PÁGINA DEDICADA (estrenos.html)
+// 4. RENDERIZADO EN ESTRENOS DEDICADOS (estrenos.html)
 window.renderEstrenosPage = (filterPlatform = 'ALL', searchTerm = '') => {
     const grid = document.getElementById('estrenosDedicatedGrid');
     if (!grid) return;
@@ -342,7 +468,8 @@ window.renderEstrenosPage = (filterPlatform = 'ALL', searchTerm = '') => {
         list = list.filter(item => 
             item.title.toLowerCase().includes(query) ||
             item.platform.toLowerCase().includes(query) ||
-            (item.releaseDate && item.releaseDate.toLowerCase().includes(query))
+            (item.releaseDate && item.releaseDate.toLowerCase().includes(query)) ||
+            (item.tag && item.tag.toLowerCase().includes(query))
         );
     }
 
@@ -368,12 +495,12 @@ window.renderEstrenosPage = (filterPlatform = 'ALL', searchTerm = '') => {
                 </span>
 
                 <span class="absolute top-3 right-3 bg-red-950/80 border border-red-500/40 text-red-300 text-xs font-black px-2 py-0.5 rounded-lg flex items-center gap-1 shadow">
-                    <i class="fa-solid fa-clock text-[10px]"></i> 2026
+                    <i class="fa-solid fa-bolt text-[10px] text-yellow-400"></i> Estreno 2026
                 </span>
 
                 <div class="absolute bottom-3 left-3 right-3">
-                    <span class="text-[10px] text-yellow-300 font-bold bg-black/70 px-2 py-0.5 rounded backdrop-blur-sm border border-yellow-500/30 block truncate">
-                        <i class="fa-solid fa-bell mr-1"></i> ${item.releaseDate}
+                    <span class="text-[10px] text-yellow-300 font-bold bg-black/80 px-2.5 py-1 rounded-lg backdrop-blur-sm border border-yellow-500/40 block truncate">
+                        <i class="fa-regular fa-clock mr-1"></i> ${item.releaseDate}
                     </span>
                 </div>
             </div>
@@ -392,10 +519,10 @@ window.renderEstrenosPage = (filterPlatform = 'ALL', searchTerm = '') => {
                 </div>
 
                 <div class="pt-3 border-t border-gray-800/80 flex items-center justify-between">
-                    <span class="text-[10px] text-gray-400 font-bold">
+                    <span class="text-[10px] text-gray-400 font-bold truncate mr-2">
                         <i class="fa-solid fa-tv text-cuycito-gold mr-1"></i> ${item.quality || '4K UHD'}
                     </span>
-                    <button onclick="window.openCarteleraModal('${item.id}')" class="bg-gradient-to-r from-cuycito-redDark to-cuycito-red hover:from-cuycito-red hover:to-cuycito-gold text-white text-[11px] font-black px-3.5 py-1.5 rounded-xl transition shadow glow-red flex items-center gap-1">
+                    <button onclick="window.openCarteleraModal('${item.id}')" class="bg-gradient-to-r from-cuycito-redDark to-cuycito-red hover:from-cuycito-red hover:to-cuycito-gold text-white text-[11px] font-black px-3.5 py-1.5 rounded-xl transition shadow glow-red flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-film"></i> Sinopsis
                     </button>
                 </div>
@@ -404,7 +531,7 @@ window.renderEstrenosPage = (filterPlatform = 'ALL', searchTerm = '') => {
     `).join('');
 };
 
-// 5. RENDERIZADO DE MUESTRA EN PORTADA PRINCIPAL (index.html)
+// 5. RENDERIZADO EN PORTADA PRINCIPAL (index.html)
 window.renderIndexCarteleraAndEstrenos = () => {
     const carteleraGrid = document.getElementById('indexCarteleraGrid');
     const estrenosGrid = document.getElementById('indexEstrenosGrid');
@@ -441,7 +568,7 @@ window.renderIndexCarteleraAndEstrenos = () => {
                     <span class="absolute top-2 left-2 ${item.tagColor || 'bg-blue-600'} text-white text-[9px] font-black px-2 py-0.5 rounded uppercase shadow">
                         ${item.platform}
                     </span>
-                    <span class="absolute bottom-2 right-2 bg-black/80 text-yellow-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-yellow-500/40">
+                    <span class="absolute bottom-2 right-2 bg-black/80 text-yellow-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-yellow-500/40 truncate max-w-[80%]">
                         ${item.releaseDate}
                     </span>
                 </div>
@@ -454,7 +581,7 @@ window.renderIndexCarteleraAndEstrenos = () => {
     }
 };
 
-// 6. FILTROS Y BÚSQUEDAS EN PÁGINAS DEDICADAS
+// 6. FILTROS Y BÚSQUEDA
 let activeFilterPlatform = 'ALL';
 
 window.filterCarteleraPage = (platform) => {
@@ -523,8 +650,8 @@ window.openCarteleraModal = (itemId) => {
                 <div class="bg-black/60 border border-gray-800/80 rounded-xl p-3 space-y-1.5 text-xs text-gray-300">
                     <div><strong class="text-gray-400">Fecha / Emisión:</strong> <span class="text-white font-bold">${item.releaseDate}</span></div>
                     <div><strong class="text-gray-400">Calidad:</strong> <span class="text-emerald-400 font-bold">${item.quality || '4K UHD'}</span></div>
-                    ${item.director ? `<div><strong class="text-gray-400">Dirección:</strong> ${item.director}</div>` : ''}
-                    ${item.cast ? `<div><strong class="text-gray-400">Reparto:</strong> ${item.cast}</div>` : ''}
+                    ${item.director ? `<div><strong class="text-gray-400">Dirección / Estudio:</strong> ${item.director}</div>` : ''}
+                    ${item.cast ? `<div><strong class="text-gray-400">Reparto / Personajes:</strong> ${item.cast}</div>` : ''}
                 </div>
 
                 <div class="space-y-1">
@@ -604,7 +731,7 @@ window.handleNewsletterSubscribe = (e) => {
 
 // 10. MODAL LECTOR DE ARTÍCULOS EDITORIALES
 window.openArticleModal = (articleId) => {
-    const article = portalArticles[articleId];
+    const article = defaultPortalArticles[articleId];
     if (!article) return;
 
     const modal = document.getElementById('articleReaderModal');

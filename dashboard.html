@@ -125,7 +125,10 @@
                     <i class="fa-solid fa-gamepad text-purple-400"></i> Juegos
                 </button>
                 <button id="tab-btn-news" onclick="window.switchTab('news')" class="text-orange-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-newspaper text-orange-400"></i> Noticias & Cartelera
+                    <i class="fa-solid fa-newspaper text-orange-400"></i> Noticias
+                </button>
+                <button id="tab-btn-cartelera" onclick="window.switchTab('cartelera')" class="text-cuycito-gold hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-film text-cuycito-gold"></i> Cartelera y Estreno
                 </button>
             </div>
 
@@ -510,10 +513,9 @@
 
             </section>
 
-            <!-- TAB 8: MÓDULO GESTOR DE NOTICIAS & CARTELERA PÚBLICA -->
-            <section id="view-news" class="hidden space-y-6 pb-10">
-                
-                <!-- Encabezado del Módulo -->
+            <!-- TAB 8: MÓDULO GESTOR DE NOTICIAS DE PORTADA -->
+            <section id="view-news" class="hidden space-y-6 pb-12">
+                <!-- Encabezado del Módulo de Noticias -->
                 <div class="bg-cuycito-dark rounded-2xl border border-orange-500/40 p-5 shadow-2xl space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 pb-3">
                         <div class="flex items-center gap-3">
@@ -522,71 +524,66 @@
                             </div>
                             <div>
                                 <h3 class="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
-                                    Gestor de Portal & Noticias <span class="bg-orange-900/60 text-orange-300 border border-orange-500/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Editor en Vivo</span>
+                                    Gestor de Noticias & Reportajes <span class="bg-orange-900/60 text-orange-300 border border-orange-500/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Editor en Vivo</span>
                                 </h3>
-                                <p class="text-xs text-gray-400">Edita los reportajes de portada (16:9) y los títulos de la cartelera y estrenos (2:3) con imágenes proporcionadas.</p>
+                                <p class="text-xs text-gray-400">Edita los reportajes de portada y noticias de streaming con proporción estándar horizontal <strong>16:9</strong>.</p>
                             </div>
                         </div>
 
-                        <!-- Botones de Acción -->
-                        <div class="flex items-center gap-2">
-                            <button onclick="window.openNewArticleModal()" class="bg-orange-600 hover:bg-orange-500 text-white font-black text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow">
-                                <i class="fa-solid fa-plus"></i> Nueva Noticia
-                            </button>
-                            <button onclick="window.openNewCarteleraModal()" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black font-black text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5 glow-gold">
-                                <i class="fa-solid fa-film"></i> Nuevo Título Cartelera
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Sub-pestañas: Noticias vs Cartelera -->
-                    <div class="flex items-center gap-3 border-b border-gray-800/80 pb-2 text-xs font-black uppercase tracking-wider">
-                        <button id="subtab-btn-news-articles" onclick="window.switchNewsManagerSubtab('articles')" class="text-orange-400 border-b-2 border-orange-400 pb-1 flex items-center gap-1.5">
-                            <i class="fa-solid fa-newspaper"></i> Reportajes de Portada (3 Máx)
-                        </button>
-                        <button id="subtab-btn-news-cartelera" onclick="window.switchNewsManagerSubtab('cartelera')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-1 flex items-center gap-1.5">
-                            <i class="fa-solid fa-clapperboard"></i> Cartelera & Estrenos
-                        </button>
-                    </div>
-                </div>
-
-                <!-- SUB-VISTA 1: GESTIÓN DE NOTICIAS DE PORTADA -->
-                <div id="newsSubviewArticles" class="bg-cuycito-dark rounded-2xl border border-gray-800 p-5 shadow-2xl space-y-4">
-                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800/80 pb-3">
-                        <div>
-                            <h4 class="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-                                <i class="fa-solid fa-list-check text-orange-400"></i> Reportajes Publicados en Portada (3 Máx)
-                            </h4>
-                            <span class="text-[11px] text-gray-400">Proporción estándar recomendada: <strong class="text-orange-400">16:9 (Horizontal)</strong></span>
-                        </div>
-                        <button onclick="window.openNewArticleModal()" class="bg-orange-600 hover:bg-orange-500 text-white font-black text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow glow-gold">
+                        <!-- Botón de Acción -->
+                        <button onclick="window.openNewArticleModal()" class="bg-orange-600 hover:bg-orange-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow glow-gold">
                             <i class="fa-solid fa-plus"></i> Nueva Noticia
                         </button>
                     </div>
 
-                    <div id="adminNewsListGrid" class="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
-                        <!-- Inyectado dinámicamente -->
+                    <div class="flex items-center justify-between text-xs text-gray-400">
+                        <span><i class="fa-solid fa-list-check text-orange-400 mr-1"></i> Reportajes Publicados en Portada (3 Máx en carrusel)</span>
+                        <span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Proporción 16:9 Estándar</span>
                     </div>
                 </div>
 
-                <!-- SUB-VISTA 2: GESTIÓN DE CARTELERA & ESTRENOS -->
-                <div id="newsSubviewCartelera" class="hidden bg-cuycito-dark rounded-2xl border border-gray-800 p-5 shadow-2xl space-y-4">
-                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800/80 pb-3">
-                        <div>
-                            <h4 class="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-                                <i class="fa-solid fa-film text-cuycito-gold"></i> Títulos en Cartelera & Estrenos
-                            </h4>
-                            <span class="text-[11px] text-gray-400">Proporción estándar recomendada: <strong class="text-cuycito-gold">2:3 (Póster Vertical)</strong></span>
+                <div class="bg-cuycito-dark rounded-2xl border border-gray-800 p-5 shadow-2xl">
+                    <div id="adminNewsListGrid" class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <!-- Inyectado dinámicamente -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 9: MÓDULO GESTOR DE CARTELERA Y ESTRENOS -->
+            <section id="view-cartelera" class="hidden space-y-6 pb-12">
+                <!-- Encabezado del Módulo de Cartelera & Estrenos -->
+                <div class="bg-cuycito-dark rounded-2xl border border-cuycito-gold/40 p-5 shadow-2xl space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 pb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-950 text-cuycito-gold border border-cuycito-gold/50 flex items-center justify-center text-xl shadow-lg">
+                                🎬
+                            </div>
+                            <div>
+                                <h3 class="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                    Gestor de Cartelera & Estrenos <span class="bg-amber-900/60 text-yellow-300 border border-yellow-500/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Editor en Vivo</span>
+                                </h3>
+                                <p class="text-xs text-gray-400">Administra los títulos en emisión y próximos estrenos de series y películas con póster vertical <strong>2:3</strong>.</p>
+                            </div>
                         </div>
-                        <button onclick="window.openNewCarteleraModal()" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black font-black text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5 glow-gold">
+
+                        <!-- Botón de Acción -->
+                        <button onclick="window.openNewCarteleraModal()" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black font-black text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-1.5 glow-gold">
                             <i class="fa-solid fa-plus"></i> Nuevo Título de Cartelera
                         </button>
                     </div>
 
-                    <div id="adminCarteleraListGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 pt-2">
+                    <div class="flex items-center justify-between text-xs text-gray-400">
+                        <span><i class="fa-solid fa-film text-cuycito-gold mr-1"></i> Títulos de Cartelera & Calendario 2026</span>
+                        <span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Proporción 2:3 Vertical</span>
+                    </div>
+                </div>
+
+                <div class="bg-cuycito-dark rounded-2xl border border-gray-800 p-5 shadow-2xl">
+                    <div id="adminCarteleraListGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                         <!-- Inyectado dinámicamente -->
                     </div>
                 </div>
+            </section>
 
             </section>
         </main>
@@ -868,14 +865,15 @@
                         <input type="number" min="0" id="catStock" value="5" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold font-bold">
                     </div>
                     <div>
-                        <label class="block text-gray-400 mb-1">Color Temático</label>
+                        <label class="block text-gray-400 mb-1">Color Temático de Plataforma</label>
                         <select id="catColor" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none">
-                            <option value="red-600">Rojo (Netflix)</option>
-                            <option value="emerald-500">Verde (Spotify)</option>
-                            <option value="blue-500">Azul (Disney+)</option>
-                            <option value="purple-500">Morado (HBO/Max)</option>
-                            <option value="yellow-500">Amarillo (Prime)</option>
-                            <option value="orange-500">Naranja (Crunchyroll)</option>
+                            <option value="#e50914">🔴 Rojo (Netflix / Paramount)</option>
+                            <option value="#8b5cf6">🟣 Púrpura (Max HBO)</option>
+                            <option value="#3b82f6">🔵 Azul (Disney+ ESPN)</option>
+                            <option value="#f97316">🟠 Naranja (Crunchyroll Anime)</option>
+                            <option value="#10b981">🟢 Verde (Spotify / Apple Music)</option>
+                            <option value="#ffb703">🟡 Dorado VIP (Combos / Ofertas)</option>
+                            <option value="#06b6d4">🔷 Cyan (Prime Video)</option>
                         </select>
                     </div>
                 </div>
