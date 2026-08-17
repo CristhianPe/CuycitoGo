@@ -1033,21 +1033,14 @@ window.spinRouletteWheel = async () => {
                 localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
                 updateProfileUI();
 
-                // Mostrar resultado
-                const prize = spinResult.prize;
-                if (prize.cost > 0 || (prize.serviceName)) {
-                    playWinSound();
-                    alert(`🎉 ¡¡FELICIDADES!! 🎁\n\n¡Has ganado: ${prize.title || prize.serviceName}!\n\nNuestro equipo se pondrá en contacto por WhatsApp para entregarte tu acceso VIP.`);
-                } else if (targetSliceIndex === 1) {
-                    playWinSound();
-                    alert(`🔄 ¡REPETISTE LA JUGADA!\n\n¡Se te ha reembolsado S/ 1.00 para que vuelvas a girar totalmente gratis!`);
-                } else {
-                    alert(`🍀 ${prize.title || 'Más suerte para la próxima.'}\n\n¡Gracias por jugar en el Club VIP CuycitoGO!`);
-                }
+                // Mostrar resultado en la Ventana Flotante Animada
+                window.showRoulettePrizeModal(spinResult, targetSliceIndex);
 
                 // Si el juego se auto-deshabilitó por agotamiento de stock
                 if (spinResult.autoDisabledNotice) {
-                    alert("⚠️ ¡Atención! Se ha agotado el stock total de cuentas de la Ruleta. El juego ha entrado en pausa automática hasta que el administrador reponga unidades.");
+                    setTimeout(() => {
+                        alert("⚠️ ¡Atención! Se ha agotado el stock total de cuentas de la Ruleta. El juego ha entrado en pausa automática hasta que el administrador reponga unidades.");
+                    }, 800);
                 }
 
                 window.checkRouletteEligibility();
@@ -1064,64 +1057,162 @@ window.spinRouletteWheel = async () => {
     }
 };
 
-window.loadUserGameStats = async () => {
-    if (!currentClientUser) return;
-    const tbody = document.getElementById('userSpinsHistoryTableBody');
-    const elSpins = document.getElementById('userStatTotalSpins');
-    const elSpent = document.getElementById('userStatTotalSpent');
-    const elWon = document.getElementById('userStatTotalWonValue');
-    const elNet = document.getElementById('userStatNetDifference');
+// Variable para almacenar el último premio ganado en memoria
+let lastWonPrizeData = null;
 
-    try {
-        const spinsSnap = await getDocs(collection(db, "game_spins"));
-        const userSpins = [];
-        let totalSpent = 0;
-        let totalWon = 0;
+window.showRoulettePrizeModal = (spinResult, targetSliceIndex) => {
+    const modal = document.getElementById('roulettePrizeModal');
+    const card = document.getElementById('roulettePrizeCard');
+    const iconWrapper = document.getElementById('prizeModalIconWrapper');
+    const badge = document.getElementById('prizeModalBadge');
+    const title = document.getElementById('prizeModalTitle');
+    const desc = document.getElementById('prizeModalDesc');
+    const userNameEl = document.getElementById('prizeModalUserName');
+    const userBalEl = document.getElementById('prizeModalNewBalance');
+    const btnMain = document.getElementById('prizeModalBtnMain');
+    const btnSecondary = document.getElementById('prizeModalBtnSecondary');
+    const glow = document.getElementById('prizeModalGlow');
 
-        spinsSnap.forEach(d => {
-            const s = d.data();
-            if (s.userId === currentClientUser.id || (s.userName && s.userName.toLowerCase() === currentClientUser.name.toLowerCase())) {
-                userSpins.push(s);
-                totalSpent += parseFloat(s.cost || 1.00);
-                totalWon += parseFloat(s.prizeCostForHouse || 0);
-            }
-        });
+    if (!modal || !card) return;
 
-        userSpins.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const prize = spinResult.prize || {};
+    lastWonPrizeData = prize;
 
-        if (elSpins) elSpins.innerText = userSpins.length;
-        if (elSpent) elSpent.innerText = `S/ ${totalSpent.toFixed(2)}`;
-        if (elWon) elWon.innerText = `S/ ${totalWon.toFixed(2)}`;
-        if (elNet) {
-            const net = totalWon - totalSpent;
-            elNet.innerText = `${net >= 0 ? '+' : ''}S/ ${net.toFixed(2)}`;
-            elNet.className = `text-2xl font-black font-mono ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+    const nick = currentClientUser.nickname || currentClientUser.name;
+    if (userNameEl) userNameEl.innerText = `${nick} (${currentClientUser.phone})`;
+    if (userBalEl) userBalEl.innerText = `S/ ${parseFloat(currentClientUser.balance || 0).toFixed(2)}`;
+
+    const isServiceWin = (prize.cost > 0) || (prize.serviceName);
+    const isFreeSpin = targetSliceIndex === 1;
+
+    if (isServiceWin) {
+        playWinSound();
+        if (iconWrapper) {
+            iconWrapper.innerText = '🎁';
+            iconWrapper.className = "w-24 h-24 mx-auto rounded-3xl bg-gradient-to-tr from-amber-400 via-yellow-500 to-yellow-200 text-black flex items-center justify-center text-5xl shadow-[0_0_40px_rgba(255,183,3,0.6)] animate-bounce";
+        }
+        if (badge) {
+            badge.innerText = '🏆 ¡PREMIO GANADO!';
+            badge.className = 'text-[11px] font-black uppercase tracking-widest px-3.5 py-1.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/50 inline-block shadow';
+        }
+        if (title) {
+            title.innerText = prize.title || prize.serviceName || 'Cuenta VIP';
+            title.className = 'text-2xl sm:text-3xl font-black text-cuycito-gold glow-gold';
+        }
+        if (desc) {
+            desc.innerText = `¡Felicidades! Has ganado una suscripción completa de ${prize.title || prize.serviceName}. Haz clic abajo para recibir tus accesos oficiales de inmediato por WhatsApp.`;
+        }
+        if (glow) glow.className = "absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-64 bg-cuycito-gold/30 rounded-full blur-3xl pointer-events-none";
+
+        if (btnMain) {
+            btnMain.className = "w-full bg-[#25D366] hover:bg-emerald-400 text-black font-black text-sm py-4 px-6 rounded-2xl transition shadow-2xl glow-gold flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-95";
+            btnMain.innerHTML = `<i class="fa-brands fa-whatsapp text-xl"></i> <span>Reclamar Premio por WhatsApp</span>`;
+            btnMain.onclick = window.claimRoulettePrizeWhatsApp;
+        }
+        if (btnSecondary) {
+            btnSecondary.className = "w-full bg-gray-900 hover:bg-gray-800 border border-gray-700 text-white font-bold text-xs py-3 rounded-2xl transition flex items-center justify-center gap-2";
+            btnSecondary.innerHTML = `<i class="fa-solid fa-rotate-right"></i> <span>Seguir Jugando en la Ruleta (S/ 1.00)</span>`;
+            btnSecondary.onclick = window.spinAgainFromModal;
         }
 
-        if (tbody) {
-            if (userSpins.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500 font-sans">Aún no has realizado giros en la Ruleta VIP. ¡Prueba tu suerte por S/ 1.00!</td></tr>`;
-            } else {
-                let html = '';
-                userSpins.slice(0, 30).forEach(spin => {
-                    const dateStr = spin.timestamp ? new Date(spin.timestamp).toLocaleString('es-PE') : 'N/A';
-                    const hasCostPrize = (spin.prizeCostForHouse || 0) > 0;
-                    const statusBadge = hasCostPrize
-                        ? `<span class="bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded">🏆 Premio Ganado (S/ ${spin.prizeCostForHouse.toFixed(2)})</span>`
-                        : (spin.sliceIndex === 1 ? `<span class="bg-sky-950 text-sky-400 border border-sky-500/40 text-[10px] font-black px-2 py-0.5 rounded">🔄 Giro Gratis</span>` : `<span class="text-gray-500 text-[10px]">Sin premio</span>`);
-
-                    html += `
-                    <tr class="hover:bg-black/50 transition">
-                        <td class="p-3 text-gray-400 text-[11px]">${dateStr}</td>
-                        <td class="p-3 font-mono font-bold text-white">S/ ${(spin.cost || 1).toFixed(2)}</td>
-                        <td class="p-3 font-bold text-white">${spin.prizeTitle}</td>
-                        <td class="p-3 text-center">${statusBadge}</td>
-                    </tr>`;
-                });
-                tbody.innerHTML = html;
-            }
+    } else if (isFreeSpin) {
+        playWinSound();
+        if (iconWrapper) {
+            iconWrapper.innerText = '🔄';
+            iconWrapper.className = "w-24 h-24 mx-auto rounded-3xl bg-gradient-to-tr from-sky-400 to-blue-600 text-white flex items-center justify-center text-5xl shadow-[0_0_35px_rgba(56,189,248,0.5)] animate-bounce";
         }
-    } catch (e) {
-        console.error("Error al cargar estadísticas del usuario:", e);
+        if (badge) {
+            badge.innerText = '✨ ¡GIRO GRATIS!';
+            badge.className = 'text-[11px] font-black uppercase tracking-widest px-3.5 py-1.5 rounded-full bg-sky-950 text-sky-400 border border-sky-500/50 inline-block shadow';
+        }
+        if (title) {
+            title.innerText = '¡Repites Jugada Gratis!';
+            title.className = 'text-2xl sm:text-3xl font-black text-sky-300';
+        }
+        if (desc) {
+            desc.innerText = '¡La suerte está de tu lado! Se te ha reembolsado S/ 1.00 a tu saldo para que vuelvas a girar inmediatamente gratis.';
+        }
+        if (glow) glow.className = "absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-64 bg-sky-500/25 rounded-full blur-3xl pointer-events-none";
+
+        if (btnMain) {
+            btnMain.className = "w-full bg-sky-500 hover:bg-sky-400 text-black font-black text-sm py-4 px-6 rounded-2xl transition shadow-xl flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-95";
+            btnMain.innerHTML = `<i class="fa-solid fa-bolt"></i> <span>¡Girar de Nuevo Gratis!</span>`;
+            btnMain.onclick = window.spinAgainFromModal;
+        }
+        if (btnSecondary) {
+            btnSecondary.className = "w-full bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-400 hover:text-white text-xs py-3 rounded-2xl transition";
+            btnSecondary.innerHTML = `<span>Cerrar</span>`;
+            btnSecondary.onclick = window.closeRoulettePrizeModal;
+        }
+
+    } else {
+        // Más suerte / Sigue intentando
+        if (iconWrapper) {
+            iconWrapper.innerText = '🍀';
+            iconWrapper.className = "w-24 h-24 mx-auto rounded-3xl bg-gradient-to-tr from-gray-700 to-gray-900 text-white flex items-center justify-center text-5xl shadow-xl";
+        }
+        if (badge) {
+            badge.innerText = '🎲 SIGUE JUGANDO';
+            badge.className = 'text-[11px] font-black uppercase tracking-widest px-3.5 py-1.5 rounded-full bg-gray-900 text-gray-400 border border-gray-700 inline-block';
+        }
+        if (title) {
+            title.innerText = '¡Casi lo logras!';
+            title.className = 'text-2xl sm:text-3xl font-black text-white';
+        }
+        if (desc) {
+            desc.innerText = '¡Más suerte para la próxima! Cada giro de 1 Sol tiene oportunidades reales de ganar cuentas completas.';
+        }
+        if (glow) glow.className = "absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-64 bg-gray-800/30 rounded-full blur-3xl pointer-events-none";
+
+        if (btnMain) {
+            btnMain.className = "w-full bg-gradient-to-r from-cuycito-gold to-yellow-500 hover:from-yellow-400 hover:to-yellow-300 text-black font-black text-sm py-4 px-6 rounded-2xl transition shadow-xl glow-gold flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-95";
+            btnMain.innerHTML = `<i class="fa-solid fa-dice"></i> <span>Girar de Nuevo (S/ 1.00)</span>`;
+            btnMain.onclick = window.spinAgainFromModal;
+        }
+        if (btnSecondary) {
+            btnSecondary.className = "w-full bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-400 hover:text-white text-xs py-3 rounded-2xl transition";
+            btnSecondary.innerHTML = `<span>Cerrar</span>`;
+            btnSecondary.onclick = window.closeRoulettePrizeModal;
+        }
     }
+
+    // Mostrar modal con animación fluida
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        card.classList.remove('scale-95', 'opacity-0');
+        card.classList.add('scale-100', 'opacity-100');
+    }, 20);
+};
+
+window.closeRoulettePrizeModal = () => {
+    const modal = document.getElementById('roulettePrizeModal');
+    const card = document.getElementById('roulettePrizeCard');
+    if (!modal || !card) return;
+
+    card.classList.remove('scale-100', 'opacity-100');
+    card.classList.add('scale-95', 'opacity-0');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 250);
+};
+
+window.spinAgainFromModal = () => {
+    window.closeRoulettePrizeModal();
+    setTimeout(() => {
+        window.spinRouletteWheel();
+    }, 300);
+};
+
+window.claimRoulettePrizeWhatsApp = () => {
+    if (!lastWonPrizeData || !currentClientUser) return;
+    const prizeName = lastWonPrizeData.title || lastWonPrizeData.serviceName || 'Premio VIP';
+    const nick = currentClientUser.nickname || currentClientUser.name;
+    const msg = `¡Hola CuycitoGO! 🐹🎁👑\n\nSoy *${nick}* (${currentClientUser.name} - Tel: ${currentClientUser.phone}).\n🎉 ¡Acabo de ganar *${prizeName}* en la Ruleta VIP del Club CuycitoGO!\n\n¿Me pueden enviar los accesos de mi cuenta premiada? ¡Muchas gracias! 🙌`;
+
+    window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
+    window.closeRoulettePrizeModal();
+};
+
+window.loadUserGameStats = async () => {
+    // Ya no es necesario renderizar la tabla de gastos personales del cliente
 };

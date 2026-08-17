@@ -328,56 +328,6 @@
                     </div>
                 </div>
 
-                <!-- 3. RESUMEN FINANCIERO PERSONAL DEL CLIENTE EN EL JUEGO -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div class="bg-[#121212] border border-gray-800 rounded-2xl p-4 space-y-1">
-                        <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Tus Giros Totales</span>
-                        <h4 id="userStatTotalSpins" class="text-2xl font-black text-white font-mono">0</h4>
-                    </div>
-                    <div class="bg-[#121212] border border-red-950/40 rounded-2xl p-4 space-y-1">
-                        <span class="text-[10px] text-red-400 font-bold uppercase tracking-wider">Total Gastado</span>
-                        <h4 id="userStatTotalSpent" class="text-2xl font-black text-red-400 font-mono">S/ 0.00</h4>
-                    </div>
-                    <div class="bg-[#121212] border border-emerald-950/40 rounded-2xl p-4 space-y-1">
-                        <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Valor Premios Ganados</span>
-                        <h4 id="userStatTotalWonValue" class="text-2xl font-black text-emerald-400 font-mono">S/ 0.00</h4>
-                    </div>
-                    <div class="bg-[#121212] border border-cuycito-gold/40 rounded-2xl p-4 space-y-1">
-                        <span class="text-[10px] text-cuycito-gold font-bold uppercase tracking-wider">Balance Neto</span>
-                        <h4 id="userStatNetDifference" class="text-2xl font-black text-cuycito-gold font-mono">S/ 0.00</h4>
-                    </div>
-                </div>
-
-                <!-- 4. TABLA DE HISTORIAL DE JUGADAS DEL CLIENTE -->
-                <div class="bg-[#121212] border border-gray-800 rounded-3xl overflow-hidden shadow-2xl">
-                    <div class="p-4 border-b border-gray-800 bg-black/60 flex items-center justify-between">
-                        <h3 class="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-                            <i class="fa-solid fa-clock-rotate-left text-cuycito-gold"></i> Historial de Mis Giros en la Ruleta
-                        </h3>
-                        <button onclick="window.loadUserGameStats()" class="text-xs text-gray-400 hover:text-white transition">
-                            <i class="fa-solid fa-arrows-rotate"></i> Actualizar
-                        </button>
-                    </div>
-
-                    <div class="overflow-x-auto max-h-[300px] custom-scrollbar">
-                        <table class="w-full text-left text-xs text-gray-400">
-                            <thead class="bg-black text-gray-300 uppercase tracking-wider font-extrabold text-[10px] sticky top-0">
-                                <tr>
-                                    <th class="p-3">Fecha y Hora</th>
-                                    <th class="p-3">Costo</th>
-                                    <th class="p-3">Resultado Obtenido</th>
-                                    <th class="p-3 text-center">Estado del Premio</th>
-                                </tr>
-                            </thead>
-                            <tbody id="userSpinsHistoryTableBody" class="divide-y divide-gray-800 font-mono">
-                                <tr>
-                                    <td colspan="4" class="p-8 text-center text-gray-500 font-sans">Aún no has realizado giros en la Ruleta VIP. ¡Prueba tu suerte por S/ 1.00!</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
             </div>
         </section>
 
@@ -624,6 +574,65 @@
                 <button type="button" onclick="window.sendManualRechargeWhatsApp()" class="w-full bg-[#25D366] hover:bg-emerald-500 text-black font-black text-xs py-3 px-4 rounded-xl transition shadow glow-gold flex items-center justify-center gap-2">
                     <i class="fa-brands fa-whatsapp text-base"></i>
                     <span>Enviar Comprobante por WhatsApp</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL FLOTANTE ANIMADO DE RESULTADO DE RULETA VIP -->
+    <div id="roulettePrizeModal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4 z-50 transition-all duration-300">
+        <div id="roulettePrizeCard" class="bg-gradient-to-b from-[#1e1e1e] via-[#121212] to-black border-2 border-cuycito-gold rounded-3xl p-6 sm:p-8 w-full max-w-md text-center space-y-5 shadow-[0_0_60px_rgba(255,183,3,0.35)] transform transition-all duration-500 scale-95 opacity-0 relative overflow-hidden">
+            
+            <!-- Glow decorativo superior -->
+            <div id="prizeModalGlow" class="absolute -top-24 left-1/2 -translate-x-1/2 w-56 h-56 bg-cuycito-gold/25 rounded-full blur-3xl pointer-events-none"></div>
+
+            <!-- Botón Cerrar -->
+            <button onclick="window.closeRoulettePrizeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <!-- Icono Grande Animado -->
+            <div id="prizeModalIconWrapper" class="w-24 h-24 mx-auto rounded-3xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-5xl shadow-2xl animate-bounce">
+                🏆
+            </div>
+
+            <!-- Títulos y Badges -->
+            <div class="space-y-1.5">
+                <span id="prizeModalBadge" class="text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-cuycito-gold/20 text-cuycito-gold border border-cuycito-gold/40 inline-block">
+                    ¡PREMIO GANADO!
+                </span>
+                <h3 id="prizeModalTitle" class="text-2xl sm:text-3xl font-black text-white glow-gold">
+                    Netflix 4K VIP 👑
+                </h3>
+                <p id="prizeModalDesc" class="text-xs text-gray-300 leading-relaxed max-w-xs mx-auto">
+                    ¡Felicidades! Has ganado una cuenta de streaming completa.
+                </p>
+            </div>
+
+            <!-- Caja de Detalles / Jugador y Saldo -->
+            <div id="prizeModalDetailsBox" class="bg-black/80 border border-gray-800 rounded-2xl p-4 space-y-2 text-xs">
+                <div class="flex items-center justify-between text-gray-400">
+                    <span>Jugador VIP:</span>
+                    <strong id="prizeModalUserName" class="text-white font-bold">Cliente</strong>
+                </div>
+                <div class="flex items-center justify-between text-gray-400">
+                    <span>Saldo Actualizado:</span>
+                    <strong id="prizeModalNewBalance" class="text-emerald-400 font-mono font-bold">S/ 0.00</strong>
+                </div>
+            </div>
+
+            <!-- Botones de Acción Dinámicos -->
+            <div id="prizeModalActions" class="space-y-2.5 pt-2">
+                <!-- Botón Principal (WhatsApp o Re-Giro) -->
+                <button id="prizeModalBtnMain" onclick="window.claimRoulettePrizeWhatsApp()" class="w-full bg-[#25D366] hover:bg-emerald-500 text-black font-black text-sm py-3.5 px-6 rounded-2xl transition shadow-xl glow-gold flex items-center justify-center gap-2">
+                    <i class="fa-brands fa-whatsapp text-lg"></i>
+                    <span>Reclamar Premio por WhatsApp</span>
+                </button>
+                
+                <!-- Botón Secundario (Girar de nuevo) -->
+                <button id="prizeModalBtnSecondary" onclick="window.spinAgainFromModal()" class="w-full bg-gray-900 hover:bg-gray-800 border border-gray-700 text-white font-bold text-xs py-3 rounded-2xl transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> <span>Girar la Ruleta de Nuevo (S/ 1.00)</span>
                 </button>
             </div>
 
