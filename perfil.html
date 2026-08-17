@@ -38,17 +38,17 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-20">
                 <a href="index.html" class="flex items-center gap-3 group">
-                    <div class="w-11 h-11 bg-black rounded-xl border-2 border-cuycito-gold glow-gold flex items-center justify-center text-2xl transition group-hover:scale-105">🐹</div>
-                    <div>
-                        <span class="text-2xl font-black tracking-wider text-white">Cuycito<span class="text-cuycito-gold">GO</span></span>
-                        <span class="block text-[10px] text-gray-400 -mt-1 tracking-widest font-bold uppercase">Portal de Clientes</span>
-                    </div>
+                    <img src="assets/img/logo.png" alt="CuycitoGO" class="h-14 object-contain transition group-hover:scale-105 drop-shadow-[0_0_15px_rgba(255,183,3,0.3)]">
                 </a>
 
                 <div class="flex items-center gap-4">
-                    <a href="index.html" class="hidden sm:flex items-center gap-2 text-xs font-bold text-gray-300 hover:text-cuycito-gold transition px-3 py-2 rounded-lg bg-black border border-gray-800">
-                        <i class="fa-solid fa-store text-cuycito-gold"></i> Ir a la Tienda
+                    <a href="index.html" class="hidden sm:flex items-center gap-2 text-xs font-bold text-gray-300 hover:text-cuycito-gold transition px-3.5 py-2 rounded-xl bg-black border border-gray-800">
+                        <i class="fa-solid fa-newspaper text-cuycito-gold"></i> Noticias
                     </a>
+
+                    <button onclick="window.switchProfileTab('store')" class="hidden sm:flex items-center gap-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 transition px-3.5 py-2 rounded-xl shadow glow-gold">
+                        <i class="fa-solid fa-store"></i> Tienda VIP
+                    </button>
 
                     <div class="flex items-center gap-3 pl-2 sm:border-l sm:border-gray-800">
                         <div class="text-right hidden md:block">
@@ -110,7 +110,7 @@
                     <div class="flex items-center justify-between sm:justify-start gap-4 bg-black/80 border border-cuycito-gold/40 rounded-2xl px-4 py-2.5 shadow-lg">
                         <div>
                             <span class="text-[9px] uppercase font-extrabold text-gray-400 block tracking-wider"><i class="fa-solid fa-wallet text-cuycito-gold mr-1"></i> Mi Saldo VIP</span>
-                            <span id="profileBalanceDisplay" class="text-xl font-black text-cuycito-gold glow-gold">$ 0.00</span>
+                            <span id="profileBalanceDisplay" class="text-xl font-black text-cuycito-gold glow-gold">S/ 0.00</span>
                         </div>
                         <button onclick="window.openRechargeModal()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5 glow-gold">
                             <i class="fa-solid fa-bolt text-yellow-300"></i> Recargar
@@ -120,20 +120,24 @@
                     <button onclick="window.openEditProfileModal()" class="bg-black hover:bg-gray-900 border border-cuycito-gold/50 hover:border-cuycito-gold text-cuycito-gold font-extrabold text-xs px-4 py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
                         <i class="fa-solid fa-user-pen"></i> Modificar Nickname
                     </button>
-                    <a href="index.html" class="bg-cuycito-red hover:bg-cuycito-redHover text-white font-extrabold text-xs px-4 py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg glow-red">
-                        <i class="fa-solid fa-cart-plus"></i> Comprar Cuentas
-                    </a>
+                    <button onclick="window.switchProfileTab('store')" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs px-4 py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg glow-gold">
+                        <i class="fa-solid fa-cart-shopping"></i> Comprar Cuentas
+                    </button>
                 </div>
             </div>
         </section>
 
-        <!-- NAVEGACIÓN ENTRE SERVICIOS Y JUEGOS -->
-        <div class="flex items-center gap-3 border-b border-gray-800 pb-2">
-            <button id="tabBtnServices" onclick="window.switchProfileTab('services')" class="text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2">
+        <!-- NAVEGACIÓN ENTRE SERVICIOS, TIENDA Y JUEGOS -->
+        <div class="flex items-center gap-3 border-b border-gray-800 pb-2 overflow-x-auto">
+            <button id="tabBtnServices" onclick="window.switchProfileTab('services')" class="text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0">
                 <i class="fa-solid fa-layer-group"></i> Mis Servicios Contratados
             </button>
-            <button id="tabBtnRoulette" onclick="window.switchProfileTab('roulette')" class="text-gray-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 relative">
-                <span class="text-base">🎮</span> Juegos
+            <button id="tabBtnStore" onclick="window.switchProfileTab('store')" class="text-gray-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0">
+                <i class="fa-solid fa-store text-emerald-400"></i> Tienda VIP & Catálogo
+                <span class="bg-emerald-950/80 text-emerald-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-500/40">Comprar</span>
+            </button>
+            <button id="tabBtnRoulette" onclick="window.switchProfileTab('roulette')" class="text-gray-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0 relative">
+                <span class="text-base">🎮</span> Juegos VIP
                 <span class="bg-gradient-to-r from-cuycito-red to-amber-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow glow-red animate-pulse">S/ 1.00</span>
             </button>
         </div>
@@ -222,7 +226,55 @@
         </section>
 
         <!-- ========================================================= -->
-        <!-- VISTA 2: RULETA DE PREMIOS VIP (3+ SERVICIOS ACTIVOS)    -->
+        <!-- VISTA 2: TIENDA VIP & CATÁLOGO DE PRODUCTOS               -->
+        <!-- ========================================================= -->
+        <section id="viewProfileStore" class="hidden space-y-6">
+            <div class="bg-[#121212] border border-gray-800/80 rounded-3xl p-6 shadow-2xl space-y-6">
+                
+                <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-gray-800 pb-5">
+                    <div>
+                        <h2 class="text-xl font-black text-white flex items-center gap-2.5">
+                            <i class="fa-solid fa-store text-emerald-400"></i> Tienda VIP & Catálogo de Cuentas
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Adquiere o renueva tus pantallas compartidas con PIN privado y soporte VIP.</p>
+                    </div>
+
+                    <!-- Buscador de Productos -->
+                    <div class="relative w-full md:w-72">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-xs text-gray-500"></i>
+                        <input 
+                            type="text" 
+                            id="profileCatalogSearch" 
+                            oninput="window.renderProfileCatalog()" 
+                            placeholder="Buscar Netflix, Max, Spotify..." 
+                            class="w-full bg-[#0a0a0a] border border-gray-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cuycito-gold transition"
+                        >
+                    </div>
+                </div>
+
+                <!-- Filtro de Categorías -->
+                <div class="flex flex-wrap gap-2">
+                    <button data-category="ALL" onclick="window.filterProfileCatalog('ALL')" class="profile-category-btn bg-emerald-600 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow glow-gold">Todos</button>
+                    <button data-category="OFERTA" onclick="window.filterProfileCatalog('OFERTA')" class="profile-category-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition">🔥 Ofertas VIP</button>
+                    <button data-category="STREAMING" onclick="window.filterProfileCatalog('STREAMING')" class="profile-category-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition">📺 Streaming</button>
+                    <button data-category="COMBOS" onclick="window.filterProfileCatalog('COMBOS')" class="profile-category-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition">📦 Combos</button>
+                    <button data-category="MUSICA" onclick="window.filterProfileCatalog('MUSICA')" class="profile-category-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition">🎵 Música</button>
+                    <button data-category="GAMING" onclick="window.filterProfileCatalog('GAMING')" class="profile-category-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition">🎮 Gaming & Anime</button>
+                </div>
+
+                <!-- Grid de Productos -->
+                <div id="profileCatalogGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                    <div class="col-span-full py-16 text-center text-gray-500 space-y-3">
+                        <i class="fa-solid fa-spinner fa-spin text-3xl text-cuycito-gold"></i>
+                        <p class="text-sm">Cargando catálogo VIP de productos...</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- VISTA 3: RULETA DE PREMIOS VIP (3+ SERVICIOS ACTIVOS)    -->
         <!-- ========================================================= -->
         <section id="viewProfileRoulette" class="hidden space-y-6">
             

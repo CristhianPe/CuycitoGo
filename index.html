@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CuycitoGO - Tienda Oficial de Streaming & Cuentas Digitales</title>
+    <title>CuycitoGO News • Portal de Noticias, Estrenos & Tendencias de Streaming</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -32,52 +32,93 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="min-h-screen flex flex-col justify-between selection:bg-cuycito-gold selection:text-black bg-[#0a0a0a] text-slate-100">
+<body class="min-h-screen flex flex-col justify-between selection:bg-cuycito-gold selection:text-black bg-[#0a0a0a] text-slate-100 font-sans">
 
-    <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
+    <!-- ========================================================= -->
+    <!-- 1. BARRA DE PRECIOS OFICIALES DE STREAMING EN PERÚ (TICKER) -->
+    <!-- ========================================================= -->
+    <div class="bg-black/95 border-b border-gray-800 text-xs py-2.5 overflow-hidden relative z-50">
+        <div class="max-w-7xl mx-auto px-4 flex items-center gap-3">
+            <span class="bg-orange-600 text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shrink-0 shadow">
+                <span class="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span>
+                Precios Oficiales Perú
+            </span>
+
+            <div class="overflow-hidden w-full relative">
+                <div class="animate-marquee gap-8 items-center text-xs font-semibold text-gray-300">
+                    <span class="flex items-center gap-2 shrink-0">
+                        <strong class="text-red-500 font-bold">Netflix Premium 4K:</strong> S/ 52.90 / mes (o hasta S/ 58.90 con miembro extra)
+                    </span>
+                    <span class="text-gray-600">•</span>
+                    <span class="flex items-center gap-2 shrink-0">
+                        <strong class="text-blue-400 font-bold">Disney+ Premium (ESPN):</strong> S/ 68.90 / mes
+                    </span>
+                    <span class="text-gray-600">•</span>
+                    <span class="flex items-center gap-2 shrink-0">
+                        <strong class="text-purple-400 font-bold">Max Platino 4K:</strong> S/ 49.90 / mes
+                    </span>
+                    <span class="text-gray-600">•</span>
+                    <span class="flex items-center gap-2 shrink-0">
+                        <strong class="text-emerald-400 font-bold">Spotify Premium:</strong> S/ 21.90 / mes
+                    </span>
+                    <span class="text-gray-600">•</span>
+                    <span class="flex items-center gap-2 shrink-0">
+                        <strong class="text-orange-400 font-bold">Crunchyroll Mega Fan:</strong> S/ 29.90 / mes
+                    </span>
+                    <span class="text-gray-600">•</span>
+                    <span class="flex items-center gap-2 shrink-0">
+                        <strong class="text-amber-400 font-bold">Amazon Prime Video:</strong> S/ 19.90 / mes
+                    </span>
+                    <span class="text-gray-600">•</span>
+                    <span class="flex items-center gap-2 shrink-0">
+                        <strong class="text-sky-300 font-bold">Apple TV+ 4K:</strong> S/ 34.90 / mes
+                    </span>
+                    <span class="text-gray-600">•</span>
+                    <span class="flex items-center gap-2 shrink-0">
+                        <strong class="text-red-400 font-bold">YouTube Premium:</strong> S/ 25.90 / mes
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 2. BARRA DE NAVEGACIÓN PRINCIPAL (CABECERA)               -->
+    <!-- ========================================================= -->
     <header class="bg-[#121212]/95 border-b border-gray-800/90 sticky top-0 z-40 backdrop-blur-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-20">
                 
-                <!-- Logo CuycitoGO -->
+                <!-- Logotipo Oficial CuycitoGO -->
                 <a href="index.html" class="flex items-center gap-3 group">
-                    <div class="w-11 h-11 bg-black rounded-xl border-2 border-cuycito-gold glow-gold flex items-center justify-center text-2xl transition group-hover:scale-105">🐹</div>
-                    <div>
-                        <span class="text-2xl font-black tracking-wider text-white">Cuycito<span class="text-cuycito-gold">GO</span></span>
-                        <span class="block text-[10px] text-gray-400 -mt-1 tracking-widest font-bold uppercase">Streaming & Digital Store</span>
-                    </div>
+                    <img src="assets/img/logo.png" alt="CuycitoGO" class="h-14 sm:h-16 object-contain transition group-hover:scale-105 drop-shadow-[0_0_15px_rgba(255,183,3,0.3)]">
                 </a>
 
-                <!-- Enlaces Rápidos de Navegación -->
-                <nav class="hidden md:flex items-center gap-6 text-xs font-bold uppercase tracking-wider">
-                    <a href="#catalogo" class="text-gray-300 hover:text-cuycito-gold transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-store text-cuycito-gold"></i> Stock & Catálogo
+                <!-- Enlaces de Navegación -->
+                <nav class="hidden lg:flex items-center gap-7 text-xs font-bold uppercase tracking-wider">
+                    <a href="index.html" class="text-cuycito-gold border-b-2 border-cuycito-gold pb-1 flex items-center gap-1.5">
+                        <i class="fa-solid fa-house text-cuycito-gold"></i> Inicio
                     </a>
-                    <button onclick="window.filterByCategory('OFERTA')" class="text-cuycito-red hover:text-red-400 transition flex items-center gap-1.5 font-extrabold">
-                        <i class="fa-solid fa-fire text-cuycito-red animate-pulse"></i> Ofertas
-                    </button>
-                    <a href="#como-funciona" class="text-gray-300 hover:text-cuycito-gold transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-users text-sky-400"></i> Cuentas Compartidas
+                    <a href="cartelera.html" class="text-gray-300 hover:text-cuycito-gold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-film text-cuycito-red"></i> Cartelera
                     </a>
-                    <a href="#garantia" class="text-gray-300 hover:text-cuycito-gold transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-shield-halved text-emerald-400"></i> Garantía
+                    <a href="estrenos.html" class="text-gray-300 hover:text-cuycito-gold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-clapperboard text-orange-400"></i> Estrenos
+                    </a>
+                    <a href="#precios-oficiales" class="text-gray-300 hover:text-cuycito-gold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-chart-line text-emerald-400"></i> Precios Oficiales
+                    </a>
+                    <a href="#guias-tech" class="text-gray-300 hover:text-cuycito-gold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-tv text-sky-400"></i> Guía 4K
                     </a>
                 </nav>
 
-                <!-- Acciones de Usuario y Carrito -->
+                <!-- Botón de Acceso a Clientes / Miembros -->
                 <div class="flex items-center gap-3">
-                    
-                    <!-- Botón de Carrito -->
-                    <button onclick="window.toggleCartDrawer()" class="relative bg-black hover:bg-gray-900 border border-gray-800 hover:border-cuycito-gold text-cuycito-gold p-2.5 px-3.5 rounded-xl transition flex items-center gap-2 shadow-lg" title="Ver Carrito">
-                        <i class="fa-solid fa-cart-shopping text-base"></i>
-                        <span class="text-xs font-black hidden sm:inline">Carrito</span>
-                        <span id="cartCountBadge" class="bg-cuycito-red text-white text-[11px] font-black w-5 h-5 rounded-full flex items-center justify-center -mr-1 shadow">0</span>
-                    </button>
-
-                    <!-- Botón de Sesión (Dinámico: Iniciar Sesión O Mi Perfil) -->
                     <div id="navAuthContainer">
-                        <a href="login-cliente.html" id="btnNavLogin" class="bg-gradient-to-r from-cuycito-redDark via-cuycito-red to-cuycito-redHover hover:from-cuycito-red hover:to-cuycito-gold text-white text-xs font-black px-4 py-2.5 rounded-xl transition shadow-lg glow-red flex items-center gap-2 uppercase tracking-wider">
-                            <i class="fa-solid fa-right-to-bracket"></i> <span class="hidden sm:inline">Iniciar Sesión</span>
+                        <a href="login-cliente.html" class="bg-gradient-to-r from-cuycito-redDark via-cuycito-red to-cuycito-redHover hover:from-cuycito-red hover:to-cuycito-gold text-white text-xs font-black px-4 py-2.5 rounded-xl transition shadow-lg glow-red flex items-center gap-2 uppercase tracking-wider">
+                            <i class="fa-solid fa-right-to-bracket"></i>
+                            <span class="hidden sm:inline">Portal Clientes</span>
                         </a>
                     </div>
                 </div>
@@ -85,324 +126,578 @@
         </div>
     </header>
 
-    <!-- HERO / BANNER PRINCIPAL PROMOCIONAL -->
-    <section class="relative overflow-hidden bg-cuy-gradient border-b border-gray-800/80 py-10 md:py-16">
-        <!-- Luces decorativas de fondo -->
-        <div class="absolute -top-24 left-1/4 w-96 h-96 bg-cuycito-red/15 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="absolute -bottom-24 right-1/4 w-96 h-96 bg-cuycito-gold/10 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
+    <!-- ========================================================= -->
+    <!-- 3. ESQUEMA EDITORIAL PRINCIPAL (ESTILO REVISTA DIGITAL)    -->
+    <!-- ========================================================= -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- COLUMNA IZQUIERDA: BLOQUE PRINCIPAL DE NOTICIAS (8 COLS) -->
+            <div class="lg:col-span-8 space-y-6">
                 
-                <div class="space-y-4 text-center lg:text-left max-w-2xl">
-                    <div class="inline-flex items-center gap-2 bg-red-950/60 border border-cuycito-red/50 text-red-300 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-widest">
-                        <i class="fa-solid fa-users text-cuycito-gold"></i> Cuentas Compartidas • Perfiles Privados con PIN
+                <!-- 3.1. NOTICIA DESTACADA DESPLAZABLE (HERO SLIDER) -->
+                <div class="relative rounded-3xl overflow-hidden border border-gray-800 bg-black shadow-2xl group">
+                    
+                    <!-- Badge Superior "NOTICIA DESTACADA" -->
+                    <div class="absolute top-4 left-4 z-20">
+                        <span class="bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase px-3.5 py-1.5 rounded-xl tracking-wider shadow-xl flex items-center gap-1.5 glow-gold">
+                            <i class="fa-solid fa-bolt text-yellow-200"></i> NOTICIA DESTACADA
+                        </span>
                     </div>
 
-                    <h1 class="text-3xl sm:text-5xl font-black text-white leading-tight">
-                        Cuentas Compartidas de <span class="text-gold-gradient">Streaming VIP</span> al Mejor Precio en Perú
-                    </h1>
+                    <!-- Botones de Navegación del Slider (< y >) -->
+                    <button onclick="window.prevHeroSlide()" class="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/70 hover:bg-orange-600 text-white border border-gray-700 flex items-center justify-center transition opacity-0 group-hover:opacity-100 shadow-xl">
+                        <i class="fa-solid fa-chevron-left text-sm"></i>
+                    </button>
+                    <button onclick="window.nextHeroSlide()" class="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/70 hover:bg-orange-600 text-white border border-gray-700 flex items-center justify-center transition opacity-0 group-hover:opacity-100 shadow-xl">
+                        <i class="fa-solid fa-chevron-right text-sm"></i>
+                    </button>
 
-                    <p class="text-sm sm:text-base text-gray-300 leading-relaxed">
-                        Disfruta de Netflix, Max, Disney+, Spotify, Crunchyroll y Prime Video pagando solo una fracción. Te entregamos tu <strong>perfil privado con PIN propio</strong> en cuentas compartidas estables con garantía total 30 días.
-                    </p>
+                    <!-- Pistas Desplazables del Slider -->
+                    <div class="relative w-full overflow-hidden">
+                        <div id="heroSliderTrack" class="flex transition-transform duration-500 ease-out w-full">
+                            
+                            <!-- SLIDE 1: Alzas de Tarifas Perú -->
+                            <div class="w-full shrink-0 relative aspect-[16/10] sm:aspect-[16/9] cursor-pointer" onclick="window.openArticleModal('alzas-tarifas')">
+                                <img src="assets/img/news1.jpg" alt="Alzas de Tarifas Streaming" class="w-full h-full object-cover object-center">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+                                <div class="absolute bottom-0 left-0 right-0 p-6 sm:p-8 space-y-2">
+                                    <h2 class="text-xl sm:text-3xl font-black text-white leading-tight drop-shadow-md hover:text-cuycito-gold transition">
+                                        EL MAPA DEL STREAMING EN PERÚ: Alzas en Netflix (S/ 58.90), Disney+ (S/ 68.90) y Nuevas Restricciones de Hogar
+                                    </h2>
+                                    <p class="text-xs sm:text-sm text-gray-300 line-clamp-2 leading-relaxed">
+                                        Las multinacionales continúan actualizando sus planes para Perú y Latinoamérica. Conoce la estructura de costos oficiales y cómo optimizar tu presupuesto.
+                                    </p>
+                                    <div class="flex items-center gap-2 text-[11px] text-gray-400 font-bold uppercase tracking-wider pt-1">
+                                        <span class="text-orange-400">MERCADO PERÚ</span>
+                                        <span>|</span>
+                                        <span>Hace 1 hora</span>
+                                    </div>
+                                </div>
+                            </div>
 
-                    <!-- Beneficios Rápidos -->
-                    <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2 text-xs font-bold text-gray-300">
-                        <span class="flex items-center gap-1.5 bg-black/50 border border-gray-800 px-3 py-1.5 rounded-xl"><i class="fa-solid fa-lock text-emerald-400"></i> Perfil y PIN Personal</span>
-                        <span class="flex items-center gap-1.5 bg-black/50 border border-gray-800 px-3 py-1.5 rounded-xl"><i class="fa-solid fa-shield-halved text-cuycito-gold"></i> Garantía 30 Días</span>
-                        <span class="flex items-center gap-1.5 bg-black/50 border border-gray-800 px-3 py-1.5 rounded-xl"><i class="fa-solid fa-bolt text-cuycito-red"></i> Entrega en Minutos</span>
-                    </div>
-                </div>
+                            <!-- SLIDE 2: The Last of Us 2 HBO -->
+                            <div class="w-full shrink-0 relative aspect-[16/10] sm:aspect-[16/9] cursor-pointer" onclick="window.openArticleModal('the-last-of-us-slide')">
+                                <img src="assets/img/poster4.jpg" alt="The Last of Us 2" class="w-full h-full object-cover object-center">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+                                <div class="absolute bottom-0 left-0 right-0 p-6 sm:p-8 space-y-2">
+                                    <h2 class="text-xl sm:text-3xl font-black text-white leading-tight drop-shadow-md hover:text-cuycito-gold transition">
+                                        THE LAST OF US TEMPORADA 2: Pedro Pascal y Bella Ramsey Regresan con Nuevos Desafíos en Seattle
+                                    </h2>
+                                    <p class="text-xs sm:text-sm text-gray-300 line-clamp-2 leading-relaxed">
+                                        La aclamada producción de Max HBO confirma fecha y formato de transmisión en calidad 4K Platino con sonido envolvente Dolby Atmos.
+                                    </p>
+                                    <div class="flex items-center gap-2 text-[11px] text-gray-400 font-bold uppercase tracking-wider pt-1">
+                                        <span class="text-purple-400">SERIES HBO</span>
+                                        <span>|</span>
+                                        <span>Hace 2 horas</span>
+                                    </div>
+                                </div>
+                            </div>
 
-                <!-- Tarjeta VIP Hero -->
-                <div class="w-full lg:w-auto flex flex-col sm:flex-row gap-4 justify-center">
-                    <div class="bg-[#121212]/90 border border-cuycito-gold/40 rounded-3xl p-6 shadow-2xl text-center space-y-3 glow-gold max-w-xs mx-auto">
-                        <div class="w-12 h-12 rounded-2xl bg-black border border-cuycito-gold text-cuycito-gold text-2xl flex items-center justify-center mx-auto glow-gold">
-                            <i class="fa-solid fa-crown"></i>
+                            <!-- SLIDE 3: Demon Slayer Ufotable -->
+                            <div class="w-full shrink-0 relative aspect-[16/10] sm:aspect-[16/9] cursor-pointer" onclick="window.openArticleModal('demon-slayer-slide')">
+                                <img src="assets/img/poster2.jpg" alt="Demon Slayer Castillo Infinito" class="w-full h-full object-cover object-center">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+                                <div class="absolute bottom-0 left-0 right-0 p-6 sm:p-8 space-y-2">
+                                    <h2 class="text-xl sm:text-3xl font-black text-white leading-tight drop-shadow-md hover:text-cuycito-gold transition">
+                                        DEMON SLAYER: Ufotable Revela la Trilogía del Castillo Infinito para Cines y Streaming
+                                    </h2>
+                                    <p class="text-xs sm:text-sm text-gray-300 line-clamp-2 leading-relaxed">
+                                        La épica batalla de Tanjiro contra las Lunas Superiores se transmitirá en formato Simulcast en alta definición a través de Crunchyroll.
+                                    </p>
+                                    <div class="flex items-center gap-2 text-[11px] text-gray-400 font-bold uppercase tracking-wider pt-1">
+                                        <span class="text-orange-400">ANIME GLOBAL</span>
+                                        <span>|</span>
+                                        <span>Hace 3 horas</span>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
-                        <h2 class="text-base font-black text-white">¿Ya eres cliente?</h2>
-                        <p class="text-xs text-gray-400">Accede a tu panel para ver tus credenciales, PIN y fechas de vencimiento.</p>
-                        <a href="login-cliente.html" id="heroPortalLink" class="block w-full bg-cuycito-gold hover:bg-cuycito-goldHover text-black font-black text-xs py-3 rounded-xl transition shadow-md uppercase tracking-wider">
-                            Entrar a Mi Panel
-                        </a>
+                    </div>
+
+                    <!-- Indicadores de Puntos (Dots) -->
+                    <div class="absolute bottom-4 right-6 z-20 flex items-center gap-1.5 bg-black/60 px-3 py-1.5 rounded-full border border-gray-800 backdrop-blur-sm">
+                        <button onclick="window.showHeroSlide(0)" class="hero-slider-dot w-6 h-2 rounded-full bg-cuycito-gold transition-all duration-300"></button>
+                        <button onclick="window.showHeroSlide(1)" class="hero-slider-dot w-2 h-2 rounded-full bg-gray-600 transition-all duration-300"></button>
+                        <button onclick="window.showHeroSlide(2)" class="hero-slider-dot w-2 h-2 rounded-full bg-gray-600 transition-all duration-300"></button>
+                    </div>
+
+                </div>
+
+                <!-- 3.2. SUB-DESTACADA HORIZONTAL (2 COLUMNAS) -->
+                <div class="bg-[#121212] border border-gray-800 hover:border-orange-500/50 rounded-3xl overflow-hidden p-4 sm:p-6 transition duration-300 shadow-xl group cursor-pointer" onclick="window.openArticleModal('codec-av1')">
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center">
+                        <div class="sm:col-span-5 relative aspect-[16/10] rounded-2xl overflow-hidden bg-black border border-gray-800">
+                            <img src="assets/img/news5.jpg" alt="Códec AV1 Streaming" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-500">
+                            <span class="absolute top-2 left-2 bg-sky-600 text-white text-[9px] font-black px-2 py-0.5 rounded uppercase shadow">
+                                TECNOLOGÍA
+                            </span>
+                        </div>
+                        <div class="sm:col-span-7 space-y-2">
+                            <span class="text-[11px] font-black text-orange-400 uppercase tracking-wider block">
+                                AVANCE TECNOLÓGICO:
+                            </span>
+                            <h3 class="text-base sm:text-lg font-black text-white group-hover:text-cuycito-gold transition leading-snug">
+                                Nuevo Códec AV1: Plataformas Logran Reducir 30% el Consumo de Datos en Streaming 4K
+                            </h3>
+                            <p class="text-xs text-gray-400 leading-relaxed line-clamp-2">
+                                Las aplicaciones optimizan el ancho de banda para conexiones en el hogar, permitiendo reproducir en Ultra HD sin saturar la red Wi-Fi familiar.
+                            </p>
+                            <div class="flex items-center gap-2 text-[11px] text-gray-500 font-bold uppercase tracking-wider pt-1">
+                                <span class="text-sky-400">HARDWARE & REDES</span>
+                                <span>|</span>
+                                <span>Hace 2 horas</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- 3.3. FILA INFERIOR: 3 NOTICIAS EN COLUMNAS -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    
+                    <!-- Tarjeta 1: Deportes Disney+ ESPN -->
+                    <article class="bg-[#121212] border border-gray-800 hover:border-cuycito-gold/50 rounded-2xl overflow-hidden p-4 flex flex-col justify-between space-y-3 transition duration-300 shadow-xl group cursor-pointer" onclick="window.openArticleModal('espn-disney')">
+                        <div class="space-y-2.5">
+                            <div class="relative aspect-[16/10] w-full rounded-xl overflow-hidden bg-black border border-gray-800">
+                                <img src="assets/img/news6.jpg" alt="ESPN Disney Deportes" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-500">
+                            </div>
+                            <h4 class="text-xs sm:text-sm font-black text-white group-hover:text-cuycito-gold transition leading-snug">
+                                Disney+ y ESPN Centralizan Todos los Torneos de Fútbol en Vivo
+                            </h4>
+                            <p class="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">
+                                Champions League, Premier League y torneos continentales integrados en una sola suscripción.
+                            </p>
+                        </div>
+                        <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider border-t border-gray-800 pt-2 flex items-center justify-between">
+                            <span class="text-blue-400">DEPORTES</span>
+                            <span>Hace 3 horas</span>
+                        </div>
+                    </article>
+
+                    <!-- Tarjeta 2: Audio Hi-Fi Spotify -->
+                    <article class="bg-[#121212] border border-gray-800 hover:border-cuycito-gold/50 rounded-2xl overflow-hidden p-4 flex flex-col justify-between space-y-3 transition duration-300 shadow-xl group cursor-pointer" onclick="window.openArticleModal('audio-hifi')">
+                        <div class="space-y-2.5">
+                            <div class="relative aspect-[16/10] w-full rounded-xl overflow-hidden bg-black border border-gray-800">
+                                <img src="assets/img/news3.jpg" alt="Audio Hi-Fi" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-500">
+                            </div>
+                            <h4 class="text-xs sm:text-sm font-black text-white group-hover:text-cuycito-gold transition leading-snug">
+                                Spotify vs Apple Music: ¿Vale la Pena Pagar por Audio Lossless?
+                            </h4>
+                            <p class="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">
+                                Comparativa técnica sobre compresión acústica, códecs FLAC y sonido envolvente.
+                            </p>
+                        </div>
+                        <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider border-t border-gray-800 pt-2 flex items-center justify-between">
+                            <span class="text-emerald-400">AUDIO</span>
+                            <span>Hace 4 horas</span>
+                        </div>
+                    </article>
+
+                    <!-- Tarjeta 3: Cine IMAX -->
+                    <article class="bg-[#121212] border border-gray-800 hover:border-cuycito-gold/50 rounded-2xl overflow-hidden p-4 flex flex-col justify-between space-y-3 transition duration-300 shadow-xl group cursor-pointer" onclick="window.openArticleModal('cine-imax')">
+                        <div class="space-y-2.5">
+                            <div class="relative aspect-[16/10] w-full rounded-xl overflow-hidden bg-black border border-gray-800">
+                                <img src="assets/img/news4.jpg" alt="Salas IMAX" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-500">
+                            </div>
+                            <h4 class="text-xs sm:text-sm font-black text-white group-hover:text-cuycito-gold transition leading-snug">
+                                Salas IMAX Desarrollan Nuevos Modos de Calibración para Smart TVs
+                            </h4>
+                            <p class="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">
+                                Cómo habilitar la relación de aspecto 1.90:1 y colores de cine en televisores 4K modernos.
+                            </p>
+                        </div>
+                        <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider border-t border-gray-800 pt-2 flex items-center justify-between">
+                            <span class="text-purple-400">CINE</span>
+                            <span>Hace 5 horas</span>
+                        </div>
+                    </article>
+
+                </div>
+
+            </div>
+
+            <!-- COLUMNA DERECHA: SIDEBAR DE TENDENCIAS & MULTIMEDIA (4 COLS) -->
+            <aside class="lg:col-span-4 space-y-6">
+                
+                <!-- 1. LO MÁS LEÍDO (RANKING NUMERADO) -->
+                <div class="bg-[#121212] border border-gray-800 rounded-3xl p-6 shadow-xl space-y-4">
+                    <h3 class="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-gray-800 pb-3">
+                        <i class="fa-solid fa-fire text-orange-500"></i> LO MÁS LEÍDO
+                    </h3>
+
+                    <div class="space-y-4 text-xs">
+                        
+                        <div class="flex items-start gap-3 group cursor-pointer" onclick="window.openArticleModal('alzas-tarifas')">
+                            <span class="text-2xl font-black text-orange-500 font-mono leading-none">1</span>
+                            <div>
+                                <h4 class="font-bold text-white group-hover:text-cuycito-gold transition leading-snug">
+                                    CRISIS DE TARIFAS EN PERÚ: Netflix actualiza cobros y planes 4K
+                                </h4>
+                                <span class="text-[10px] text-gray-500">Tendencia Nacional</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3 group cursor-pointer border-t border-gray-800/60 pt-3" onclick="window.openArticleModal('espn-disney')">
+                            <span class="text-2xl font-black text-orange-500 font-mono leading-none">2</span>
+                            <div>
+                                <h4 class="font-bold text-white group-hover:text-cuycito-gold transition leading-snug">
+                                    Disney+ Premium: Qué incluye el plan con ESPN y 4 dispositivos
+                                </h4>
+                                <span class="text-[10px] text-gray-500">Guía de Suscripción</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3 group cursor-pointer border-t border-gray-800/60 pt-3" onclick="window.openArticleModal('the-last-of-us-slide')">
+                            <span class="text-2xl font-black text-orange-500 font-mono leading-none">3</span>
+                            <div>
+                                <h4 class="font-bold text-white group-hover:text-cuycito-gold transition leading-snug">
+                                    Max Platino: Configuración de audio Dolby Atmos en Smart TVs
+                                </h4>
+                                <span class="text-[10px] text-gray-500">Tutorial Técnico</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3 group cursor-pointer border-t border-gray-800/60 pt-3" onclick="window.openArticleModal('demon-slayer-slide')">
+                            <span class="text-2xl font-black text-gray-500 font-mono leading-none">4</span>
+                            <div>
+                                <h4 class="font-bold text-white group-hover:text-cuycito-gold transition leading-snug">
+                                    Crunchyroll Simulcast: Horarios de estreno de anime en Perú
+                                </h4>
+                                <span class="text-[10px] text-gray-500">Anime & Manga</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3 group cursor-pointer border-t border-gray-800/60 pt-3" onclick="window.openArticleModal('codec-av1')">
+                            <span class="text-2xl font-black text-gray-500 font-mono leading-none">5</span>
+                            <div>
+                                <h4 class="font-bold text-white group-hover:text-cuycito-gold transition leading-snug">
+                                    Ahorro de Megas: El nuevo estándar de video para streaming móvil
+                                </h4>
+                                <span class="text-[10px] text-gray-500">Tecnología</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 2. TENDENCIAS (TAGS / HASHTAGS) -->
+                <div class="bg-[#121212] border border-gray-800 rounded-3xl p-6 shadow-xl space-y-3">
+                    <h3 class="text-xs font-black text-gray-400 uppercase tracking-wider">
+                        TENDENCIAS
+                    </h3>
+                    <div class="flex flex-wrap gap-2 text-xs font-bold">
+                        <a href="cartelera.html" class="bg-[#181818] hover:bg-gray-800 text-gray-300 hover:text-cuycito-gold px-3 py-1 rounded-xl border border-gray-800 transition">#Streaming</a>
+                        <a href="#precios-oficiales" class="bg-[#181818] hover:bg-gray-800 text-gray-300 hover:text-cuycito-gold px-3 py-1 rounded-xl border border-gray-800 transition">#Netflix4K</a>
+                        <a href="cartelera.html" class="bg-[#181818] hover:bg-gray-800 text-gray-300 hover:text-cuycito-gold px-3 py-1 rounded-xl border border-gray-800 transition">#MaxHBO</a>
+                        <a href="#precios-oficiales" class="bg-[#181818] hover:bg-gray-800 text-gray-300 hover:text-cuycito-gold px-3 py-1 rounded-xl border border-gray-800 transition">#DisneyPlus</a>
+                        <a href="estrenos.html" class="bg-[#181818] hover:bg-gray-800 text-gray-300 hover:text-cuycito-gold px-3 py-1 rounded-xl border border-gray-800 transition">#Crunchyroll</a>
+                        <a href="#guias-tech" class="bg-[#181818] hover:bg-gray-800 text-gray-300 hover:text-cuycito-gold px-3 py-1 rounded-xl border border-gray-800 transition">#DolbyAtmos</a>
+                    </div>
+                </div>
+
+                <!-- 3. CAJA DE SUSCRIPCIÓN NEWSLETTER -->
+                <div class="bg-gradient-to-br from-[#0e2a47] via-[#0c1f33] to-[#0a0a0a] border border-blue-500/40 rounded-3xl p-6 shadow-2xl space-y-3">
+                    <span class="text-xs font-black text-blue-300 uppercase tracking-widest block">SUSCRÍBETE</span>
+                    <h4 class="text-base font-black text-white leading-snug">
+                        Recibe Alertas de Tarifas y Estrenos Semanales
+                    </h4>
+                    <p class="text-[11px] text-gray-300 leading-relaxed">
+                        Entérate antes que nadie de nuevos lanzamientos, cambios de precios y análisis técnicos de streaming.
+                    </p>
+                    <form onsubmit="window.handleNewsletterSubscribe(event)" class="flex gap-2 pt-1">
+                        <input 
+                            type="email" 
+                            id="newsletterEmail" 
+                            required 
+                            placeholder="Enviar un email..." 
+                            class="w-full bg-black/80 border border-blue-400/40 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cuycito-gold"
+                        >
+                        <button type="submit" class="bg-orange-500 hover:bg-orange-600 text-white font-black text-xs px-4 py-2 rounded-xl transition shadow glow-gold shrink-0">
+                            Enviar
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 4. MULTIMEDIA & TRAILERS -->
+                <div class="bg-[#121212] border border-gray-800 rounded-3xl p-6 shadow-xl space-y-4">
+                    <h3 class="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-gray-800 pb-3">
+                        <i class="fa-solid fa-play text-cuycito-gold"></i> MULTIMEDIA & TRAILERS
+                    </h3>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        
+                        <!-- Trailer 1 -->
+                        <div class="relative aspect-video rounded-xl overflow-hidden bg-black border border-gray-800 group cursor-pointer" onclick="window.openArticleModal('trailer-stranger')">
+                            <img src="assets/img/poster3.jpg" alt="Trailer Stranger Things" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-300">
+                            <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <div class="w-9 h-9 rounded-full bg-red-600/90 text-white flex items-center justify-center text-xs shadow-xl group-hover:scale-110 transition">
+                                    <i class="fa-solid fa-play ml-0.5"></i>
+                                </div>
+                            </div>
+                            <span class="absolute bottom-1.5 left-2 right-2 text-[9px] font-bold text-white truncate drop-shadow">Stranger Things 5</span>
+                        </div>
+
+                        <!-- Trailer 2 -->
+                        <div class="relative aspect-video rounded-xl overflow-hidden bg-black border border-gray-800 group cursor-pointer" onclick="window.openArticleModal('trailer-lastofus')">
+                            <img src="assets/img/poster4.jpg" alt="Trailer The Last of Us" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-300">
+                            <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <div class="w-9 h-9 rounded-full bg-purple-600/90 text-white flex items-center justify-center text-xs shadow-xl group-hover:scale-110 transition">
+                                    <i class="fa-solid fa-play ml-0.5"></i>
+                                </div>
+                            </div>
+                            <span class="absolute bottom-1.5 left-2 right-2 text-[9px] font-bold text-white truncate drop-shadow">The Last of Us T2</span>
+                        </div>
+
+                    </div>
+                </div>
+
+            </aside>
+
+        </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 4. SECCIÓN CARTELERA EN EMISIÓN (SERIES & PELÍCULAS)      -->
+    <!-- ========================================================= -->
+    <section id="cartelera-preview" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-gray-800 pb-4">
+            <div class="space-y-1">
+                <span class="text-xs font-black text-cuycito-gold uppercase tracking-widest flex items-center gap-2">
+                    <i class="fa-solid fa-film text-cuycito-gold"></i> Cartelera Digital
+                </span>
+                <h2 class="text-2xl font-black text-white">Series & Películas Más Vistas</h2>
+                <p class="text-xs text-gray-400">Las producciones más populares en Netflix, Max, Disney+, Prime y Crunchyroll.</p>
+            </div>
+            <a href="cartelera.html" class="bg-[#161616] hover:bg-gray-800 text-cuycito-gold hover:text-white border border-cuycito-gold/40 text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 shrink-0 shadow">
+                <span>Ver Cartelera Completa</span>
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+            </a>
+        </div>
+
+        <!-- Grid de Cartelera con Pósters en proporción 2:3 -->
+        <div id="indexCarteleraGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-5">
+            <!-- Inyectado dinámicamente desde js/portal-news.js -->
+        </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 5. SECCIÓN PRÓXIMOS ESTRENOS 2026                         -->
+    <!-- ========================================================= -->
+    <section id="estrenos-preview" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-gray-800 pb-4">
+            <div class="space-y-1">
+                <span class="text-xs font-black text-cuycito-red uppercase tracking-widest flex items-center gap-2">
+                    <i class="fa-solid fa-clapperboard text-cuycito-red"></i> Calendario 2026
+                </span>
+                <h2 class="text-2xl font-black text-white">Próximos Estrenos Mundiales</h2>
+                <p class="text-xs text-gray-400">Nuevas temporadas y largometrajes que llegarán a las plataformas de streaming.</p>
+            </div>
+            <a href="estrenos.html" class="bg-[#161616] hover:bg-gray-800 text-cuycito-red hover:text-white border border-cuycito-red/40 text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 shrink-0 shadow">
+                <span>Ver Todos los Estrenos</span>
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+            </a>
+        </div>
+
+        <!-- Grid de Estrenos con Pósters en proporción 2:3 -->
+        <div id="indexEstrenosGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-5">
+            <!-- Inyectado dinámicamente desde js/portal-news.js -->
+        </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 5. SECCIÓN COMPARATIVA DE PRECIOS OFICIALES EN PERÚ       -->
+    <!-- ========================================================= -->
+    <section id="precios-oficiales" class="bg-[#0e0e0e] border-y border-gray-800 py-14">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+            
+            <div class="text-center max-w-3xl mx-auto space-y-2">
+                <span class="text-emerald-400 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-chart-line"></i> Precios Oficiales Reales en Perú
+                </span>
+                <h2 class="text-2xl sm:text-3xl font-black text-white">Tarifas Oficiales del Streaming (2026)</h2>
+                <p class="text-xs sm:text-sm text-gray-400">
+                    Valores directos cobrados en Soles peruanos (PEN) por cada plataforma oficial a nivel nacional.
+                </p>
+            </div>
+
+            <!-- Selector de Tipo de Servicio -->
+            <div class="flex justify-center gap-2">
+                <button data-category="ALL" onclick="window.filterPlatforms('ALL')" class="platform-filter-btn bg-cuycito-red text-white text-xs font-black px-4 py-2 rounded-xl transition shadow glow-red">Todas</button>
+                <button data-category="VIDEO" onclick="window.filterPlatforms('VIDEO')" class="platform-filter-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition">Video & Series</button>
+                <button data-category="AUDIO" onclick="window.filterPlatforms('AUDIO')" class="platform-filter-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition">Música</button>
+            </div>
+
+            <!-- Grilla de Tarjetas de Precios Oficiales -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 pt-2">
+                
+                <!-- Netflix -->
+                <div data-category="VIDEO" class="platform-price-card bg-[#141414] border border-gray-800 rounded-2xl p-5 flex flex-col justify-between hover:border-red-600/50 transition shadow-lg">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-black text-red-500 uppercase tracking-wider">Netflix</span>
+                            <span class="text-[10px] bg-red-950/60 text-red-300 font-bold px-2 py-0.5 rounded border border-red-900/40">Plan Premium</span>
+                        </div>
+                        <div>
+                            <span class="text-2xl font-black text-white">S/ 52.90</span>
+                            <span class="text-xs text-gray-400 font-medium">a S/ 58.90 / mes</span>
+                        </div>
+                        <ul class="text-xs text-gray-300 space-y-1.5 pt-2 border-t border-gray-800 font-medium">
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-tv text-cuycito-gold text-[11px]"></i> Calidad Ultra HD 4K + HDR</li>
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-volume-high text-cuycito-gold text-[11px]"></i> Audio Espacial Netflix</li>
+                        </ul>
+                    </div>
+                    <span class="text-[11px] text-gray-500 block pt-4 text-center font-mono">Tarifa oficial en Perú</span>
+                </div>
+
+                <!-- Disney+ (con ESPN) -->
+                <div data-category="VIDEO" class="platform-price-card bg-[#141414] border border-gray-800 rounded-2xl p-5 flex flex-col justify-between hover:border-blue-600/50 transition shadow-lg">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-black text-blue-400 uppercase tracking-wider">Disney+</span>
+                            <span class="text-[10px] bg-blue-950/60 text-blue-300 font-bold px-2 py-0.5 rounded border border-blue-900/40">Premium + ESPN</span>
+                        </div>
+                        <div>
+                            <span class="text-2xl font-black text-white">S/ 68.90</span>
+                            <span class="text-xs text-gray-400 font-medium">/ mes</span>
+                        </div>
+                        <ul class="text-xs text-gray-300 space-y-1.5 pt-2 border-t border-gray-800 font-medium">
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-trophy text-cuycito-gold text-[11px]"></i> Incluye todos los canales ESPN</li>
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-film text-cuycito-gold text-[11px]"></i> 4K UHD & Dolby Atmos</li>
+                        </ul>
+                    </div>
+                    <span class="text-[11px] text-gray-500 block pt-4 text-center font-mono">Tarifa oficial en Perú</span>
+                </div>
+
+                <!-- Max (HBO) Platino -->
+                <div data-category="VIDEO" class="platform-price-card bg-[#141414] border border-gray-800 rounded-2xl p-5 flex flex-col justify-between hover:border-purple-600/50 transition shadow-lg">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-black text-purple-400 uppercase tracking-wider">Max (HBO)</span>
+                            <span class="text-[10px] bg-purple-950/60 text-purple-300 font-bold px-2 py-0.5 rounded border border-purple-900/40">Plan Platino</span>
+                        </div>
+                        <div>
+                            <span class="text-2xl font-black text-white">S/ 49.90</span>
+                            <span class="text-xs text-gray-400 font-medium">/ mes</span>
+                        </div>
+                        <ul class="text-xs text-gray-300 space-y-1.5 pt-2 border-t border-gray-800 font-medium">
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-tv text-cuycito-gold text-[11px]"></i> Resolución 4K UHD y Dolby Atmos</li>
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-users text-cuycito-gold text-[11px]"></i> 4 dispositivos en simultáneo</li>
+                        </ul>
+                    </div>
+                    <span class="text-[11px] text-gray-500 block pt-4 text-center font-mono">Tarifa oficial en Perú</span>
+                </div>
+
+                <!-- Spotify -->
+                <div data-category="AUDIO" class="platform-price-card bg-[#141414] border border-gray-800 rounded-2xl p-5 flex flex-col justify-between hover:border-emerald-600/50 transition shadow-lg">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-black text-emerald-400 uppercase tracking-wider">Spotify</span>
+                            <span class="text-[10px] bg-emerald-950/60 text-emerald-300 font-bold px-2 py-0.5 rounded border border-emerald-900/40">Individual</span>
+                        </div>
+                        <div>
+                            <span class="text-2xl font-black text-white">S/ 21.90</span>
+                            <span class="text-xs text-gray-400 font-medium">/ mes</span>
+                        </div>
+                        <ul class="text-xs text-gray-300 space-y-1.5 pt-2 border-t border-gray-800 font-medium">
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-ban text-cuycito-gold text-[11px]"></i> Música sin anuncios ni límites</li>
+                            <li class="flex items-center gap-2"><i class="fa-solid fa-download text-cuycito-gold text-[11px]"></i> Descargas offline</li>
+                        </ul>
+                    </div>
+                    <span class="text-[11px] text-gray-500 block pt-4 text-center font-mono">Tarifa oficial en Perú</span>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 6. SECCIÓN GUÍA TÉCNICA 4K & CONFIGURACIÓN                -->
+    <!-- ========================================================= -->
+    <section id="guias-tech" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 space-y-6">
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-800 pb-5">
+            <div>
+                <span class="text-sky-400 text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                    <i class="fa-solid fa-tv"></i> Guía Técnica de Optimización
+                </span>
+                <h2 class="text-2xl font-black text-white mt-1">Cómo Configurar tu Smart TV para 4K UHD Real</h2>
+            </div>
+            
+            <button onclick="window.openArticleModal('alzas-tarifas')" class="bg-[#141414] hover:bg-gray-800 text-cuycito-gold border border-cuycito-gold/40 text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-2">
+                <i class="fa-solid fa-book-open"></i> Leer Guía Técnica
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div class="bg-[#121212] border border-gray-800 rounded-3xl p-5 space-y-2">
+                <div class="w-10 h-10 bg-sky-950/60 border border-sky-500/50 rounded-xl flex items-center justify-center text-sky-400 text-lg shadow">
+                    <i class="fa-solid fa-wifi"></i>
+                </div>
+                <h3 class="text-sm font-black text-white">1. Ancho de Banda Mínimo</h3>
+                <p class="text-xs text-gray-400 leading-relaxed">25 a 35 Mbps dedicados por pantalla para evitar caídas de resolución.</p>
+            </div>
+            <div class="bg-[#121212] border border-gray-800 rounded-3xl p-5 space-y-2">
+                <div class="w-10 h-10 bg-amber-950/60 border border-amber-500/50 rounded-xl flex items-center justify-center text-amber-400 text-lg shadow">
+                    <i class="fa-solid fa-sliders"></i>
+                </div>
+                <h3 class="text-sm font-black text-white">2. Modo HDMI Mejorado</h3>
+                <p class="text-xs text-gray-400 leading-relaxed">Activa HDMI Ultra HD Deep Color en ajustes para habilitar HDR dinámico.</p>
+            </div>
+            <div class="bg-[#121212] border border-gray-800 rounded-3xl p-5 space-y-2">
+                <div class="w-10 h-10 bg-purple-950/60 border border-purple-500/50 rounded-xl flex items-center justify-center text-purple-400 text-lg shadow">
+                    <i class="fa-solid fa-volume-high"></i>
+                </div>
+                <h3 class="text-sm font-black text-white">3. Audio Dolby Atmos / eARC</h3>
+                <p class="text-xs text-gray-400 leading-relaxed">Conecta por puerto HDMI eARC con paso directo para sonido espacial.</p>
             </div>
         </div>
     </section>
 
-    <!-- SECCIÓN PRINCIPAL: CATÁLOGO & STOCK DE PRODUCTOS -->
-    <main id="catalogo" class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-        
-        <!-- Barra de Búsqueda & Filtros -->
-        <div class="space-y-4">
-            
-            <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-2xl font-black text-white flex items-center gap-2.5">
-                        <i class="fa-solid fa-layer-group text-cuycito-gold"></i> Catálogo Disponible
-                    </h2>
-                    <p class="text-xs text-gray-400 mt-1">Elige tus servicios favoritos y agrégalos a tu orden.</p>
-                </div>
-
-                <!-- Buscador en tiempo real -->
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <div class="relative flex-1 sm:w-72">
-                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-500">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </span>
-                        <input 
-                            type="text" 
-                            id="storeSearchInput" 
-                            oninput="window.filterCatalog()" 
-                            placeholder="Buscar servicio (ej. Netflix, Spotify)..." 
-                            class="w-full bg-[#121212] border border-gray-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cuycito-gold transition"
-                        >
-                    </div>
-
-                    <!-- Ordenamiento -->
-                    <select 
-                        id="storeSortSelect" 
-                        onchange="window.filterCatalog()" 
-                        class="bg-[#121212] border border-gray-800 text-gray-300 font-bold rounded-xl px-3 py-2.5 text-xs outline-none focus:border-cuycito-gold transition"
-                    >
-                        <option value="featured">✨ Destacados</option>
-                        <option value="promo_first">🔥 Ofertas Primero</option>
-                        <option value="price_asc">💵 Menor Precio</option>
-                        <option value="price_desc">💎 Mayor Precio</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Píldoras de Categorías -->
-            <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar text-xs font-bold" id="categoryPillsContainer">
-                <button onclick="window.filterByCategory('ALL')" data-category="ALL" class="cat-pill active bg-cuycito-red text-white px-4 py-2 rounded-xl whitespace-nowrap transition shadow">
-                    Todos los Servicios
-                </button>
-                <button onclick="window.filterByCategory('OFERTA')" data-category="OFERTA" class="cat-pill bg-black hover:bg-gray-900 border border-gray-800 text-cuycito-red hover:text-red-400 px-4 py-2 rounded-xl whitespace-nowrap transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-fire text-cuycito-red animate-pulse"></i> Solo Ofertas 🔥
-                </button>
-                <button onclick="window.filterByCategory('Streaming')" data-category="Streaming" class="cat-pill bg-black hover:bg-gray-900 border border-gray-800 text-gray-300 hover:text-cuycito-gold px-4 py-2 rounded-xl whitespace-nowrap transition">
-                    🎬 Streaming
-                </button>
-                <button onclick="window.filterByCategory('Pantallas / Perfil')" data-category="Pantallas / Perfil" class="cat-pill bg-black hover:bg-gray-900 border border-gray-800 text-gray-300 hover:text-cuycito-gold px-4 py-2 rounded-xl whitespace-nowrap transition">
-                    👤 Pantalla / Perfil
-                </button>
-                <button onclick="window.filterByCategory('Cuentas Raíz')" data-category="Cuentas Raíz" class="cat-pill bg-black hover:bg-gray-900 border border-gray-800 text-gray-300 hover:text-cuycito-gold px-4 py-2 rounded-xl whitespace-nowrap transition">
-                    👑 Cuentas Completas
-                </button>
-                <button onclick="window.filterByCategory('Música')" data-category="Música" class="cat-pill bg-black hover:bg-gray-900 border border-gray-800 text-gray-300 hover:text-cuycito-gold px-4 py-2 rounded-xl whitespace-nowrap transition">
-                    🎵 Música
-                </button>
-                <button onclick="window.filterByCategory('Combos')" data-category="Combos" class="cat-pill bg-black hover:bg-gray-900 border border-gray-800 text-cuycito-gold hover:text-yellow-300 px-4 py-2 rounded-xl whitespace-nowrap transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-gift text-cuycito-gold"></i> Combos Ahorro 🔥
-                </button>
-                <button onclick="window.filterByCategory('Gaming')" data-category="Gaming" class="cat-pill bg-black hover:bg-gray-900 border border-gray-800 text-gray-300 hover:text-cuycito-gold px-4 py-2 rounded-xl whitespace-nowrap transition">
-                    🎮 Gaming
-                </button>
-            </div>
-        </div>
-
-        <!-- Grilla de Productos en Vivo -->
-        <div id="catalogGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <div class="col-span-full py-20 text-center text-gray-500 flex flex-col items-center justify-center space-y-3">
-                <i class="fa-solid fa-spinner fa-spin text-4xl text-cuycito-gold"></i>
-                <p class="text-sm font-semibold">Cargando productos de la tienda desde la nube...</p>
-            </div>
-        </div>
-
-        <!-- SECCIÓN EXPLICATIVA: ¿CÓMO FUNCIONAN LAS CUENTAS COMPARTIDAS? -->
-        <section id="como-funciona" class="bg-gradient-to-b from-[#141414] to-[#0d0d0d] border border-cuycito-gold/40 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-8 mt-12">
-            <div class="text-center max-w-2xl mx-auto space-y-2">
-                <span class="text-xs font-black uppercase tracking-widest text-cuycito-gold bg-cuycito-gold/10 border border-cuycito-gold/30 px-3 py-1 rounded-full inline-block">
-                    Transparencia & Máximo Ahorro
-                </span>
-                <h3 class="text-2xl sm:text-3xl font-black text-white">
-                    ¿Cómo funcionan nuestras <span class="text-gold-gradient">Cuentas Compartidas</span>?
-                </h3>
-                <p class="text-xs text-gray-300 leading-relaxed">
-                    Accede a tus plataformas de streaming favoritas sin pagar el costo total de una cuenta completa.
-                </p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                <!-- Paso 1 -->
-                <div class="bg-black/70 border border-gray-800 rounded-2xl p-6 space-y-3 relative overflow-hidden group hover:border-cuycito-gold/60 transition">
-                    <div class="w-12 h-12 rounded-2xl bg-sky-950/80 text-sky-400 border border-sky-500/40 flex items-center justify-center text-xl font-black shadow-lg">
-                        <i class="fa-solid fa-user-lock"></i>
-                    </div>
-                    <h4 class="text-base font-black text-white">1. Tu Perfil Personal con PIN</h4>
-                    <p class="text-xs text-gray-300 leading-relaxed">
-                        Te asignamos un <strong>perfil privado exclusivo</strong> con tu propio nombre y PIN de seguridad de 4 dígitos. Nadie más entra a tu historial ni a tus recomendaciones.
+    <!-- ========================================================= -->
+    <!-- 7. PIE DE PÁGINA                                          -->
+    <!-- ========================================================= -->
+    <footer class="bg-[#0a0a0a] border-t border-gray-800/80 py-10 text-gray-400 text-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="flex flex-col items-center md:items-start gap-2">
+                    <a href="index.html" class="flex items-center gap-2">
+                        <img src="assets/img/logo.png" alt="CuycitoGO" class="h-12 object-contain drop-shadow-[0_0_15px_rgba(255,183,3,0.3)]">
+                    </a>
+                    <p class="text-[11px] text-gray-500 text-center md:text-left max-w-sm">
+                        Portal independiente de noticias, cartelera y análisis de entretenimiento digital.
                     </p>
                 </div>
-
-                <!-- Paso 2 -->
-                <div class="bg-black/70 border border-gray-800 rounded-2xl p-6 space-y-3 relative overflow-hidden group hover:border-cuycito-gold/60 transition">
-                    <div class="w-12 h-12 rounded-2xl bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xl font-black shadow-lg">
-                        <i class="fa-solid fa-tv"></i>
-                    </div>
-                    <h4 class="text-base font-black text-white">2. Disfruta en 1 Pantalla (4K UHD)</h4>
-                    <p class="text-xs text-gray-300 leading-relaxed">
-                        Puedes iniciar sesión en tu Smart TV, celular, laptop o tablet y reproducir en <strong>1 dispositivo a la vez</strong> con la máxima resolución Ultra HD disponible.
-                    </p>
-                </div>
-
-                <!-- Paso 3 -->
-                <div class="bg-black/70 border border-gray-800 rounded-2xl p-6 space-y-3 relative overflow-hidden group hover:border-cuycito-gold/60 transition">
-                    <div class="w-12 h-12 rounded-2xl bg-amber-950/80 text-cuycito-gold border border-cuycito-gold/40 flex items-center justify-center text-xl font-black shadow-lg">
-                        <i class="fa-solid fa-piggy-bank"></i>
-                    </div>
-                    <h4 class="text-base font-black text-white">3. Ahorro Real de hasta el 70%</h4>
-                    <p class="text-xs text-gray-300 leading-relaxed">
-                        Pagas solo por el perfil que usas en <strong>Soles peruanos</strong> (sin suscripciones bancarias forzosas ni renovaciones automáticas sorpresivas).
-                    </p>
-                </div>
-
-            </div>
-        </section>
-
-        <!-- SECCIÓN DE GARANTÍA Y FAQ -->
-        <section id="garantia" class="bg-[#121212] border border-gray-800/80 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-8 mt-12">
-            <div class="text-center max-w-2xl mx-auto space-y-2">
-                <span class="text-xs font-black uppercase tracking-widest text-cuycito-gold">Confiabilidad & Seguridad</span>
-                <h3 class="text-2xl sm:text-3xl font-black text-white">¿Por qué comprar en CuycitoGO?</h3>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center sm:text-left">
-                <div class="bg-black/60 border border-gray-800/80 rounded-2xl p-5 space-y-3">
-                    <div class="w-10 h-10 rounded-xl bg-cuycito-red/20 text-cuycito-red flex items-center justify-center text-xl border border-cuycito-red/30">
-                        <i class="fa-solid fa-bolt"></i>
-                    </div>
-                    <h4 class="text-base font-extrabold text-white">Entrega en Minutos</h4>
-                    <p class="text-xs text-gray-400 leading-relaxed">Una vez confirmado tu pedido, te entregamos tu perfil o cuenta al instante con sus credenciales oficiales.</p>
-                </div>
-
-                <div class="bg-black/60 border border-gray-800/80 rounded-2xl p-5 space-y-3">
-                    <div class="w-10 h-10 rounded-xl bg-cuycito-gold/20 text-cuycito-gold flex items-center justify-center text-xl border border-cuycito-gold/30">
-                        <i class="fa-solid fa-shield-heart"></i>
-                    </div>
-                    <h4 class="text-base font-extrabold text-white">Garantía Durante Todo el Mes</h4>
-                    <p class="text-xs text-gray-400 leading-relaxed">Cero caídas. Si ocurre cualquier inconveniente con tu acceso durante tus 30 días, te reponemos el servicio de inmediato.</p>
-                </div>
-
-                <div class="bg-black/60 border border-gray-800/80 rounded-2xl p-5 space-y-3">
-                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl border border-emerald-500/30">
-                        <i class="fa-solid fa-mobile-screen-button"></i>
-                    </div>
-                    <h4 class="text-base font-extrabold text-white">Pagos Fáciles en Soles</h4>
-                    <p class="text-xs text-gray-400 leading-relaxed">Aceptamos Yape, Plin, Transferencias BCP, BBVA, Interbank y Saldo VIP directo.</p>
+                <div class="flex flex-wrap justify-center gap-6 font-bold uppercase tracking-wider text-[11px]">
+                    <a href="index.html" class="text-cuycito-gold">Inicio</a>
+                    <a href="cartelera.html" class="hover:text-cuycito-gold transition">Cartelera</a>
+                    <a href="estrenos.html" class="hover:text-cuycito-gold transition">Estrenos</a>
+                    <a href="#precios-oficiales" class="hover:text-cuycito-gold transition">Precios Perú</a>
+                    <a href="login-cliente.html" class="hover:text-cuycito-gold transition text-cuycito-gold">Portal Clientes</a>
                 </div>
             </div>
-        </section>
-
-    </main>
-
-    <!-- DRAWER / PANEL LATERAL DEL CARRITO DE COMPRAS -->
-    <div id="cartDrawerBackdrop" onclick="window.toggleCartDrawer()" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden transition-opacity"></div>
-
-    <aside id="cartDrawer" class="fixed top-0 right-0 h-full w-full max-w-md bg-[#121212] border-l border-gray-800 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col justify-between">
-        
-        <!-- Header del Carrito -->
-        <div class="p-5 border-b border-gray-800 flex items-center justify-between bg-black/60">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-cuycito-gold/20 text-cuycito-gold flex items-center justify-center text-lg border border-cuycito-gold/30">
-                    <i class="fa-solid fa-bag-shopping"></i>
-                </div>
-                <div>
-                    <h3 class="text-base font-black text-white">Tu Carrito de Compras</h3>
-                    <p class="text-[10px] text-gray-400">Resumen y solicitud inmediata</p>
-                </div>
-            </div>
-            <button onclick="window.toggleCartDrawer()" class="w-8 h-8 rounded-lg bg-gray-900 text-gray-400 hover:text-white flex items-center justify-center transition">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-
-        <!-- Lista de Items en Carrito -->
-        <div id="cartItemsList" class="p-5 flex-1 overflow-y-auto cart-scroll space-y-3">
-            <div class="py-16 text-center text-gray-500 space-y-2">
-                <i class="fa-solid fa-basket-shopping text-4xl opacity-30"></i>
-                <p class="text-xs">Tu carrito está vacío.</p>
-            </div>
-        </div>
-
-        <!-- Footer del Carrito & Botón de Pedido por WhatsApp -->
-        <div class="p-5 border-t border-gray-800 bg-black/80 space-y-4">
-            
-            <div class="space-y-2 text-xs">
-                <div class="flex justify-between text-gray-400">
-                    <span>Subtotal</span>
-                    <span id="cartDrawerSubtotal" class="font-bold text-gray-200">S/ 0.00</span>
-                </div>
-                <div class="flex justify-between text-gray-400">
-                    <span>Garantía & Soporte</span>
-                    <span class="text-emerald-400 font-bold">100% INCLUIDA</span>
-                </div>
-                <div class="flex justify-between text-base font-black text-white pt-2 border-t border-gray-800">
-                    <span>Total a Pagar:</span>
-                    <span id="cartDrawerTotal" class="text-cuycito-gold">S/ 0.00</span>
-                </div>
-            </div>
-
-            <!-- Sección Saldo VIP (Clientes Logueados) -->
-            <div id="cartUserBalanceBox" class="hidden bg-gradient-to-r from-emerald-950/40 to-black border border-emerald-500/40 rounded-xl p-3 space-y-1.5">
-                <div class="flex items-center justify-between text-xs">
-                    <span class="text-gray-400 font-bold flex items-center gap-1"><i class="fa-solid fa-wallet text-emerald-400"></i> Mi Saldo VIP:</span>
-                    <strong id="cartUserBalanceText" class="text-emerald-400 font-black font-mono">S/ 0.00</strong>
-                </div>
-                <p id="cartBalanceNotice" class="text-[10px] text-gray-400"></p>
-            </div>
-
-            <!-- Nombre para la orden -->
-            <div id="cartClientNameContainer">
-                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">
-                    Nombre para registrar tu pedido:
-                </label>
-                <input 
-                    type="text" 
-                    id="cartClientName" 
-                    placeholder="Ej. Juan Pérez o Nickname" 
-                    class="w-full bg-[#0a0a0a] border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cuycito-gold transition"
-                >
-            </div>
-
-            <div class="space-y-2">
-                <!-- Botón de Compra Directa con Saldo (Visible si saldo >= total) -->
-                <button id="btnPayWithBalance" onclick="window.payOrderWithBalance()" class="hidden w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm py-3.5 rounded-xl transition shadow-lg flex items-center justify-center gap-2 uppercase tracking-wider glow-gold">
-                    <i class="fa-solid fa-bolt text-yellow-300"></i> Comprar con Saldo VIP
-                </button>
-
-                <!-- Botón Solicitar por WhatsApp -->
-                <button onclick="window.sendOrderWhatsApp()" class="w-full bg-[#25D366] hover:bg-emerald-500 text-black font-black text-sm py-3.5 rounded-xl transition shadow-lg flex items-center justify-center gap-2 uppercase tracking-wider glow-gold">
-                    <i class="fa-brands fa-whatsapp text-lg"></i> Solicitar por WhatsApp
-                </button>
-            </div>
-
-            <button onclick="window.clearCart()" class="w-full text-center text-xs text-gray-500 hover:text-cuycito-red transition pt-1 flex items-center justify-center gap-1">
-                <i class="fa-solid fa-trash-can"></i> Vaciar Carrito
-            </button>
-        </div>
-    </aside>
-
-    <!-- FOOTER (SIN ENLACES DE ADMINISTRACIÓN) -->
-    <footer class="border-t border-gray-800 bg-[#0d0d0d] py-8 text-xs text-gray-500">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-2">
-                <span class="text-cuycito-gold font-black text-sm">🐹 CuycitoGO</span>
-                <span>• Cuentas Compartidas de Streaming & Entretenimiento VIP</span>
-            </div>
-            <div class="flex items-center gap-4">
-                <a href="login-cliente.html" class="hover:text-cuycito-gold transition">Acceso Clientes VIP</a>
-                <span>•</span>
-                <a href="perfil.html" class="hover:text-cuycito-gold transition">Mi Panel</a>
+            <div class="border-t border-gray-900 pt-5 text-center text-[11px] text-gray-600">
+                © 2026 CuycitoGO News. Todos los derechos reservados.
             </div>
         </div>
     </footer>
 
-    <script src="js/security-guard.js"></script>
-    <script type="module" src="js/store.js"></script>
+    <!-- MODAL LECTOR DE ARTÍCULOS -->
+    <div id="articleReaderModal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4 z-50 transition-all duration-300">
+        <div class="bg-[#121212] border border-gray-800 rounded-3xl p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl relative">
+            <button onclick="window.closeArticleModal()" class="absolute top-4 right-4 bg-gray-900 hover:bg-gray-800 text-gray-400 hover:text-white p-2 rounded-xl transition border border-gray-800 z-10">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div id="articleReaderContent"></div>
+            <div class="mt-8 pt-4 border-t border-gray-800 flex justify-end">
+                <button onclick="window.closeArticleModal()" class="bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold px-5 py-2.5 rounded-xl border border-gray-700 transition">
+                    Cerrar Lectura
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/portal-news.js"></script>
 </body>
 </html>

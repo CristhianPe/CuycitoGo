@@ -817,24 +817,166 @@ window.drawRouletteWheel = (angle = 0) => {
 
 window.switchProfileTab = (tab) => {
     const btnServices = document.getElementById('tabBtnServices');
+    const btnStore = document.getElementById('tabBtnStore');
     const btnRoulette = document.getElementById('tabBtnRoulette');
     const viewServices = document.getElementById('viewProfileServices');
+    const viewStore = document.getElementById('viewProfileStore');
     const viewRoulette = document.getElementById('viewProfileRoulette');
 
+    // Reset styles
+    if (btnServices) btnServices.className = "text-gray-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0";
+    if (btnStore) btnStore.className = "text-gray-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0";
+    if (btnRoulette) btnRoulette.className = "text-gray-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0 relative";
+
+    // Hide all views
+    if (viewServices) viewServices.classList.add('hidden');
+    if (viewStore) viewStore.classList.add('hidden');
+    if (viewRoulette) viewRoulette.classList.add('hidden');
+
     if (tab === 'services') {
-        if (btnServices) btnServices.className = "text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2";
-        if (btnRoulette) btnRoulette.className = "text-gray-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 relative";
+        if (btnServices) btnServices.className = "text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0";
         if (viewServices) viewServices.classList.remove('hidden');
-        if (viewRoulette) viewRoulette.classList.add('hidden');
-    } else {
-        if (btnRoulette) btnRoulette.className = "text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 relative";
-        if (btnServices) btnServices.className = "text-gray-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2";
-        if (viewServices) viewServices.classList.add('hidden');
+    } else if (tab === 'store') {
+        if (btnStore) btnStore.className = "text-emerald-400 border-b-2 border-emerald-400 pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0";
+        if (viewStore) viewStore.classList.remove('hidden');
+        window.loadProfileStoreCatalog();
+    } else if (tab === 'roulette') {
+        if (btnRoulette) btnRoulette.className = "text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0 relative";
         if (viewRoulette) viewRoulette.classList.remove('hidden');
 
         // Validar acceso según cantidad de servicios activos (>= 3)
         window.checkRouletteEligibility();
     }
+};
+
+let profileCatalogProducts = [];
+let profileActiveCategory = 'ALL';
+
+window.loadProfileStoreCatalog = async () => {
+    const grid = document.getElementById('profileCatalogGrid');
+    if (!grid) return;
+
+    try {
+        grid.innerHTML = `
+            <div class="col-span-full py-16 text-center text-gray-500 space-y-3">
+                <i class="fa-solid fa-spinner fa-spin text-3xl text-cuycito-gold"></i>
+                <p class="text-sm">Cargando catálogo VIP de streaming y cuentas...</p>
+            </div>
+        `;
+
+        const catalogSnap = await getDocs(collection(db, "store_catalog"));
+        profileCatalogProducts = [];
+        catalogSnap.forEach(d => {
+            profileCatalogProducts.push({ id: d.id, ...d.data() });
+        });
+
+        // Cargar cuentas maestras para cálculo de stock
+        const masterSnap = await getDocs(collection(db, "masterAccounts"));
+        allMasterAccounts = [];
+        masterSnap.forEach(d => {
+            allMasterAccounts.push({ id: d.id, ...d.data() });
+        });
+
+        renderProfileCatalog();
+    } catch (e) {
+        console.error("Error cargando catálogo en perfil:", e);
+        grid.innerHTML = `<div class="col-span-full text-center text-red-400 py-8">Error al conectar con la base de datos de productos.</div>`;
+    }
+};
+
+window.filterProfileCatalog = (category) => {
+    profileActiveCategory = category;
+    const buttons = document.querySelectorAll('.profile-category-btn');
+    buttons.forEach(btn => {
+        if (btn.dataset.category === category) {
+            btn.className = "profile-category-btn bg-emerald-600 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow glow-gold";
+        } else {
+            btn.className = "profile-category-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition";
+        }
+    });
+    renderProfileCatalog();
+};
+
+function renderProfileCatalog() {
+    const grid = document.getElementById('profileCatalogGrid');
+    if (!grid) return;
+
+    const searchEl = document.getElementById('profileCatalogSearch');
+    const searchTerm = (searchEl?.value || '').toLowerCase().trim();
+
+    let filtered = profileCatalogProducts.filter(p => {
+        const matchesCategory = profileActiveCategory === 'ALL' || p.category === profileActiveCategory;
+        const matchesSearch = !searchTerm || (p.title || '').toLowerCase().includes(searchTerm) || (p.description || '').toLowerCase().includes(searchTerm);
+        return matchesCategory && matchesSearch;
+    });
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `
+            <div class="col-span-full text-center py-16 text-gray-500 space-y-3">
+                <i class="fa-solid fa-box-open text-4xl text-gray-600"></i>
+                <p class="text-sm font-medium">No se encontraron productos disponibles en esta categoría.</p>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = filtered.map(prod => {
+        const price = parseFloat(prod.price || 0).toFixed(2);
+        const icon = prod.icon || 'fa-solid fa-tv';
+        const isOffer = prod.isOffer || prod.category === 'OFERTA';
+        const color = prod.color || '#ffb703';
+
+        return `
+            <div class="bg-[#141414] border border-gray-800 rounded-3xl p-6 flex flex-col justify-between hover:border-cuycito-gold/50 transition duration-300 shadow-xl relative overflow-hidden group">
+                ${isOffer ? '<span class="absolute top-4 right-4 bg-cuycito-red text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow glow-red animate-pulse">Oferta VIP</span>' : ''}
+                
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-lg border border-white/10" style="background-color: ${color}20; color: ${color};">
+                            <i class="${icon}"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase font-black tracking-widest text-gray-400 block">${prod.category || 'Streaming'}</span>
+                            <h3 class="text-lg font-black text-white group-hover:text-cuycito-gold transition">${prod.title || 'Servicio Digital'}</h3>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-1.5 text-[10px] font-black uppercase">
+                        <span class="bg-gray-900/90 text-gray-300 px-2 py-0.5 rounded border border-gray-800 flex items-center gap-1">
+                            <i class="fa-solid fa-users text-sky-400"></i> Cuenta Compartida
+                        </span>
+                        <span class="bg-gray-900/90 text-gray-300 px-2 py-0.5 rounded border border-gray-800 flex items-center gap-1">
+                            <i class="fa-solid fa-lock text-amber-400"></i> PIN Privado
+                        </span>
+                        <span class="bg-gray-900/90 text-gray-300 px-2 py-0.5 rounded border border-gray-800 flex items-center gap-1">
+                            <i class="fa-solid fa-tv text-emerald-400"></i> 1 Pantalla
+                        </span>
+                    </div>
+
+                    <p class="text-xs text-gray-400 leading-relaxed font-normal">${prod.description || 'Acceso garantizado y privado con soporte VIP.'}</p>
+                </div>
+
+                <div class="pt-6 border-t border-gray-800/80 mt-4 flex items-center justify-between gap-3">
+                    <div>
+                        <span class="text-[10px] text-gray-400 block uppercase font-bold">Precio VIP:</span>
+                        <span class="text-2xl font-black text-cuycito-gold font-mono">S/ ${price}</span>
+                    </div>
+
+                    <button onclick="window.orderServiceDirect('${encodeURIComponent(prod.title || 'Servicio')}', '${price}')" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black px-4 py-3 rounded-2xl transition shadow-lg glow-gold flex items-center gap-2">
+                        <i class="fa-brands fa-whatsapp text-sm"></i>
+                        <span>Solicitar</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.orderServiceDirect = (serviceName, price) => {
+    if (!currentClientUser) return;
+    const nick = currentClientUser.nickname || currentClientUser.name;
+    const msg = `¡Hola CuycitoGO! 🐹👋\n\nSoy *${nick}* (${currentClientUser.name} - Tel: ${currentClientUser.phone}).\nQuiero adquirir el servicio: *${decodeURIComponent(serviceName)}* por *S/ ${price}*.\n\n¿Me pueden brindar la información de entrega? ¡Gracias! 🙌`;
+    window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
 };
 
 window.checkRouletteEligibility = async () => {

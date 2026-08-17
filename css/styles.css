@@ -146,3 +146,28 @@ input[type="number"]::-webkit-outer-spin-button {
     backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 183, 3, 0.25);
 }
+
+/* Animación de Ticker / Marquesina de Precios */
+@keyframes marqueeScroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+    display: flex;
+    width: max-content;
+    animation: marqueeScroll 28s linear infinite;
+}
+
+.animate-marquee:hover {
+    animation-play-state: paused;
+}
+
+.news-card-zoom img {
+    transition: transform 0.4s ease, filter 0.4s ease;
+}
+
+.news-card-zoom:hover img {
+    transform: scale(1.05);
+    filter: brightness(1.08);
+}

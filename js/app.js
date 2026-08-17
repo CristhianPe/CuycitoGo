@@ -152,7 +152,7 @@ window.copyInfoText = () => {
 };
 
 window.switchTab = (tabId) => {
-    ['subs', 'master', 'finance', 'clients', 'catalog', 'recharges', 'games'].forEach(id => {
+    ['subs', 'master', 'finance', 'clients', 'catalog', 'recharges', 'games', 'news'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const btn = document.getElementById('tab-btn-' + id);
         if(view) {
@@ -160,7 +160,7 @@ window.switchTab = (tabId) => {
             if(id === tabId) {
                 view.classList.remove('hidden');
                 if(id==='subs') view.classList.add('block');
-                if(id==='master' || id==='finance' || id==='clients' || id==='catalog' || id==='recharges' || id==='games') view.className = view.className.replace('hidden', 'block space-y-4');
+                if(id==='master' || id==='finance' || id==='clients' || id==='catalog' || id==='recharges' || id==='games' || id==='news') view.className = view.className.replace('hidden', 'block space-y-4');
             }
         }
         if(btn) {
@@ -177,6 +177,9 @@ window.switchTab = (tabId) => {
     }
     if(tabId === 'games') {
         window.renderGamesSection();
+    }
+    if(tabId === 'news') {
+        window.initNewsManager();
     }
 };
 
@@ -2788,3 +2791,519 @@ window.saveRouletteSettingsToFirebase = async () => {
         alert("Error al guardar la configuración en Firebase.");
     }
 };
+
+// ========================================================
+// MÓDULO GESTOR DE NOTICIAS & CARTELERA PÚBLICA (ADMIN)
+// ========================================================
+
+window.initNewsManager = () => {
+    window.renderAdminNewsList();
+    window.renderAdminCarteleraList();
+};
+
+window.switchNewsManagerSubtab = (subtab) => {
+    const viewArticles = document.getElementById('newsSubviewArticles');
+    const viewCartelera = document.getElementById('newsSubviewCartelera');
+    const btnArticles = document.getElementById('subtab-btn-news-articles');
+    const btnCartelera = document.getElementById('subtab-btn-news-cartelera');
+
+    if (subtab === 'articles') {
+        if (viewArticles) viewArticles.classList.remove('hidden');
+        if (viewCartelera) viewCartelera.classList.add('hidden');
+        if (btnArticles) btnArticles.className = "text-orange-400 border-b-2 border-orange-400 pb-1 flex items-center gap-1.5";
+        if (btnCartelera) btnCartelera.className = "text-gray-500 hover:text-white border-b-2 border-transparent pb-1 flex items-center gap-1.5";
+        window.renderAdminNewsList();
+    } else {
+        if (viewArticles) viewArticles.classList.add('hidden');
+        if (viewCartelera) viewCartelera.classList.remove('hidden');
+        if (btnArticles) btnArticles.className = "text-gray-500 hover:text-white border-b-2 border-transparent pb-1 flex items-center gap-1.5";
+        if (btnCartelera) btnCartelera.className = "text-cuycito-gold border-b-2 border-cuycito-gold pb-1 flex items-center gap-1.5";
+        window.renderAdminCarteleraList();
+    }
+};
+
+// 1. Renderizado de Noticias en Admin
+window.renderAdminNewsList = () => {
+    const grid = document.getElementById('adminNewsListGrid');
+    if (!grid) return;
+
+    let newsList = [];
+    try {
+        const stored = localStorage.getItem("cuycito_portal_news");
+        if (stored) newsList = JSON.parse(stored);
+    } catch(e) {}
+
+    if (!newsList || newsList.length === 0) {
+        newsList = [
+            {
+                id: "alzas-tarifas",
+                category: "ANÁLISIS DE MERCADO",
+                categoryColor: "bg-red-600",
+                readTime: "6 min de lectura",
+                date: "Actualizado Hoy",
+                title: "El Mapa del Streaming en Perú: Alzas de Tarifas Oficiales y Restricciones de Pantallas en 2026",
+                image: "assets/img/news1.jpg",
+                excerpt: "Las multinacionales continúan actualizando sus planes para Perú. Conoce la estructura de costos con Netflix hasta S/ 58.90 y Disney+ Premium en S/ 68.90.",
+                isHero: true
+            },
+            {
+                id: "anime-gaming",
+                category: "ANIME & GAMING",
+                categoryColor: "bg-orange-500",
+                readTime: "5 min de lectura",
+                date: "Tendencias",
+                title: "Crunchyroll y el Fenómeno del Simulcast Global en Alta Definición",
+                image: "assets/img/news2.jpg",
+                excerpt: "Cómo el streaming simultáneo de animes desde Japón cambió los hábitos de consumo y la demanda de servidores de alta velocidad.",
+                isHero: false
+            },
+            {
+                id: "audio-hifi",
+                category: "AUDIO & HI-FI",
+                categoryColor: "bg-emerald-600",
+                readTime: "4 min de lectura",
+                date: "Tecnología de Sonido",
+                title: "Spotify vs Apple Music vs Tidal: ¿Realmente se Nota la Calidad Lossless?",
+                image: "assets/img/news3.jpg",
+                excerpt: "Un análisis comparativo sobre frecuencias de audio, compresión AAC a 320kbps y sonido espacial Dolby Atmos.",
+                isHero: false
+            }
+        ];
+        localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
+    }
+
+    grid.innerHTML = newsList.map(item => `
+        <div class="bg-[#101010] border border-gray-800 hover:border-orange-500/80 rounded-2xl overflow-hidden p-4 flex flex-col justify-between space-y-3 shadow-2xl transition">
+            <div class="space-y-2.5">
+                <div class="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-black border border-gray-800">
+                    <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover object-center">
+                    <span class="absolute top-2 left-2 ${item.categoryColor || 'bg-red-600'} text-white text-[9px] font-black px-2.5 py-0.5 rounded uppercase shadow">
+                        ${item.category}
+                    </span>
+                    ${item.isHero ? `<span class="absolute top-2 right-2 bg-amber-500 text-black text-[9px] font-black px-2 py-0.5 rounded uppercase shadow">🌟 HERO PRINCIPAL</span>` : ''}
+                </div>
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between text-[10px] text-gray-400 font-semibold">
+                        <span><i class="fa-regular fa-clock text-cuycito-gold mr-1"></i> ${item.readTime}</span>
+                        <span>${item.date}</span>
+                    </div>
+                    <h5 class="text-xs font-black text-white line-clamp-2 leading-snug">${item.title}</h5>
+                    <p class="text-[11px] text-gray-400 line-clamp-2">${item.excerpt || ''}</p>
+                </div>
+            </div>
+
+            <div class="space-y-2 pt-2 border-t border-gray-800">
+                <div class="flex items-center justify-between text-[10px]">
+                    <span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Proporción 16:9 OK</span>
+                    <span class="text-gray-500 font-mono">ID: ${item.id}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.openEditArticleModal('${item.id}')" class="flex-1 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white font-black text-xs py-2 rounded-xl transition shadow flex items-center justify-center gap-1.5 glow-gold">
+                        <i class="fa-solid fa-pen-to-square"></i> Editar Noticia
+                    </button>
+                    <button onclick="window.quickDeleteAdminNewsArticle('${item.id}')" class="bg-red-950/60 hover:bg-red-800 text-red-300 hover:text-white border border-red-800/60 text-xs p-2 rounded-xl transition" title="Eliminar">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+};
+
+window.quickDeleteAdminNewsArticle = async (id) => {
+    if (!confirm("¿Seguro que deseas eliminar esta noticia?")) return;
+    let newsList = [];
+    try {
+        const stored = localStorage.getItem("cuycito_portal_news");
+        if (stored) newsList = JSON.parse(stored);
+    } catch(e) {}
+
+    newsList = newsList.filter(n => n.id !== id);
+    localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
+
+    try {
+        await setDoc(doc(db, "portal_settings", "news_articles"), {
+            articles: newsList,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+    } catch(e) {}
+
+    window.renderAdminNewsList();
+    alert("🗑️ Noticia eliminada exitosamente.");
+};
+
+window.openNewArticleModal = () => {
+    document.getElementById('newsEditId').value = "";
+    document.getElementById('newsModalHeaderTitle').innerHTML = `<i class="fa-solid fa-plus"></i> Nueva Noticia de Portada`;
+    document.getElementById('newsEditTitle').value = "";
+    document.getElementById('newsEditCategory').value = "CINE & SERIES";
+    document.getElementById('newsEditReadTime').value = "4 min de lectura";
+    document.getElementById('newsEditDate').value = "Actualizado Hoy";
+    document.getElementById('newsEditImage').value = "assets/img/news1.jpg";
+    document.getElementById('newsEditExcerpt').value = "";
+    document.getElementById('newsEditContent').value = "<p class='text-sm text-gray-300 leading-relaxed'>Contenido detallado de la noticia...</p>";
+    document.getElementById('newsEditIsHero').checked = false;
+    document.getElementById('btnDeleteNewsArticle').classList.add('hidden');
+    window.updateAdminNewsImagePreview();
+    document.getElementById('newsArticleEditModal').classList.remove('hidden');
+};
+
+window.openEditArticleModal = (newsId) => {
+    let newsList = [];
+    try {
+        const stored = localStorage.getItem("cuycito_portal_news");
+        if (stored) newsList = JSON.parse(stored);
+    } catch(e) {}
+
+    const item = newsList.find(n => n.id === newsId);
+    if (!item) return;
+
+    document.getElementById('newsEditId').value = item.id;
+    document.getElementById('newsModalHeaderTitle').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Editar Noticia: ${item.title.substring(0, 25)}...`;
+    document.getElementById('newsEditTitle').value = item.title;
+    document.getElementById('newsEditCategory').value = item.category || "CINE & SERIES";
+    document.getElementById('newsEditReadTime').value = item.readTime || "5 min de lectura";
+    document.getElementById('newsEditDate').value = item.date || "Actualizado";
+    document.getElementById('newsEditImage').value = item.image || "assets/img/news1.jpg";
+    document.getElementById('newsEditExcerpt').value = item.excerpt || "";
+    document.getElementById('newsEditContent').value = item.content || "";
+    document.getElementById('newsEditIsHero').checked = !!item.isHero;
+    document.getElementById('btnDeleteNewsArticle').classList.remove('hidden');
+    window.updateAdminNewsImagePreview();
+    document.getElementById('newsArticleEditModal').classList.remove('hidden');
+};
+
+window.updateAdminNewsImagePreview = () => {
+    const url = document.getElementById('newsEditImage').value.trim() || 'assets/img/news1.jpg';
+    const previewEl = document.getElementById('newsEditImagePreview');
+    if (previewEl) previewEl.src = url;
+};
+
+window.saveAdminNewsArticle = async () => {
+    const id = document.getElementById('newsEditId').value.trim() || ("news-" + Date.now());
+    const title = document.getElementById('newsEditTitle').value.trim();
+    const category = document.getElementById('newsEditCategory').value;
+    const readTime = document.getElementById('newsEditReadTime').value.trim();
+    const date = document.getElementById('newsEditDate').value.trim();
+    const image = document.getElementById('newsEditImage').value.trim() || 'assets/img/news1.jpg';
+    const excerpt = document.getElementById('newsEditExcerpt').value.trim();
+    const content = document.getElementById('newsEditContent').value.trim();
+    const isHero = document.getElementById('newsEditIsHero').checked;
+
+    if (!title) {
+        alert("Por favor ingresa un título para la noticia.");
+        return;
+    }
+
+    let newsList = [];
+    try {
+        const stored = localStorage.getItem("cuycito_portal_news");
+        if (stored) newsList = JSON.parse(stored);
+    } catch(e) {}
+
+    // Si este es hero, desmarcar los demás
+    if (isHero) {
+        newsList.forEach(n => n.isHero = false);
+    }
+
+    const categoryColors = {
+        "ANÁLISIS DE MERCADO": "bg-red-600",
+        "CINE & SERIES": "bg-cuycito-red",
+        "ANIME & GAMING": "bg-orange-500",
+        "AUDIO & HI-FI": "bg-emerald-600",
+        "TECNOLOGÍA 4K": "bg-sky-600"
+    };
+
+    const newObj = {
+        id,
+        title,
+        category,
+        categoryColor: categoryColors[category] || "bg-orange-600",
+        readTime,
+        date,
+        image,
+        excerpt,
+        content,
+        isHero
+    };
+
+    const idx = newsList.findIndex(n => n.id === id);
+    if (idx >= 0) {
+        newsList[idx] = newObj;
+    } else {
+        newsList.push(newObj);
+    }
+
+    localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
+
+    // Guardar también en Firebase si está disponible
+    try {
+        await setDoc(doc(db, "portal_settings", "news_articles"), {
+            articles: newsList,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+    } catch(e) {
+        console.warn("Guardado local exitoso, sincronización remota:", e);
+    }
+
+    document.getElementById('newsArticleEditModal').classList.add('hidden');
+    window.renderAdminNewsList();
+    alert("✅ ¡Noticia guardada con éxito!");
+};
+
+window.deleteAdminNewsArticle = async () => {
+    const id = document.getElementById('newsEditId').value;
+    if (!id) return;
+    if (!confirm("¿Seguro que deseas eliminar esta noticia?")) return;
+
+    let newsList = [];
+    try {
+        const stored = localStorage.getItem("cuycito_portal_news");
+        if (stored) newsList = JSON.parse(stored);
+    } catch(e) {}
+
+    newsList = newsList.filter(n => n.id !== id);
+    localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
+
+    try {
+        await setDoc(doc(db, "portal_settings", "news_articles"), {
+            articles: newsList,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+    } catch(e) {}
+
+    document.getElementById('newsArticleEditModal').classList.add('hidden');
+    window.renderAdminNewsList();
+    alert("🗑️ Noticia eliminada.");
+};
+
+// 2. Renderizado de Cartelera & Estrenos en Admin
+window.renderAdminCarteleraList = () => {
+    const grid = document.getElementById('adminCarteleraListGrid');
+    if (!grid) return;
+
+    let list = [];
+    try {
+        const stored = localStorage.getItem("cuycito_portal_cartelera");
+        if (stored) list = JSON.parse(stored);
+    } catch(e) {}
+
+    if (!list || list.length === 0) {
+        list = [
+            { id: "stranger-things", title: "Stranger Things 5: Temporada Final", platform: "NETFLIX", type: "ambos", tag: "Temporada Final", tagColor: "bg-red-600", rating: "9.5", releaseDate: "Diciembre 2026", image: "assets/img/poster3.jpg", quality: "4K UHD • Dolby Vision", synopsis: "La batalla final por Hawkins." },
+            { id: "the-last-of-us-2", title: "The Last of Us: Temporada 2", platform: "MAX", type: "ambos", tag: "Serie Platino HBO", tagColor: "bg-purple-600", rating: "9.6", releaseDate: "Estreno Mundial 2026", image: "assets/img/poster4.jpg", quality: "4K Platino • Dolby Atmos", synopsis: "Joel y Ellie en las ruinas de Seattle." },
+            { id: "demon-slayer-castillo", title: "Demon Slayer: El Castillo Infinito", platform: "CRUNCHYROLL", type: "ambos", tag: "Trilogía de Cine", tagColor: "bg-orange-600", rating: "9.9", releaseDate: "Simulcast 2026", image: "assets/img/poster2.jpg", quality: "1080p 60fps", synopsis: "Tanjiro y los Pilares entran al laberinto dimensional." },
+            { id: "the-boys-5", title: "The Boys: Temporada 5 Final", platform: "PRIME", type: "ambos", tag: "Acción & Sátira", tagColor: "bg-amber-600", rating: "9.2", releaseDate: "Temporada Final 2026", image: "assets/img/poster5.jpg", quality: "4K HDR", synopsis: "La guerra entre Carnicero y Patriota." },
+            { id: "avatar-fuego", title: "Avatar 3: Fuego y Cenizas", platform: "DISNEY", type: "estrenos", tag: "Superproducción Disney+", tagColor: "bg-blue-600", rating: "9.4", releaseDate: "Diciembre 2026", image: "assets/img/poster6.jpg", quality: "IMAX Enhanced 4K", synopsis: "James Cameron expande el universo de Pandora." },
+            { id: "daredevil-born-again", title: "Daredevil: Born Again", platform: "DISNEY", type: "cartelera", tag: "Marvel Studios", tagColor: "bg-red-700", rating: "9.3", releaseDate: "Marvel Television", image: "assets/img/poster1.jpg", quality: "4K UHD", synopsis: "Matt Murdock regresa a Hell's Kitchen." }
+        ];
+        localStorage.setItem("cuycito_portal_cartelera", JSON.stringify(list));
+    }
+
+    grid.innerHTML = list.map(item => `
+        <div class="bg-[#101010] border border-gray-800 hover:border-cuycito-gold/80 rounded-2xl overflow-hidden p-3.5 flex flex-col justify-between space-y-3 shadow-2xl transition">
+            <div class="space-y-2">
+                <div class="relative aspect-[2/3] w-full rounded-xl overflow-hidden bg-black border border-gray-800">
+                    <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover object-center">
+                    <span class="absolute top-2 left-2 ${item.tagColor || 'bg-blue-600'} text-white text-[9px] font-black px-2 py-0.5 rounded uppercase shadow">
+                        ${item.platform}
+                    </span>
+                    <span class="absolute bottom-2 right-2 bg-black/80 text-cuycito-gold text-[10px] font-black px-1.5 py-0.5 rounded border border-yellow-500/40">
+                        ★ ${item.rating}
+                    </span>
+                </div>
+                <div>
+                    <h5 class="text-xs font-black text-white truncate">${item.title}</h5>
+                    <span class="text-[10px] text-gray-400 block">${item.tag || item.platform} • <strong class="text-cuycito-gold uppercase">${item.type}</strong></span>
+                </div>
+            </div>
+
+            <div class="space-y-2 pt-2 border-t border-gray-800">
+                <div class="flex items-center justify-between text-[10px]">
+                    <span class="text-emerald-400 font-bold">2:3 Proporción OK</span>
+                    <span class="text-gray-500 font-mono">${item.releaseDate}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.openEditCarteleraModal('${item.id}')" class="flex-1 bg-cuycito-gold hover:bg-cuycito-goldHover text-black font-black text-xs py-2 rounded-xl transition shadow flex items-center justify-center gap-1.5 glow-gold">
+                        <i class="fa-solid fa-pen-to-square"></i> Editar Título
+                    </button>
+                    <button onclick="window.quickDeleteAdminCarteleraItem('${item.id}')" class="bg-red-950/60 hover:bg-red-800 text-red-300 hover:text-white border border-red-800/60 text-xs p-2 rounded-xl transition" title="Eliminar">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+};
+
+window.quickDeleteAdminCarteleraItem = async (id) => {
+    if (!confirm("¿Seguro que deseas eliminar este título de la cartelera?")) return;
+    let list = [];
+    try {
+        const stored = localStorage.getItem("cuycito_portal_cartelera");
+        if (stored) list = JSON.parse(stored);
+    } catch(e) {}
+
+    list = list.filter(c => c.id !== id);
+    localStorage.setItem("cuycito_portal_cartelera", JSON.stringify(list));
+
+    try {
+        await setDoc(doc(db, "portal_settings", "cartelera_titles"), {
+            titles: list,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+    } catch(e) {}
+
+    window.renderAdminCarteleraList();
+    alert("🗑️ Título eliminado de la cartelera.");
+};
+
+window.openNewCarteleraModal = () => {
+    document.getElementById('carteleraEditId').value = "";
+    document.getElementById('carteleraModalHeaderTitle').innerHTML = `<i class="fa-solid fa-plus"></i> Nuevo Título de Cartelera & Estrenos`;
+    document.getElementById('carteleraEditTitle').value = "";
+    document.getElementById('carteleraEditPlatform').value = "NETFLIX";
+    document.getElementById('carteleraEditType').value = "ambos";
+    document.getElementById('carteleraEditTag').value = "Estreno Global";
+    document.getElementById('carteleraEditRating').value = "9.0";
+    document.getElementById('carteleraEditReleaseDate').value = "2026";
+    document.getElementById('carteleraEditQuality').value = "4K UHD • Dolby Atmos";
+    document.getElementById('carteleraEditImage').value = "assets/img/poster3.jpg";
+    document.getElementById('carteleraEditDirector').value = "";
+    document.getElementById('carteleraEditCast').value = "";
+    document.getElementById('carteleraEditSynopsis').value = "";
+    document.getElementById('btnDeleteCarteleraItem').classList.add('hidden');
+    window.updateAdminCarteleraImagePreview();
+    document.getElementById('carteleraItemEditModal').classList.remove('hidden');
+};
+
+window.openEditCarteleraModal = (carteleraId) => {
+    let list = [];
+    try {
+        const stored = localStorage.getItem("cuycito_portal_cartelera");
+        if (stored) list = JSON.parse(stored);
+    } catch(e) {}
+
+    const item = list.find(c => c.id === carteleraId);
+    if (!item) return;
+
+    document.getElementById('carteleraEditId').value = item.id;
+    document.getElementById('carteleraModalHeaderTitle').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Editar: ${item.title}`;
+    document.getElementById('carteleraEditTitle').value = item.title;
+    document.getElementById('carteleraEditPlatform').value = item.platform || "NETFLIX";
+    document.getElementById('carteleraEditType').value = item.type || "ambos";
+    document.getElementById('carteleraEditTag').value = item.tag || "";
+    document.getElementById('carteleraEditRating').value = item.rating || "9.0";
+    document.getElementById('carteleraEditReleaseDate').value = item.releaseDate || "";
+    document.getElementById('carteleraEditQuality').value = item.quality || "4K UHD";
+    document.getElementById('carteleraEditImage').value = item.image || "assets/img/poster3.jpg";
+    document.getElementById('carteleraEditDirector').value = item.director || "";
+    document.getElementById('carteleraEditCast').value = item.cast || "";
+    document.getElementById('carteleraEditSynopsis').value = item.synopsis || "";
+    document.getElementById('btnDeleteCarteleraItem').classList.remove('hidden');
+    window.updateAdminCarteleraImagePreview();
+    document.getElementById('carteleraItemEditModal').classList.remove('hidden');
+};
+
+window.updateAdminCarteleraImagePreview = () => {
+    const url = document.getElementById('carteleraEditImage').value.trim() || 'assets/img/poster3.jpg';
+    const previewEl = document.getElementById('carteleraEditImagePreview');
+    if (previewEl) previewEl.src = url;
+};
+
+window.saveAdminCarteleraItem = async () => {
+    const id = document.getElementById('carteleraEditId').value.trim() || ("title-" + Date.now());
+    const title = document.getElementById('carteleraEditTitle').value.trim();
+    const platform = document.getElementById('carteleraEditPlatform').value;
+    const type = document.getElementById('carteleraEditType').value;
+    const tag = document.getElementById('carteleraEditTag').value.trim();
+    const rating = document.getElementById('carteleraEditRating').value.trim() || "9.0";
+    const releaseDate = document.getElementById('carteleraEditReleaseDate').value.trim() || "2026";
+    const quality = document.getElementById('carteleraEditQuality').value.trim() || "4K UHD";
+    const image = document.getElementById('carteleraEditImage').value.trim() || 'assets/img/poster3.jpg';
+    const director = document.getElementById('carteleraEditDirector').value.trim();
+    const cast = document.getElementById('carteleraEditCast').value.trim();
+    const synopsis = document.getElementById('carteleraEditSynopsis').value.trim();
+
+    if (!title) {
+        alert("Por favor ingresa un título para la serie o película.");
+        return;
+    }
+
+    const platformColors = {
+        "NETFLIX": "bg-red-600",
+        "MAX": "bg-purple-600",
+        "DISNEY": "bg-blue-600",
+        "PRIME": "bg-amber-600",
+        "CRUNCHYROLL": "bg-orange-600",
+        "APPLE": "bg-sky-600"
+    };
+
+    const newObj = {
+        id,
+        title,
+        platform,
+        type,
+        tag: tag || platform,
+        tagColor: platformColors[platform] || "bg-cuycito-gold",
+        rating,
+        releaseDate,
+        quality,
+        image,
+        director,
+        cast,
+        synopsis
+    };
+
+    let list = [];
+    try {
+        const stored = localStorage.getItem("cuycito_portal_cartelera");
+        if (stored) list = JSON.parse(stored);
+    } catch(e) {}
+
+    const idx = list.findIndex(c => c.id === id);
+    if (idx >= 0) {
+        list[idx] = newObj;
+    } else {
+        list.push(newObj);
+    }
+
+    localStorage.setItem("cuycito_portal_cartelera", JSON.stringify(list));
+
+    try {
+        await setDoc(doc(db, "portal_settings", "cartelera_titles"), {
+            titles: list,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+    } catch(e) {}
+
+    document.getElementById('carteleraItemEditModal').classList.add('hidden');
+    window.renderAdminCarteleraList();
+    alert("✅ ¡Título de Cartelera / Estreno guardado con éxito!");
+};
+
+window.deleteAdminCarteleraItem = async () => {
+    const id = document.getElementById('carteleraEditId').value;
+    if (!id) return;
+    if (!confirm("¿Seguro que deseas eliminar este título de la cartelera?")) return;
+
+    let list = [];
+    try {
+        const stored = localStorage.getItem("cuycito_portal_cartelera");
+        if (stored) list = JSON.parse(stored);
+    } catch(e) {}
+
+    list = list.filter(c => c.id !== id);
+    localStorage.setItem("cuycito_portal_cartelera", JSON.stringify(list));
+
+    try {
+        await setDoc(doc(db, "portal_settings", "cartelera_titles"), {
+            titles: list,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+    } catch(e) {}
+
+    document.getElementById('carteleraItemEditModal').classList.add('hidden');
+    window.renderAdminCarteleraList();
+    alert("🗑️ Título eliminado.");
+};
