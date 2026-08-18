@@ -1,4 +1,44 @@
-import { db, collection, getDocs, setDoc, doc, query, where } from './firebase-config.js';
+import { db, collection, getDocs, setDoc, doc, query, where, onSnapshot } from './firebase-config.js';
+
+// ==========================================================================
+// PROTOCOLO DE MANTENIMIENTO: PAUSAR ACCESO POR LOGIN
+// ==========================================================================
+let isStoreInMaintenance = false;
+
+try {
+    onSnapshot(doc(db, "system_config", "store_settings"), (docSnap) => {
+        const notice = document.getElementById('loginMaintenanceNotice');
+        const btn = document.getElementById('btnLoginSubmit');
+        const alertBox = document.getElementById('loginAlertBox');
+
+        if (docSnap.exists() && docSnap.data().maintenanceMode === true) {
+            isStoreInMaintenance = true;
+            if (notice) notice.classList.remove('hidden');
+            if (btn) {
+                btn.classList.remove('from-cuycito-redDark', 'via-cuycito-red', 'to-cuycito-redHover');
+                btn.classList.add('bg-gray-800', 'text-gray-400', 'border', 'border-red-500/50');
+                btn.innerHTML = '<i class="fa-solid fa-lock text-red-400 mr-1.5"></i> Acceso Pausado por Mantenimiento';
+            }
+            if (alertBox) {
+                alertBox.innerText = '⚠️ El acceso por medio de login se encuentra pausado temporalmente por mantenimiento técnico. Por favor espera a que se restablezca el servicio.';
+                alertBox.classList.remove('hidden');
+            }
+        } else {
+            isStoreInMaintenance = false;
+            if (notice) notice.classList.add('hidden');
+            if (btn && !btn.disabled) {
+                btn.className = "w-full bg-gradient-to-r from-cuycito-redDark via-cuycito-red to-cuycito-redHover hover:from-cuycito-red hover:to-cuycito-gold text-white font-extrabold py-3.5 rounded-xl transition-all duration-300 shadow-lg glow-red text-sm flex items-center justify-center gap-2 uppercase tracking-wider";
+                btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Ingresar a Mi Cuenta';
+            }
+            if (alertBox && alertBox.innerText.includes('mantenimiento')) {
+                alertBox.classList.add('hidden');
+                alertBox.innerText = '';
+            }
+        }
+    });
+} catch(err) {
+    console.warn("Error en listener de mantenimiento login:", err);
+}
 
 // Si ya tiene sesión activa, redirigir directo a perfil.html
 const existingSession = localStorage.getItem("cuycitoClient");
@@ -40,6 +80,14 @@ if (form) {
 
         alertBox.classList.add('hidden');
         alertBox.innerText = '';
+
+        // BLOQUEO POR PROTOCOLO DE MANTENIMIENTO ACTIVO
+        if (isStoreInMaintenance) {
+            alertBox.innerText = '🛑 El acceso por login se encuentra pausado temporalmente debido a labores de mantenimiento técnico en la tienda. Intenta nuevamente cuando el servicio vuelva al estado operativo.';
+            alertBox.classList.remove('hidden');
+            return;
+        }
+
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando datos...';
 

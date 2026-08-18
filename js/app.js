@@ -2071,12 +2071,14 @@ window.initStoreMaintenanceListener = () => {
 
 window.updateStoreMaintenanceUI = (isMaintenance) => {
     // 1. Switches
+    const switchElGlobal = document.getElementById('globalStoreMaintenanceToggle');
     const switchEl1 = document.getElementById('storeMaintenanceSwitch');
     const switchEl2 = document.getElementById('storeMaintenanceSwitchCatalog');
+    if (switchElGlobal) switchElGlobal.checked = isMaintenance;
     if (switchEl1) switchEl1.checked = isMaintenance;
     if (switchEl2) switchEl2.checked = isMaintenance;
 
-    // 2. Badges e Indicadores en Tab 4 y Tab 5
+    // 2. Badges e Indicadores en Tab 4 y Tab 5 y Barra Global
     const badges = document.querySelectorAll('.store-status-badge');
     badges.forEach(b => {
         if (isMaintenance) {
@@ -2084,7 +2086,7 @@ window.updateStoreMaintenanceUI = (isMaintenance) => {
             b.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400 animate-ping"></span> Clientes Desactivados (En Mantenimiento)';
         } else {
             b.className = "store-status-badge bg-emerald-950 text-emerald-300 border border-emerald-500/60 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1";
-            b.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Clientes Activados (Tienda Abierta)';
+            b.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Clientes Activados (Tienda Operativa)';
         }
     });
 
@@ -2092,9 +2094,9 @@ window.updateStoreMaintenanceUI = (isMaintenance) => {
     const descEls = document.querySelectorAll('.store-status-desc');
     descEls.forEach(d => {
         if (isMaintenance) {
-            d.innerHTML = '<strong class="text-red-400">MODO CRÍTICO ACTIVO:</strong> El acceso a la tienda está bloqueado para los clientes. Al entrar verán el mensaje "Estamos en mantenimiento".';
+            d.innerHTML = '<strong class="text-red-400">MODO CRÍTICO ACTIVO:</strong> El acceso a la tienda y login está pausado para los clientes. Al entrar verán el mensaje "Estamos en mantenimiento".';
         } else {
-            d.innerHTML = 'Los clientes pueden explorar el catálogo, agregar saldo y adquirir pantallas con normalidad.';
+            d.innerHTML = 'Acceso por login habilitado para todos los clientes. Compras y tienda operativas.';
         }
     });
 

@@ -48,6 +48,24 @@
     <!-- Contenedor Principal de Login -->
     <main class="flex-1 flex flex-col items-center justify-center px-4 py-6 space-y-4 w-full">
         
+        <!-- AVISO DE PROTOCOLO DE MANTENIMIENTO ACTIVO (BLOQUEO DE LOGIN) -->
+        <div id="loginMaintenanceNotice" class="hidden w-full max-w-md mx-auto">
+            <div class="bg-gradient-to-r from-red-950/95 via-black to-red-950/90 border-2 border-red-500/80 rounded-2xl p-4 shadow-2xl text-center space-y-2 glow-red animate-pulse">
+                <div class="w-10 h-10 mx-auto rounded-xl bg-red-500/20 text-red-400 border border-red-500/50 flex items-center justify-center text-xl shadow">
+                    🛠️
+                </div>
+                <div>
+                    <span class="bg-red-900 text-red-200 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        Modo Mantenimiento Activo
+                    </span>
+                    <h3 class="text-sm font-black text-white mt-1">Acceso a Tienda Pausado Temporalmente</h3>
+                    <p class="text-xs text-gray-300 leading-snug mt-1">
+                        El acceso por login se encuentra pausado por labores de mantenimiento del servidor. Volveremos muy pronto con el servicio activo.
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <!-- BANNER DE APERTURA (+S/ 1.00 DE CRÉDITO) -->
         <div id="openingBonusBanner" class="w-full max-w-md mx-auto">
             <div class="bg-gradient-to-r from-amber-950/90 via-black to-emerald-950/90 border border-cuycito-gold/70 rounded-2xl p-4 shadow-xl flex items-center justify-between gap-3 glow-gold">

@@ -285,6 +285,7 @@ function initClientStoreMaintenanceListener() {
 function updateClientStoreMaintenanceState() {
     const storeTabBtn = document.getElementById('tabBtnStore');
     const storeMaintenanceNotice = document.getElementById('profileStoreMaintenanceNotice');
+    const globalNotice = document.getElementById('profileGlobalMaintenanceNotice');
     const storeContent = document.getElementById('profileStoreNormalContent');
 
     if (isStoreMaintenanceActive) {
@@ -292,12 +293,14 @@ function updateClientStoreMaintenanceState() {
             storeTabBtn.innerHTML = '<i class="fa-solid fa-store text-amber-400"></i> Tienda VIP <span class="bg-red-950 text-red-400 border border-red-500/50 text-[9px] px-1.5 py-0.5 rounded-full font-black ml-1">🛠️ Mantenimiento</span>';
         }
         if (storeMaintenanceNotice) storeMaintenanceNotice.classList.remove('hidden');
+        if (globalNotice) globalNotice.classList.remove('hidden');
         if (storeContent) storeContent.classList.add('hidden');
     } else {
         if (storeTabBtn) {
             storeTabBtn.innerHTML = '<i class="fa-solid fa-store text-emerald-400"></i> Tienda VIP';
         }
         if (storeMaintenanceNotice) storeMaintenanceNotice.classList.add('hidden');
+        if (globalNotice) globalNotice.classList.add('hidden');
         if (storeContent) storeContent.classList.remove('hidden');
     }
 }
