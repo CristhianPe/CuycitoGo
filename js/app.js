@@ -2075,10 +2075,12 @@ window.updateStoreMaintenanceUI = (isMaintenance) => {
     const switchElGlobal = document.getElementById('globalStoreMaintenanceToggle');
     const switchEl1 = document.getElementById('storeMaintenanceSwitch');
     const switchEl2 = document.getElementById('storeMaintenanceSwitchCatalog');
+    const switchElClientsRow = document.getElementById('storeMaintenanceSwitchClientsRow');
     if (switchElHeader) switchElHeader.checked = isMaintenance;
     if (switchElGlobal) switchElGlobal.checked = isMaintenance;
     if (switchEl1) switchEl1.checked = isMaintenance;
     if (switchEl2) switchEl2.checked = isMaintenance;
+    if (switchElClientsRow) switchElClientsRow.checked = isMaintenance;
 
     // 2. Badges e Indicadores en Header, Tab 4, Tab 5 y Barra Global
     const badges = document.querySelectorAll('.store-status-badge');

@@ -25,23 +25,35 @@
                 <h1 class="text-xl sm:text-3xl font-black tracking-widest text-cuycito-gold drop-shadow-md leading-none" style="font-family: impact, sans-serif;">CuycitoGO</h1>
                 <p class="text-[9px] sm:text-xs text-gray-400 uppercase tracking-widest font-bold">Admin Center PRO</p>
             </div>
+            
+            <!-- INTERRUPTOR MAESTRO DE ACCESO A TIENDA (SIEMPRE VISIBLE EN EL HEADER) -->
+            <div class="store-maintenance-header-box flex items-center gap-2.5 bg-black/90 border-2 border-emerald-500/80 px-3 py-1.5 rounded-2xl shadow-xl ml-2 sm:ml-4 transition-all">
+                <div class="flex flex-col text-right">
+                    <span class="text-[10px] sm:text-xs font-black uppercase tracking-wider store-switch-label text-emerald-400">TIENDA OPERATIVA</span>
+                    <span class="text-[9px] text-gray-400 store-switch-sublabel hidden sm:inline">Acceso Clientes OK</span>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="headerStoreMaintenanceToggle" onchange="window.handleStoreMaintenanceToggle(this.checked)" class="sr-only peer">
+                    <div class="w-12 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                </label>
+            </div>
         </div>
 
-        <!-- Controles para PC (Escritorio >= 1280px) -->
-        <div class="hidden xl:flex items-center gap-3">
+        <!-- Controles para PC -->
+        <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
             <!-- Botón de Estado de Notificaciones Chrome -->
             <button 
                 id="btnChromeNotifStatus" 
                 onclick="window.requestChromeNotificationPermission()" 
-                class="bg-yellow-950/80 hover:bg-yellow-900/80 border border-yellow-500/50 text-xs px-3 py-1.5 rounded-xl transition flex items-center gap-2 shadow glow-gold cursor-pointer"
+                class="hidden md:flex bg-yellow-950/80 hover:bg-yellow-900/80 border border-yellow-500/50 text-xs px-3 py-1.5 rounded-xl transition items-center gap-2 shadow glow-gold cursor-pointer"
                 title="Haz clic para activar o verificar notificaciones de Google Chrome"
             >
                 <i class="fa-solid fa-bell text-yellow-400 text-sm animate-pulse"></i>
-                <span class="text-yellow-300 font-bold hidden sm:inline">Activar Alertas Chrome</span>
+                <span class="text-yellow-300 font-bold hidden lg:inline">Alertas</span>
             </button>
 
             <!-- Menú Rápido de Pruebas de Notificación -->
-            <div class="relative group">
+            <div class="relative group hidden sm:block">
                 <button class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 text-xs px-2.5 py-1.5 rounded-xl transition font-bold flex items-center gap-1" title="Probar Alertas">
                     <i class="fa-solid fa-vial text-cyan-400"></i>
                     <span class="hidden md:inline">Test</span>
@@ -61,18 +73,6 @@
                         ⚠️ Test Lemon Inactivo
                     </button>
                 </div>
-            </div>
-
-            <!-- INTERRUPTOR MAESTRO DE ACCESO A TIENDA EN HEADER -->
-            <div id="headerStoreControlContainer" class="flex items-center gap-2.5 bg-black/90 border-2 border-emerald-500/70 px-3.5 py-1.5 rounded-xl shadow-lg glow-gold store-maintenance-header-box">
-                <div class="flex flex-col text-right">
-                    <span class="text-[10px] font-black uppercase tracking-wider store-switch-label text-emerald-400">TIENDA OPERATIVA</span>
-                    <span class="text-[9px] text-gray-400 store-switch-sublabel">Acceso Clientes OK</span>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="headerStoreMaintenanceToggle" onchange="window.handleStoreMaintenanceToggle(this.checked)" class="sr-only peer">
-                    <div class="w-12 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-                </label>
             </div>
 
             <!-- Indicador único de Auto-Guardado en Nube (Interactivo) -->
@@ -381,14 +381,24 @@
                     </div>
                 </div>
 
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-black/50 p-4 rounded-xl border border-gray-800">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 bg-black/50 p-4 rounded-xl border border-gray-800">
                     <div>
                         <h3 class="text-sm font-black text-white uppercase"><i class="fa-solid fa-address-book text-blue-400 mr-1.5"></i> Gestión de Accesos & Servicios de Clientes</h3>
                         <p class="text-xs text-gray-400 mt-0.5">Verifica solicitudes de cuenta gratis, valida referidos VIP y administra credenciales de clientes.</p>
                     </div>
-                    <button onclick="window.openClientModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-4 py-2.5 rounded-lg glow-gold transition flex items-center gap-2">
-                        <i class="fa-solid fa-user-plus"></i> Crear Acceso Web Manual
-                    </button>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <!-- Interruptor en barra de clientes -->
+                        <div class="store-maintenance-card flex items-center gap-2.5 bg-black border-2 border-emerald-500/70 px-3.5 py-1.5 rounded-xl shadow">
+                            <span class="store-switch-label text-[11px] font-black uppercase text-emerald-400">TIENDA OPERATIVA</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="storeMaintenanceSwitchClientsRow" onchange="window.handleStoreMaintenanceToggle(this.checked)" class="sr-only peer">
+                                <div class="w-12 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                            </label>
+                        </div>
+                        <button onclick="window.openClientModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-4 py-2.5 rounded-lg glow-gold transition flex items-center gap-2">
+                            <i class="fa-solid fa-user-plus"></i> Crear Acceso Web Manual
+                        </button>
+                    </div>
                 </div>
 
                 <!-- 1. SOLICITUDES DE CUENTA GRATIS / REGISTRO PENDIENTES DE VERIFICACIÓN (CON ALARMA) -->
@@ -2003,8 +2013,8 @@
         </div>
     </div>
 
-    <script src="js/ai-marketing-agent.js"></script>
-    <script src="js/admin-notifications.js"></script>
-    <script type="module" src="js/app.js"></script>
+    <script src="js/ai-marketing-agent.js?v=2.6"></script>
+    <script src="js/admin-notifications.js?v=2.6"></script>
+    <script type="module" src="js/app.js?v=2.6"></script>
 </body>
 </html>
