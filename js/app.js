@@ -3111,25 +3111,59 @@ window.approveRechargeOrder = async (orderId) => {
     const order = appState.recharges.find(r => r.id === orderId);
     if (!order) return alert("Orden no encontrada.");
 
-    const amountToCredit = parseFloat(order.exactAmount || order.baseAmount || 0);
-    if (!confirm(`¿Aprobar manualmente la recarga de S/ ${amountToCredit.toFixed(2)} para el cliente "${order.userName || order.userId}"?`)) return;
+    const amountToCredit = parseFloat(order.exactAmount || order.baseAmount || order.amount || 0);
+    const clientDisplayName = order.userName || order.userNickname || order.userId || "Cliente";
+
+    if (!confirm(`¿Aprobar manualmente la recarga de S/ ${amountToCredit.toFixed(2)} para el cliente "${clientDisplayName}"?`)) return;
 
     try {
-        // 1. Buscar cliente y acreditar saldo (monto total con céntimos)
-        const userDocRef = doc(db, "users", order.userId);
-        const clientObj = appState.clients.find(c => c.id === order.userId);
-        const currentBal = clientObj ? parseFloat(clientObj.balance || 0) : 0;
+        // 1. Buscar cliente de manera exhaustiva (por ID, Teléfono, Email o Nombre)
+        let clientObj = appState.clients.find(c => c.id === order.userId);
+        if (!clientObj && order.userPhone) {
+            clientObj = appState.clients.find(c => c.phone && c.phone.trim() === order.userPhone.trim());
+        }
+        if (!clientObj && order.userEmail) {
+            clientObj = appState.clients.find(c => c.email && c.email.trim().toLowerCase() === order.userEmail.trim().toLowerCase());
+        }
+        if (!clientObj && order.userName) {
+            clientObj = appState.clients.find(c => 
+                (c.name && c.name.trim().toLowerCase() === order.userName.trim().toLowerCase()) ||
+                (c.nickname && c.nickname.trim().toLowerCase() === order.userName.trim().toLowerCase())
+            );
+        }
+
+        const targetUserId = clientObj ? clientObj.id : (order.userId || 'user_' + Date.now());
+        const userDocRef = doc(db, "users", targetUserId);
+
+        // Obtener saldo más reciente de Firestore
+        let currentBal = 0;
+        try {
+            const userSnap = await getDoc(userDocRef);
+            if (userSnap.exists()) {
+                currentBal = parseFloat(userSnap.data().balance || 0);
+            } else if (clientObj) {
+                currentBal = parseFloat(clientObj.balance || 0);
+            }
+        } catch (err) {
+            if (clientObj) currentBal = parseFloat(clientObj.balance || 0);
+        }
+
         const newBal = parseFloat((currentBal + amountToCredit).toFixed(2));
 
         if (clientObj) clientObj.balance = newBal;
-        await setDoc(userDocRef, { balance: newBal, lastRechargeAt: new Date().toISOString() }, { merge: true });
+        await setDoc(userDocRef, { 
+            balance: newBal, 
+            lastRechargeAt: new Date().toISOString(),
+            ...(order.userName ? { name: order.userName } : {}),
+            ...(order.userPhone ? { phone: order.userPhone } : {})
+        }, { merge: true });
 
         // 2. Actualizar estado de la orden
         order.status = 'completed';
         order.completedAt = new Date().toISOString();
-        order.transferReference = 'Aprobación Manual Admin';
+        order.transferReference = 'Aprobación Manual Admin Dashboard';
         order.creditedAmount = amountToCredit;
-        await setDoc(doc(db, "recharge_orders", order.id), order);
+        await setDoc(doc(db, "recharge_orders", order.id), order, { merge: true });
 
         // 3. Registrar en historial contable
         const txId = `tx_rec_man_${Date.now()}`;
@@ -3137,7 +3171,7 @@ window.approveRechargeOrder = async (orderId) => {
             id: txId,
             date: new Date().toISOString().split('T')[0],
             type: 'RECARGA_MANUAL',
-            person: order.userName || order.userId,
+            person: clientDisplayName,
             service: 'Recarga Saldo VIP',
             amount: amountToCredit,
             currency: order.currency || 'PEN',
@@ -3149,11 +3183,11 @@ window.approveRechargeOrder = async (orderId) => {
         window.notifyAutoSave('Recarga Aprobada');
         window.renderRechargesTable();
         window.renderClients();
-        alert(`✅ ¡Recarga de S/ ${amountToCredit.toFixed(2)} aprobada y acreditada exitosamente!`);
+        alert(`✅ ¡Recarga de S/ ${amountToCredit.toFixed(2)} aprobada y acreditada con éxito! Nuevo saldo de ${clientDisplayName}: S/ ${newBal.toFixed(2)}`);
 
     } catch (e) {
         console.error(e);
-        alert("Error al aprobar la recarga en Firebase.");
+        alert("Error al aprobar la recarga en Firebase: " + e.message);
     }
 };
 

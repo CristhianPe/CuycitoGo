@@ -33,7 +33,9 @@ data class AlarmEventModel(
 
 data class RecargaModel(
     val id: String = "",
+    val userId: String = "",
     val clientName: String = "",
+    val clientPhone: String = "",
     val clientEmail: String = "",
     val amount: Double = 0.0,
     val paymentMethod: String = "Yape",

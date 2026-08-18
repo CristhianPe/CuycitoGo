@@ -87,10 +87,17 @@ class FirebaseManager(private val context: Context) {
                                 else -> System.currentTimeMillis()
                             }
                             val statusRaw = (data["status"] as? String ?: "pending_manual").trim()
+                            val uId = data["userId"] as? String ?: data["uid"] as? String ?: ""
+                            val uPhone = data["userPhone"] as? String ?: data["phone"] as? String ?: ""
+                            val uName = data["userName"] as? String ?: data["name"] as? String ?: data["userNickname"] as? String ?: "Cliente"
+                            val uEmail = data["userEmail"] as? String ?: data["email"] as? String ?: ""
+
                             RecargaModel(
                                 id = doc.id,
-                                clientName = data["userName"] as? String ?: data["name"] as? String ?: data["userNickname"] as? String ?: "Cliente",
-                                clientEmail = data["userEmail"] as? String ?: data["email"] as? String ?: "",
+                                userId = uId,
+                                clientName = uName,
+                                clientPhone = uPhone,
+                                clientEmail = uEmail,
                                 amount = amountVal,
                                 paymentMethod = data["paymentMethod"] as? String ?: data["method"] as? String ?: "Yape / Plin",
                                 voucherUrl = data["voucherUrl"] as? String ?: data["imageUrl"] as? String ?: data["receiptUrl"] as? String ?: data["voucher"] as? String ?: "",
@@ -111,23 +118,116 @@ class FirebaseManager(private val context: Context) {
 
     suspend fun approveRecarga(recarga: RecargaModel): Result<Boolean> {
         return try {
-            // 1. Actualizar orden
+            val nowIso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
+            val nowDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+            // 1. Actualizar orden en recharge_orders con estado completed / approved
             firestore.collection("recharge_orders").document(recarga.id)
-                .update("status", "approved", "verifiedAt", System.currentTimeMillis().toString())
+                .update(
+                    "status", "completed",
+                    "verifiedAt", System.currentTimeMillis().toString(),
+                    "completedAt", nowIso,
+                    "creditedAmount", recarga.amount,
+                    "transferReference", "Aprobacion Movil Admin"
+                )
                 .await()
 
-            // 2. Sumar saldo al cliente en la coleccion "users"
-            if (recarga.clientEmail.isNotBlank()) {
-                val querySnap = firestore.collection("users")
-                    .whereEqualTo("email", recarga.clientEmail)
-                    .get()
-                    .await()
+            var userUpdated = false
 
-                for (doc in querySnap.documents) {
-                    val currentBal = (doc.getDouble("balance") ?: 0.0)
-                    doc.reference.update("balance", currentBal + recarga.amount).await()
-                }
+            // 2.A. Buscar directamente por doc ID en la coleccion "users"
+            if (recarga.userId.isNotBlank()) {
+                try {
+                    val userDoc = firestore.collection("users").document(recarga.userId).get().await()
+                    if (userDoc.exists()) {
+                        val currentBal = userDoc.getDouble("balance") ?: (userDoc.getLong("balance")?.toDouble() ?: 0.0)
+                        val newBal = currentBal + recarga.amount
+                        userDoc.reference.update(
+                            "balance", newBal,
+                            "lastRechargeAt", nowIso
+                        ).await()
+                        userUpdated = true
+                    }
+                } catch (e: Exception) {}
             }
+
+            // 2.B. Si no se actualizó por ID, buscar por teléfono
+            if (!userUpdated && recarga.clientPhone.isNotBlank()) {
+                try {
+                    val phoneQuery = firestore.collection("users")
+                        .whereEqualTo("phone", recarga.clientPhone)
+                        .get()
+                        .await()
+                    for (doc in phoneQuery.documents) {
+                        val currentBal = doc.getDouble("balance") ?: (doc.getLong("balance")?.toDouble() ?: 0.0)
+                        val newBal = currentBal + recarga.amount
+                        doc.reference.update(
+                            "balance", newBal,
+                            "lastRechargeAt", nowIso
+                        ).await()
+                        userUpdated = true
+                    }
+                } catch (e: Exception) {}
+            }
+
+            // 2.C. Si no se actualizó, buscar por email
+            if (!userUpdated && recarga.clientEmail.isNotBlank() && !recarga.clientEmail.contains("Sin correo", ignoreCase = true)) {
+                try {
+                    val emailQuery = firestore.collection("users")
+                        .whereEqualTo("email", recarga.clientEmail)
+                        .get()
+                        .await()
+                    for (doc in emailQuery.documents) {
+                        val currentBal = doc.getDouble("balance") ?: (doc.getLong("balance")?.toDouble() ?: 0.0)
+                        val newBal = currentBal + recarga.amount
+                        doc.reference.update(
+                            "balance", newBal,
+                            "lastRechargeAt", nowIso
+                        ).await()
+                        userUpdated = true
+                    }
+                } catch (e: Exception) {}
+            }
+
+            // 2.D. Si no se actualizó, buscar por coincidencia de nombre o nickname en todos los usuarios
+            if (!userUpdated && recarga.clientName.isNotBlank() && recarga.clientName != "Cliente") {
+                try {
+                    val allUsers = firestore.collection("users").get().await()
+                    val targetName = recarga.clientName.trim().lowercase()
+                    for (doc in allUsers.documents) {
+                        val name = (doc.getString("name") ?: "").trim().lowercase()
+                        val nickname = (doc.getString("nickname") ?: "").trim().lowercase()
+                        if (name == targetName || nickname == targetName ||
+                            (name.isNotBlank() && targetName.contains(name)) ||
+                            (nickname.isNotBlank() && targetName.contains(nickname))) {
+                            val currentBal = doc.getDouble("balance") ?: (doc.getLong("balance")?.toDouble() ?: 0.0)
+                            val newBal = currentBal + recarga.amount
+                            doc.reference.update(
+                                "balance", newBal,
+                                "lastRechargeAt", nowIso
+                            ).await()
+                            userUpdated = true
+                            break
+                        }
+                    }
+                } catch (e: Exception) {}
+            }
+
+            // 3. Registrar en historial contable oficial
+            val txId = "tx_rec_app_" + System.currentTimeMillis()
+            val txData = hashMapOf(
+                "id" to txId,
+                "date" to nowDate,
+                "type" to "RECARGA_MANUAL",
+                "person" to recarga.clientName,
+                "service" to "Recarga Saldo VIP",
+                "amount" to recarga.amount,
+                "currency" to "PEN",
+                "orderId" to recarga.id
+            )
+            try {
+                firestore.collection("history").document(txId).set(txData).await()
+            } catch (e: Exception) {}
+
             Result.success(true)
         } catch (e: Exception) {
             Result.failure(e)

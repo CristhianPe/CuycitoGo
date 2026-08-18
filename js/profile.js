@@ -1,6 +1,6 @@
-import { db, collection, getDocs, getDoc, doc, setDoc } from "./firebase-config.js";
+import { db, collection, getDocs, getDoc, doc, setDoc, onSnapshot } from "./firebase-config.js";
 
-// Catálogo de Precios de Servicios VIP (para renovaciones y cálculos)
+// Catálogo de Precios de Servicios VIP (referencia por defecto)
 const VIP_CATALOG = {
     "Netflix": { price: 15.00 },
     "HBO Max": { price: 14.00 },
@@ -16,6 +16,33 @@ const VIP_CATALOG = {
     "Apple TV+": { price: 8.00 },
     "IPTV Pro": { price: 15.00 }
 };
+
+// Función para obtener el precio EXACTO que se le cobra al cliente por su servicio
+function getSubscriptionPrice(sub) {
+    if (!sub) return 15.00;
+    // 1. Si la suscripción ya tiene un precio asignado en la base de datos (conservar lo que ya se le cobra)
+    if (sub.price !== undefined && sub.price !== null && sub.price !== "" && !isNaN(parseFloat(sub.price)) && parseFloat(sub.price) > 0) {
+        return parseFloat(sub.price);
+    }
+    if (sub.amount !== undefined && sub.amount !== null && sub.amount !== "" && !isNaN(parseFloat(sub.amount)) && parseFloat(sub.amount) > 0) {
+        return parseFloat(sub.amount);
+    }
+    if (sub.cost !== undefined && sub.cost !== null && sub.cost !== "" && !isNaN(parseFloat(sub.cost)) && parseFloat(sub.cost) > 0) {
+        return parseFloat(sub.cost);
+    }
+    // 2. Si no tiene precio explícito, buscar en catálogo por nombre
+    if (sub.service && VIP_CATALOG[sub.service] && VIP_CATALOG[sub.service].price) {
+        return parseFloat(VIP_CATALOG[sub.service].price);
+    }
+    const sName = (sub.service || '').toLowerCase();
+    for (const k in VIP_CATALOG) {
+        if (sName.includes(k.toLowerCase()) || k.toLowerCase().includes(sName)) {
+            return parseFloat(VIP_CATALOG[k].price);
+        }
+    }
+    return 15.00;
+}
+window.getSubscriptionPrice = getSubscriptionPrice;
 
 function getDaysRemaining(endDateStr) {
     if (!endDateStr) return 0;
@@ -185,17 +212,39 @@ if (document.readyState === "loading") {
 }
 
 // Sincroniza los datos más recientes del usuario desde Firestore (saldo, nickname, etc.)
+let userSnapshotUnsubscribe = null;
+
 async function refreshUserDataFromFirestore() {
-    if (!currentClientUser || !currentClientUser.id) return;
+    if (!currentClientUser) return;
     try {
         const usersSnap = await getDocs(collection(db, "users"));
+        let matchedDoc = null;
         usersSnap.forEach(d => {
-            if (d.id === currentClientUser.id || d.data().phone === currentClientUser.phone) {
-                currentClientUser = { id: d.id, ...d.data() };
-                localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
-                updateProfileUI();
+            const uData = d.data();
+            if (d.id === currentClientUser.id || 
+                (uData.phone && currentClientUser.phone && uData.phone.trim() === currentClientUser.phone.trim()) ||
+                (uData.email && currentClientUser.email && uData.email.trim().toLowerCase() === currentClientUser.email.trim().toLowerCase()) ||
+                (uData.name && currentClientUser.name && uData.name.trim().toLowerCase() === currentClientUser.name.trim().toLowerCase())) {
+                matchedDoc = { id: d.id, ...uData };
             }
         });
+
+        if (matchedDoc) {
+            currentClientUser = { ...currentClientUser, ...matchedDoc };
+            localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+            updateProfileUI();
+
+            // Suscribirse a cambios en tiempo real del usuario
+            if (!userSnapshotUnsubscribe && matchedDoc.id) {
+                userSnapshotUnsubscribe = onSnapshot(doc(db, "users", matchedDoc.id), (docSnap) => {
+                    if (docSnap.exists()) {
+                        currentClientUser = { ...currentClientUser, id: docSnap.id, ...docSnap.data() };
+                        localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+                        updateProfileUI();
+                    }
+                });
+            }
+        }
     } catch (e) {
         console.error("Error refrescando usuario desde Firestore:", e);
     }
@@ -220,15 +269,15 @@ function updateProfileUI() {
     const balanceDisplay = document.getElementById('profileBalanceDisplay');
     const avatar = document.getElementById('profileAvatar');
 
-    if (navNick) navNick.innerText = currentClientUser.isDemo ? `@${nickname} (DEMO)` : `@${nickname}`;
+    if (navNick) navNick.innerText = `@${nickname}`;
     if (navPhone) navPhone.innerText = phone;
-    if (headerNick) headerNick.innerText = currentClientUser.isDemo ? `@${nickname} 🐹 [MODO DEMO]` : `@${nickname}`;
+    if (headerNick) headerNick.innerText = `@${nickname}`;
     if (headerReal) headerReal.innerText = realName;
     if (headerPhone) headerPhone.innerText = phone;
     if (headerMail) headerMail.innerText = email;
-    if (balanceDisplay) balanceDisplay.innerText = currentClientUser.isDemo ? `S/ 99,999.00 (Demo Ilimitado)` : `S/ ${balance}`;
+    if (balanceDisplay) balanceDisplay.innerText = `S/ ${balance}`;
     const rouletteBal = document.getElementById('rouletteUserBalanceDisplay');
-    if (rouletteBal) rouletteBal.innerText = currentClientUser.isDemo ? `S/ 99,999.00 (Ilimitado)` : `S/ ${balance}`;
+    if (rouletteBal) rouletteBal.innerText = `S/ ${balance}`;
     if (avatar && nickname) avatar.innerText = nickname.charAt(0).toUpperCase();
 
     // Rellenar modal de edición
@@ -651,7 +700,7 @@ function renderClientSubscriptions(subs) {
         }
 
         if (!isPending) {
-            const renewPrice = parseFloat(sub.price || (VIP_CATALOG[sub.service] ? VIP_CATALOG[sub.service].price : 15.00));
+            const renewPrice = getSubscriptionPrice(sub);
             actionBtnHTML = `
                 <button onclick="window.promptSubRenewal('${sub.id}')" class="w-full bg-gradient-to-r from-cuycito-red via-orange-500 to-amber-500 hover:from-cuycito-redHover hover:to-yellow-400 text-white hover:text-black font-black text-xs py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg glow-gold uppercase tracking-wider">
                     <i class="fa-solid fa-rotate-right text-sm"></i>
@@ -659,6 +708,8 @@ function renderClientSubscriptions(subs) {
                 </button>
             `;
         }
+
+        const currentPlanPrice = getSubscriptionPrice(sub);
 
         html += `
         <div class="bg-[#121212] border ${borderClass} rounded-3xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between shadow-xl relative group">
@@ -675,6 +726,11 @@ function renderClientSubscriptions(subs) {
                 ${credentialsBlockHTML}
 
                 <div class="text-[11px] text-gray-400 font-mono flex items-center justify-between pt-1">
+                    <span>Mensualidad:</span>
+                    <strong class="text-cuycito-gold font-bold">S/ ${currentPlanPrice.toFixed(2)}</strong>
+                </div>
+
+                <div class="text-[11px] text-gray-400 font-mono flex items-center justify-between pt-0.5">
                     <span>Fecha Vencimiento:</span>
                     <strong class="${isExpired ? 'text-red-400' : 'text-white'}">${sub.endDate}</strong>
                 </div>
@@ -1081,7 +1137,7 @@ window.promptSubRenewal = (subId) => {
     const sub = clientSubscriptions.find(s => s.id === subId);
     if (!sub) return;
 
-    const price = parseFloat(sub.price || (VIP_CATALOG[sub.service] ? VIP_CATALOG[sub.service].price : 15.00));
+    const price = getSubscriptionPrice(sub);
     const currentBalance = parseFloat(currentClientUser ? (currentClientUser.balance || 0) : 0);
 
     activeRenewalSubId = sub.id;
@@ -1168,12 +1224,16 @@ window.executeSubRenewalWithBalance = async () => {
 
     // 3. Actualizar suscripción
     sub.endDate = newEndDate;
+    sub.price = price;
+    sub.amount = price;
     sub.status = 'active';
     sub.lastRenewalAt = new Date().toISOString();
 
     try {
         await setDoc(doc(db, "subscriptions", sub.id), {
             endDate: newEndDate,
+            price: price,
+            amount: price,
             status: 'active',
             lastRenewalAt: new Date().toISOString()
         }, { merge: true });
@@ -1654,7 +1714,7 @@ function startRechargeStatusPolling(orderId) {
             const ordersSnap = await getDocs(collection(db, "recharge_orders"));
             ordersSnap.forEach(d => {
                 const data = d.data();
-                if (data.id === orderId && data.status === 'completed') {
+                if (data.id === orderId && (data.status === 'completed' || data.status === 'approved')) {
                     clearInterval(rechargePollingInterval);
                     if (rechargeCountdownInterval) clearInterval(rechargeCountdownInterval);
 
@@ -1664,9 +1724,10 @@ function startRechargeStatusPolling(orderId) {
 
                     if (waitingBox) waitingBox.classList.add('hidden');
                     if (successBox) successBox.classList.remove('hidden');
-                    if (details) details.innerText = `Se han acreditado S/ ${(data.exactAmount || data.baseAmount).toFixed(2)} a tu saldo VIP.`;
+                    const creditedVal = data.exactAmount || data.baseAmount || data.amount || 0;
+                    if (details) details.innerText = `Se han acreditado S/ ${parseFloat(creditedVal).toFixed(2)} a tu saldo VIP.`;
 
-                    // Refrescar saldo del usuario
+                    // Refrescar saldo del usuario inmediatamente
                     refreshUserDataFromFirestore();
                 }
             });
