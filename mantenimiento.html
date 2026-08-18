@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estamos en Mantenimiento • CuycitoGO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="shortcut icon" href="assets/img/logo.png" type="image/png">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cuycito: {
+                            redDark: '#850000',
+                            red: '#D90429',
+                            redHover: '#EF233C',
+                            gold: '#FFB703',
+                            dark: '#0B090A'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glow-red {
+            box-shadow: 0 0 35px rgba(217, 4, 41, 0.45);
+        }
+        .glow-gold {
+            box-shadow: 0 0 30px rgba(255, 183, 3, 0.35);
+        }
+        @keyframes pulse-slow {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.85; }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-black text-white font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-red-600 selection:text-white relative overflow-x-hidden">
+
+    <!-- Efectos de fondo difuminados -->
+    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+    <div class="fixed bottom-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+
+    <!-- Header Mínimo -->
+    <header class="py-5 px-6 border-b border-gray-900 bg-black/80 backdrop-blur-md sticky top-0 z-50 flex items-center justify-between">
+        <a href="index.html" class="flex items-center gap-3 group">
+            <img src="assets/img/logo.png" alt="CuycitoGO" class="h-10 sm:h-12 object-contain drop-shadow-[0_0_15px_rgba(255,183,3,0.35)] group-hover:scale-105 transition">
+            <div>
+                <h1 class="text-xl sm:text-2xl font-black tracking-widest text-cuycito-gold leading-none" style="font-family: impact, sans-serif;">CuycitoGO</h1>
+                <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-widest font-bold">Servicios Digitales VIP</p>
+            </div>
+        </a>
+
+        <a href="https://wa.me/?text=Hola%20CuycitoGO,%20deseo%20consultar%20sobre%20el%20mantenimiento%20del%20portal" target="_blank" class="bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/60 text-emerald-300 text-xs font-black px-3.5 py-2 rounded-xl transition flex items-center gap-2 shadow">
+            <i class="fa-brands fa-whatsapp text-emerald-400 text-sm"></i>
+            <span class="hidden sm:inline">Soporte WhatsApp</span>
+        </a>
+    </header>
+
+    <!-- Contenido Principal Hero Mantenimiento -->
+    <main class="flex-1 flex flex-col items-center justify-center px-4 py-12">
+        <div class="max-w-xl w-full bg-[#110909]/90 border-2 border-red-500/80 rounded-3xl p-8 sm:p-12 text-center space-y-7 shadow-2xl glow-red relative overflow-hidden backdrop-blur-sm">
+            
+            <!-- Resplandor decorativo interno -->
+            <div class="absolute -top-20 -right-20 w-48 h-48 bg-red-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+            <!-- Icono animado -->
+            <div class="w-24 h-24 mx-auto rounded-3xl bg-red-500/10 border-2 border-red-500/60 flex items-center justify-center text-5xl text-red-400 shadow-[0_0_40px_rgba(239,68,68,0.4)] animate-pulse-slow">
+                🛠️
+            </div>
+
+            <!-- Textos y Badges -->
+            <div class="space-y-3">
+                <div class="inline-flex items-center gap-2 bg-red-950 text-red-300 border border-red-500/60 text-[11px] font-black px-4 py-1 rounded-full uppercase tracking-wider shadow">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-400 animate-ping"></span>
+                    <span>Modo Mantenimiento Activo</span>
+                </div>
+
+                <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                    Estamos en Mantenimiento
+                </h2>
+
+                <p class="text-sm text-gray-300 leading-relaxed max-w-md mx-auto">
+                    El acceso por inicio de sesión a cuentas de clientes y la tienda online se encuentran temporalmente en pausa por actualización de servidores e inventario.
+                </p>
+            </div>
+
+            <!-- Caja Informativa de Seguridad -->
+            <div class="bg-black/80 border border-red-500/30 rounded-2xl p-4 text-left space-y-2 text-xs text-gray-300">
+                <div class="flex items-center gap-2 text-amber-400 font-bold">
+                    <i class="fa-solid fa-shield-halved text-sm"></i>
+                    <span>Tus servicios contratados están 100% seguros</span>
+                </div>
+                <p class="text-[11px] text-gray-400 leading-normal">
+                    Tus perfiles de streaming activos continúan funcionando sin interrupciones. Si requieres ayuda urgente, soporte técnico o asistencia personalizada, contáctanos directamente por WhatsApp.
+                </p>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                <a href="https://wa.me/?text=Hola%20CuycitoGO,%20necesito%20asistencia%20durante%20el%20mantenimiento" target="_blank" class="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-black text-xs px-6 py-3.5 rounded-xl transition-all shadow-lg glow-green flex items-center justify-center gap-2 uppercase tracking-wider">
+                    <i class="fa-brands fa-whatsapp text-base"></i>
+                    <span>Contactar Soporte VIP</span>
+                </a>
+
+                <a href="index.html" class="w-full sm:w-auto bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 hover:text-white font-bold text-xs px-5 py-3.5 rounded-xl transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Volver al Inicio</span>
+                </a>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-5 text-center text-xs text-gray-600 border-t border-gray-900 bg-black/60">
+        © 2026 CuycitoGO • Todos los derechos reservados.
+    </footer>
+
+</body>
+</html>

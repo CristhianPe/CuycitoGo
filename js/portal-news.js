@@ -1312,13 +1312,13 @@ function initPortalAuth() {
 
     authContainer.innerHTML = `
         <div class="flex items-center gap-3">
-            <a href="login-cliente.html" class="text-xs font-bold text-gray-300 hover:text-white transition px-2.5 py-1.5 flex items-center gap-1.5">
+            <a href="mantenimiento.html" class="text-xs font-bold text-gray-300 hover:text-white transition px-2.5 py-1.5 flex items-center gap-1.5">
                 <i class="fa-solid fa-arrow-right-to-bracket text-gray-400"></i>
                 <span>Iniciar Sesión</span>
             </a>
-            <a href="login-cliente.html?tab=register" class="bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-500 hover:from-orange-400 hover:to-emerald-400 text-black font-black text-xs px-4 py-2.5 rounded-xl shadow-lg glow-gold transition duration-300 flex items-center gap-1.5 hover:scale-105 transform uppercase tracking-wider">
-                <i class="fa-solid fa-bolt"></i>
-                <span>Solicitar Cuenta Gratis</span>
+            <a href="mantenimiento.html" class="bg-gradient-to-r from-red-600 via-red-500 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-lg glow-red transition duration-300 flex items-center gap-1.5 hover:scale-105 transform uppercase tracking-wider">
+                <i class="fa-solid fa-wrench text-white"></i>
+                <span>Mantenimiento</span>
             </a>
         </div>
     `;
