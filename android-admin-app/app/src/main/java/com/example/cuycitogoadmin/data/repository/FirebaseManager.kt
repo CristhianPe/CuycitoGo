@@ -1,4 +1,4 @@
-﻿package com.example.cuycitogoadmin.data.repository
+package com.example.cuycitogoadmin.data.repository
 
 import android.content.Context
 import com.example.cuycitogoadmin.data.model.*
@@ -69,25 +69,33 @@ class FirebaseManager(private val context: Context) {
                     val list = snapshot.documents.mapNotNull { doc ->
                         try {
                             val data = doc.data ?: return@mapNotNull null
-                            val amountVal = when (val raw = data["amount"]) {
+                            val amountVal = when (val raw = data["exactAmount"] ?: data["baseAmount"] ?: data["amount"] ?: data["monto"]) {
                                 is Number -> raw.toDouble()
                                 is String -> raw.toDoubleOrNull() ?: 0.0
                                 else -> 0.0
                             }
-                            val rawTs = when (val raw = data["createdAt"]) {
+                            val rawTs = when (val raw = data["createdAt"] ?: data["timestamp"] ?: data["date"]) {
                                 is Number -> raw.toLong()
                                 is com.google.firebase.Timestamp -> raw.toDate().time
+                                is String -> {
+                                    try {
+                                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).parse(raw.take(19))?.time ?: System.currentTimeMillis()
+                                    } catch (e: Exception) {
+                                        System.currentTimeMillis()
+                                    }
+                                }
                                 else -> System.currentTimeMillis()
                             }
+                            val statusRaw = (data["status"] as? String ?: "pending_manual").trim()
                             RecargaModel(
                                 id = doc.id,
-                                clientName = data["userName"] as? String ?: data["name"] as? String ?: "Cliente",
+                                clientName = data["userName"] as? String ?: data["name"] as? String ?: data["userNickname"] as? String ?: "Cliente",
                                 clientEmail = data["userEmail"] as? String ?: data["email"] as? String ?: "",
                                 amount = amountVal,
-                                paymentMethod = data["method"] as? String ?: data["paymentMethod"] as? String ?: "Yape",
-                                voucherUrl = data["voucherUrl"] as? String ?: data["imageUrl"] as? String ?: "",
-                                status = (data["status"] as? String ?: "pending").lowercase(),
-                                referenceCode = data["referenceCode"] as? String ?: data["ref"] as? String ?: "",
+                                paymentMethod = data["paymentMethod"] as? String ?: data["method"] as? String ?: "Yape / Plin",
+                                voucherUrl = data["voucherUrl"] as? String ?: data["imageUrl"] as? String ?: data["receiptUrl"] as? String ?: data["voucher"] as? String ?: "",
+                                status = statusRaw,
+                                referenceCode = data["referenceCode"] as? String ?: data["ref"] as? String ?: data["id"] as? String ?: "",
                                 date = data["date"] as? String ?: "",
                                 timestamp = rawTs
                             )
@@ -137,7 +145,7 @@ class FirebaseManager(private val context: Context) {
         }
     }
 
-    // --- ACTIVACIONES DE TV & COMPRAS DE SERVICIOS (REAL-TIME) ---
+    // --- ACTIVACIONES DE TV, SPOTIFY Y SERVICIOS (REAL-TIME) ---
     fun getTvActivationsFlow(): Flow<List<TvActivationModel>> = callbackFlow {
         val listener: ListenerRegistration = firestore.collection("subscriptions")
             .addSnapshotListener { snapshot, error ->
@@ -149,9 +157,9 @@ class FirebaseManager(private val context: Context) {
                     val list = snapshot.documents.mapNotNull { doc ->
                         try {
                             val data = doc.data ?: return@mapNotNull null
-                            val statusStr = data["status"] as? String ?: ""
-                            val qrUrl = data["tvQrUrl"] as? String ?: data["qrImageUrl"] as? String ?: data["qrCode"] as? String ?: ""
-                            val pin = data["pinCode"] as? String ?: data["code"] as? String ?: ""
+                            val statusStr = (data["status"] as? String ?: "").trim()
+                            val qrUrl = data["tvQrUrl"] as? String ?: data["tvQrImage"] as? String ?: data["qrImageUrl"] as? String ?: data["qrCode"] as? String ?: ""
+                            val pin = data["pinCode"] as? String ?: data["pin"] as? String ?: data["code"] as? String ?: ""
                             val priceVal = when (val raw = data["price"] ?: data["cost"] ?: data["amount"]) {
                                 is Number -> raw.toDouble()
                                 is String -> raw.toDoubleOrNull() ?: 0.0
@@ -166,14 +174,18 @@ class FirebaseManager(private val context: Context) {
 
                             TvActivationModel(
                                 id = doc.id,
-                                person = data["person"] as? String ?: data["clientName"] as? String ?: "Cliente",
+                                person = data["person"] as? String ?: data["clientName"] as? String ?: data["name"] as? String ?: "Cliente",
                                 email = data["email"] as? String ?: data["userEmail"] as? String ?: "",
-                                service = data["service"] as? String ?: data["name"] as? String ?: "Streaming TV",
-                                accountEmail = data["accountEmail"] as? String ?: "",
+                                service = data["service"] as? String ?: data["name"] as? String ?: "Streaming VIP",
+                                accountEmail = data["accountEmail"] as? String ?: data["email"] as? String ?: "",
+                                accountPassword = data["accountPassword"] as? String ?: data["pass"] as? String ?: "",
                                 pinCode = pin,
                                 qrImageUrl = qrUrl,
+                                spotifyEmail = data["spotifyEmail"] as? String ?: "",
+                                spotifyPassword = data["spotifyPassword"] as? String ?: "",
+                                spotifyOtpCode = data["spotifyOtpCode"] as? String ?: data["otpCode"] as? String ?: "",
                                 status = statusStr.ifBlank { "Pendiente de activacion" },
-                                requestedAt = data["startDate"] as? String ?: "Hoy",
+                                requestedAt = data["startDate"] as? String ?: data["createdAt"] as? String ?: "Hoy",
                                 profileName = data["profileName"] as? String ?: "Pantalla 1",
                                 price = priceVal,
                                 rawTimestamp = rawTs
@@ -208,7 +220,8 @@ class FirebaseManager(private val context: Context) {
 
             // 1. Convertir Recargas
             recargas.forEach { r ->
-                val isPend = r.status.equals("pending", ignoreCase = true)
+                val sLower = r.status.lowercase()
+                val isPend = sLower.contains("pending") || sLower.contains("manual") || sLower.contains("pendiente") || sLower.contains("wait")
                 alarmList.add(
                     AlarmEventModel(
                         id = "recarga_${r.id}",
@@ -230,22 +243,51 @@ class FirebaseManager(private val context: Context) {
 
             // 2. Convertir Compras de Servicios / Activaciones
             subscriptions.forEach { s ->
-                val isPend = s.status.contains("pending", ignoreCase = true) ||
-                             s.status.contains("Pendiente", ignoreCase = true)
-                val isTv = s.qrImageUrl.isNotBlank() || s.pinCode.isNotBlank()
+                val sLower = s.status.lowercase()
+                val isPend = sLower.contains("pending") || sLower.contains("pendiente") || sLower.contains("proceso")
+                val sName = s.service.lowercase()
+
+                val category = when {
+                    sName.contains("spotify") -> AlarmCategory.ACTIVACION_SPOTIFY
+                    sName.contains("crunchyroll") || sName.contains("crunchy") -> AlarmCategory.ACTIVACION_CRUNCHYROLL
+                    sName.contains("netflix") || sName.contains("disney") || sName.contains("prime") || sName.contains("hbo") || sName.contains("max") -> AlarmCategory.ACTIVACION_TV
+                    else -> AlarmCategory.COMPRA_SERVICIO
+                }
+
+                val detailText = when (category) {
+                    AlarmCategory.ACTIVACION_SPOTIFY -> {
+                        if (s.spotifyOtpCode.isNotBlank()) "Spotify: ${s.spotifyEmail.ifBlank { "Cliente" }} | OTP: ${s.spotifyOtpCode}"
+                        else if (s.spotifyEmail.isNotBlank()) "Spotify: ${s.spotifyEmail} | Clave: ${s.spotifyPassword}"
+                        else "Spotify: Esperando credenciales del cliente"
+                    }
+                    AlarmCategory.ACTIVACION_CRUNCHYROLL -> {
+                        if (s.accountEmail.isNotBlank()) "Crunchyroll: ${s.accountEmail} | Pass: ${s.accountPassword}"
+                        else "Crunchyroll: Entrega de Credenciales Directas"
+                    }
+                    AlarmCategory.ACTIVACION_TV -> {
+                        if (s.qrImageUrl.isNotBlank()) "TV Smart: Foto QR recibida"
+                        else "TV Smart: Esperando QR de TV del cliente"
+                    }
+                    else -> "Perfil: ${s.profileName}"
+                }
 
                 alarmList.add(
                     AlarmEventModel(
                         id = "sub_${s.id}",
-                        category = if (isTv) AlarmCategory.ACTIVACION_TV else AlarmCategory.COMPRA_SERVICIO,
+                        category = category,
                         title = "Compra: ${s.service.uppercase()}",
                         customerName = s.person.ifBlank { "Cliente VIP" },
                         customerEmail = s.email,
                         amount = s.price,
-                        detail = if (isTv) "TV Smart - Pin: ${s.pinCode.ifBlank { "QR Adjunto" }}" else "Perfil: ${s.profileName}",
+                        detail = detailText,
                         status = s.status,
                         imageUrl = s.qrImageUrl,
                         pinCode = s.pinCode,
+                        spotifyEmail = s.spotifyEmail,
+                        spotifyPassword = s.spotifyPassword,
+                        spotifyOtpCode = s.spotifyOtpCode,
+                        accountEmail = s.accountEmail,
+                        accountPassword = s.accountPassword,
                         rawTimestamp = s.rawTimestamp,
                         timeFormatted = s.requestedAt.ifBlank { "Reciente" },
                         isPending = isPend,

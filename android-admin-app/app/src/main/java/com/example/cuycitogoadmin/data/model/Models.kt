@@ -1,9 +1,11 @@
-﻿package com.example.cuycitogoadmin.data.model
+package com.example.cuycitogoadmin.data.model
 
 enum class AlarmCategory(val displayName: String) {
     RECARGA_PENDIENTE("Recarga por Verificar"),
     COMPRA_SERVICIO("Nueva Compra de Servicio"),
-    ACTIVACION_TV("Activacion de TV Smart")
+    ACTIVACION_TV("Activacion de TV Smart"),
+    ACTIVACION_SPOTIFY("Activacion de Spotify"),
+    ACTIVACION_CRUNCHYROLL("Entrega Crunchyroll")
 }
 
 data class AlarmEventModel(
@@ -17,6 +19,11 @@ data class AlarmEventModel(
     val status: String = "pending", // pending, approved, rejected, Activo, pending_activation
     val imageUrl: String = "",
     val pinCode: String = "",
+    val spotifyEmail: String = "",
+    val spotifyPassword: String = "",
+    val spotifyOtpCode: String = "",
+    val accountEmail: String = "",
+    val accountPassword: String = "",
     val rawTimestamp: Long = System.currentTimeMillis(),
     val timeFormatted: String = "",
     val isPending: Boolean = true,
@@ -31,7 +38,7 @@ data class RecargaModel(
     val amount: Double = 0.0,
     val paymentMethod: String = "Yape",
     val voucherUrl: String = "",
-    val status: String = "pending", // pending, approved, rejected
+    val status: String = "pending", // pending, pending_manual, approved, rejected
     val referenceCode: String = "",
     val date: String = "",
     val timestamp: Long = System.currentTimeMillis()
@@ -43,8 +50,12 @@ data class TvActivationModel(
     val email: String = "",
     val service: String = "",
     val accountEmail: String = "",
+    val accountPassword: String = "",
     val pinCode: String = "",
     val qrImageUrl: String = "",
+    val spotifyEmail: String = "",
+    val spotifyPassword: String = "",
+    val spotifyOtpCode: String = "",
     val status: String = "Pendiente de activacion", // Pendiente de activacion, Activo
     val requestedAt: String = "",
     val profileName: String = "",

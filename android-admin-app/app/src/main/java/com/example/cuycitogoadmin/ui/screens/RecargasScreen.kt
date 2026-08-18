@@ -1,4 +1,4 @@
-﻿package com.example.cuycitogoadmin.ui.screens
+package com.example.cuycitogoadmin.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -43,16 +43,21 @@ fun RecargasScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val isPendingStatus = { status: String ->
+        val s = status.lowercase()
+        s.contains("pending") || s.contains("manual") || s.contains("pendiente") || s.contains("wait")
+    }
+
     val filteredList = remember(recargas, filterStatus) {
         when (filterStatus) {
-            "pending" -> recargas.filter { it.status.equals("pending", ignoreCase = true) }
-            "approved" -> recargas.filter { it.status.equals("approved", ignoreCase = true) }
+            "pending" -> recargas.filter { isPendingStatus(it.status) }
+            "approved" -> recargas.filter { it.status.contains("approved", ignoreCase = true) || it.status.contains("aprobad", ignoreCase = true) }
             else -> recargas
         }
     }
 
     val pendingCount = remember(recargas) {
-        recargas.count { it.status.equals("pending", ignoreCase = true) }
+        recargas.count { isPendingStatus(it.status) }
     }
 
     Column(
@@ -294,8 +299,9 @@ fun RecargaCard(
     onApprove: () -> Unit,
     onReject: () -> Unit
 ) {
-    val isPending = item.status.equals("pending", ignoreCase = true)
-    val isApproved = item.status.equals("approved", ignoreCase = true)
+    val s = item.status.lowercase()
+    val isPending = s.contains("pending") || s.contains("manual") || s.contains("pendiente") || s.contains("wait")
+    val isApproved = s.contains("approved") || s.contains("aprobad")
 
     Card(
         shape = RoundedCornerShape(16.dp),

@@ -1,4 +1,4 @@
-﻿package com.example.cuycitogoadmin.ui.screens
+package com.example.cuycitogoadmin.ui.screens
 
 import android.widget.Toast
 import androidx.compose.animation.core.*
@@ -496,9 +496,13 @@ fun AlarmCard(
 ) {
     val isRecarga = item.category == AlarmCategory.RECARGA_PENDIENTE
     val isTv = item.category == AlarmCategory.ACTIVACION_TV
+    val isSpotify = item.category == AlarmCategory.ACTIVACION_SPOTIFY
+    val isCrunchy = item.category == AlarmCategory.ACTIVACION_CRUNCHYROLL
 
     val badgeColor = when {
         item.isPending && isRecarga -> CuycitoRed
+        item.isPending && isSpotify -> CuycitoGreen
+        item.isPending && isCrunchy -> CuycitoGold
         item.isPending && isTv -> CuycitoCyan
         item.isPending -> CuycitoGold
         else -> CuycitoGreen
@@ -531,6 +535,8 @@ fun AlarmCard(
                         Icon(
                             imageVector = when {
                                 isRecarga -> Icons.Default.AccountBalanceWallet
+                                isSpotify -> Icons.Default.Headphones
+                                isCrunchy -> Icons.Default.Movie
                                 isTv -> Icons.Default.Tv
                                 else -> Icons.Default.ShoppingCart
                             },
@@ -548,7 +554,7 @@ fun AlarmCard(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "${item.customerName} � ${item.timeFormatted}",
+                            text = "${item.customerName} - ${item.timeFormatted}",
                             color = CuycitoTextSecondary,
                             fontSize = 10.sp
                         )
@@ -560,8 +566,16 @@ fun AlarmCard(
                         .background(badgeColor.copy(alpha = 0.2f), RoundedCornerShape(6.dp))
                         .padding(horizontal = 6.dp, vertical = 3.dp)
                 ) {
+                    val labelText = when {
+                        !item.isPending -> item.status.uppercase()
+                        isSpotify -> "SPOTIFY VIP"
+                        isCrunchy -> "CRUNCHYROLL"
+                        isTv -> "TV SMART"
+                        isRecarga -> "RECARGA"
+                        else -> "PENDIENTE"
+                    }
                     Text(
-                        text = if (item.isPending) "PENDIENTE" else item.status.uppercase(),
+                        text = labelText,
                         color = badgeColor,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Black
@@ -584,7 +598,7 @@ fun AlarmCard(
                     text = item.detail,
                     color = CuycitoTextSecondary,
                     fontSize = 11.sp,
-                    maxLines = 1
+                    maxLines = 2
                 )
                 if (item.amount > 0) {
                     Text(
@@ -593,6 +607,37 @@ fun AlarmCard(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Black
                     )
+                }
+            }
+
+            // Datos exclusivos de Spotify (Email, Contraseña y Código OTP 6 dígitos)
+            if (isSpotify && (item.spotifyEmail.isNotBlank() || item.spotifyOtpCode.isNotBlank())) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF0F1B15), RoundedCornerShape(8.dp))
+                        .border(1.dp, CuycitoGreen.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        .padding(8.dp)
+                ) {
+                    if (item.spotifyEmail.isNotBlank()) {
+                        Text("Cuenta: ${item.spotifyEmail}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                    if (item.spotifyPassword.isNotBlank()) {
+                        Text("Clave: ${item.spotifyPassword}", color = CuycitoGold, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    if (item.spotifyOtpCode.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(CuycitoGreen.copy(alpha = 0.2f), RoundedCornerShape(6.dp))
+                                .padding(vertical = 4.dp, horizontal = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("CODIGO OTP 6 DIGITOS: ${item.spotifyOtpCode}", color = CuycitoGreen, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
                 }
             }
 
@@ -638,6 +683,28 @@ fun AlarmCard(
                             Text("RECHAZAR", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
+                } else if (isSpotify) {
+                    Button(
+                        onClick = onMarkActivated,
+                        colors = ButtonDefaults.buttonColors(containerColor = CuycitoGreen),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth().height(38.dp)
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("ACTIVAR SPOTIFY", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    }
+                } else if (isCrunchy) {
+                    Button(
+                        onClick = onMarkActivated,
+                        colors = ButtonDefaults.buttonColors(containerColor = CuycitoGold),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth().height(38.dp)
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("ENTREGAR CREDENCIALES CRUNCHYROLL", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    }
                 } else if (isTv) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -664,7 +731,7 @@ fun AlarmCard(
                         ) {
                             Icon(Icons.Default.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("ACTIVAR", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                            Text("ACTIVAR TV", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 } else {

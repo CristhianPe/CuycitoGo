@@ -467,30 +467,148 @@ function renderClientSubscriptions(subs) {
             borderClass = 'border-gray-800 hover:border-emerald-500/40';
         }
 
-        // POLÍTICA DE VISIBILIDAD DE CREDENCIALES & QR DE TV
+        // CLASIFICACIÓN DEL SERVICIO
+        const sName = (sub.service || '').toLowerCase();
+        const isTvService = sName.includes('netflix') || sName.includes('disney') || sName.includes('prime') || sName.includes('hbo') || sName.includes('max');
+        const isSpotifyService = sName.includes('spotify');
+        const isCrunchyService = sName.includes('crunchyroll') || sName.includes('crunchy');
+
+        // POLÍTICA DE VISIBILIDAD DE CREDENCIALES & ACTIVACIONES
         let credentialsBlockHTML = '';
+        let actionBtnHTML = '';
+
         if (isPending) {
-            if (sub.tvQrImage) {
+            if (isSpotifyService) {
+                // SPOTIFY: Solicitud de Correo, Contraseña y Código de 6 Dígitos
+                const hasSentCreds = sub.spotifyEmail && sub.spotifyEmail.trim() !== '';
+                const hasSentOtp = sub.spotifyOtpCode && sub.spotifyOtpCode.trim() !== '';
+
                 credentialsBlockHTML = `
-                    <div class="bg-gradient-to-r from-emerald-950/40 via-black to-emerald-950/20 border border-emerald-500/50 rounded-2xl p-3 text-center space-y-2">
-                        <div class="flex items-center justify-center gap-2 text-emerald-400 font-bold text-xs">
-                            <i class="fa-solid fa-circle-check text-sm"></i>
-                            <span>Foto QR de TV Enviada</span>
+                    <div class="bg-gradient-to-b from-[#0F1B15] to-black border border-emerald-500/40 rounded-2xl p-4 space-y-3">
+                        <div class="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                            <i class="fa-brands fa-spotify text-base"></i>
+                            <span>Activación de Cuenta Spotify</span>
                         </div>
-                        <div class="w-24 h-24 mx-auto rounded-xl overflow-hidden border border-emerald-500/40 shadow-inner bg-black">
-                            <img src="${sub.tvQrImage}" alt="QR TV" class="w-full h-full object-contain">
+                        <p class="text-[11px] text-gray-300">Ingresa el correo y contraseña de tu cuenta de Spotify para vincularla a tu plan Premium.</p>
+                        
+                        <div class="space-y-2">
+                            <div>
+                                <label class="text-[10px] text-gray-400 font-bold uppercase block mb-1">Correo de tu Spotify:</label>
+                                <input type="email" id="spotifyEmail_${sub.id}" value="${sub.spotifyEmail || ''}" placeholder="tucorreo@gmail.com" class="w-full bg-black/80 border border-gray-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 font-bold uppercase block mb-1">Contraseña de tu Spotify:</label>
+                                <input type="text" id="spotifyPass_${sub.id}" value="${sub.spotifyPassword || ''}" placeholder="Tu contraseña" class="w-full bg-black/80 border border-gray-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none">
+                            </div>
+                            <button onclick="window.submitSpotifyCredentials('${sub.id}')" class="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow glow-green uppercase tracking-wider">
+                                <i class="fa-solid fa-paper-plane"></i>
+                                <span>${hasSentCreds ? 'Actualizar Datos Spotify' : 'Enviar para Activación'}</span>
+                            </button>
                         </div>
-                        <p class="text-[10px] text-gray-300">Tu asesor está escaneando el QR para activar tu TV. Recibirás tu confirmación en breve.</p>
+
+                        <!-- Sección de Código OTP de 6 dígitos -->
+                        <div class="pt-3 border-t border-emerald-950/80">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-[10px] text-amber-400 font-black uppercase flex items-center gap-1">
+                                    <i class="fa-solid fa-key"></i> Código de Aprobación (6 dígitos)
+                                </span>
+                                ${hasSentOtp ? `<span class="text-[10px] text-emerald-400 font-bold">Enviado: ${sub.spotifyOtpCode}</span>` : ''}
+                            </div>
+                            <p class="text-[10px] text-gray-400 mb-2">Si Spotify te envió un código de 6 dígitos al correo o celular para autorizar el ingreso, ingrésalo aquí:</p>
+                            <div class="flex gap-2">
+                                <input type="text" id="spotifyOtp_${sub.id}" maxlength="6" value="${sub.spotifyOtpCode || ''}" placeholder="123456" class="w-2/3 bg-black/90 border border-amber-500/50 focus:border-amber-400 rounded-xl px-3 py-2 text-center font-mono font-black text-amber-300 tracking-widest text-sm outline-none">
+                                <button onclick="window.submitSpotifyOtp('${sub.id}')" class="w-1/3 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs py-2 rounded-xl transition flex items-center justify-center gap-1 uppercase">
+                                    <i class="fa-solid fa-check"></i> Enviar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 `;
-            } else {
+            } else if (isCrunchyService) {
+                // CRUNCHYROLL: Entrega de credenciales directas (Correo y Contraseña)
+                const cEmail = sub.email || sub.accountEmail || 'crunchyroll.vip@cuycitogo.pe';
+                const cPass = sub.pass || sub.accountPassword || 'CuycitoCrunchy2026';
+                const cPin = sub.pin || 'Perfil 1';
+
                 credentialsBlockHTML = `
-                    <div class="bg-gradient-to-r from-amber-950/40 via-black to-amber-950/20 border border-yellow-500/40 rounded-2xl p-3.5 text-center space-y-2">
-                        <div class="flex items-center justify-center gap-2 text-yellow-400 font-bold text-xs">
-                            <i class="fa-solid fa-tv text-sm"></i>
-                            <span>Activación en Televisor Requerida (1 TV)</span>
+                    <div class="bg-black/80 border border-amber-500/40 rounded-2xl p-3.5 space-y-2.5 font-mono text-xs">
+                        <div class="flex items-center gap-1.5 text-amber-400 font-black text-xs pb-1 border-b border-gray-800">
+                            <i class="fa-solid fa-ticket"></i>
+                            <span>Credenciales Crunchyroll Listas</span>
                         </div>
-                        <p class="text-[11px] text-gray-300 leading-snug">Se necesita captura del código QR de activación de tu televisor. Abre la app en tu TV y toma la foto para vincular tu pantalla.</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Correo:</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-white font-bold truncate max-w-[170px] select-all">${cEmail}</span>
+                                <button onclick="window.copyText('${cEmail}')" class="text-gray-400 hover:text-cuycito-gold p-1 transition" title="Copiar correo"><i class="fa-regular fa-copy text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-1 border-t border-gray-800/60">
+                            <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Contraseña:</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-cuycito-gold font-black select-all">${cPass}</span>
+                                <button onclick="window.copyText('${cPass}')" class="text-gray-400 hover:text-cuycito-gold p-1 transition" title="Copiar contraseña"><i class="fa-regular fa-copy text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-1 border-t border-gray-800/60">
+                            <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Perfil:</span>
+                            <span class="text-emerald-400 font-black">${cPin}</span>
+                        </div>
+                    </div>
+                `;
+
+                actionBtnHTML = `
+                    <button onclick="window.copyText('${cEmail} | ${cPass}')" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black text-xs py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-2 shadow glow-gold uppercase tracking-wider">
+                        <i class="fa-regular fa-copy text-sm"></i>
+                        <span>Copiar Datos de Acceso</span>
+                    </button>
+                `;
+            } else if (isTvService) {
+                // STREAMING TV SMART (Netflix, Disney, Prime Video, HBO Max): Foto QR de TV
+                if (sub.tvQrImage) {
+                    credentialsBlockHTML = `
+                        <div class="bg-gradient-to-r from-emerald-950/40 via-black to-emerald-950/20 border border-emerald-500/50 rounded-2xl p-3 text-center space-y-2">
+                            <div class="flex items-center justify-center gap-2 text-emerald-400 font-bold text-xs">
+                                <i class="fa-solid fa-circle-check text-sm"></i>
+                                <span>Foto QR de TV Enviada</span>
+                            </div>
+                            <div class="w-24 h-24 mx-auto rounded-xl overflow-hidden border border-emerald-500/40 shadow-inner bg-black">
+                                <img src="${sub.tvQrImage}" alt="QR TV" class="w-full h-full object-contain">
+                            </div>
+                            <p class="text-[10px] text-gray-300">Tu asesor está escaneando el QR para activar tu TV. Recibirás tu confirmación en breve.</p>
+                        </div>
+                    `;
+                } else {
+                    credentialsBlockHTML = `
+                        <div class="bg-gradient-to-r from-amber-950/40 via-black to-amber-950/20 border border-yellow-500/40 rounded-2xl p-3.5 text-center space-y-2">
+                            <div class="flex items-center justify-center gap-2 text-yellow-400 font-bold text-xs">
+                                <i class="fa-solid fa-tv text-sm"></i>
+                                <span>Activación en Televisor Requerida (1 TV)</span>
+                            </div>
+                            <p class="text-[11px] text-gray-300 leading-snug">Se necesita captura del código QR de activación de tu televisor (${sub.service}). Abre la app en tu TV y toma la foto para vincular tu pantalla.</p>
+                        </div>
+                    `;
+                }
+
+                const btnText = sub.tvQrImage ? 'Cambiar Foto QR de mi TV' : 'Tomar Foto QR de mi TV (1 TV)';
+                const btnIcon = sub.tvQrImage ? 'fa-solid fa-rotate' : 'fa-solid fa-camera';
+                actionBtnHTML = `
+                    <button onclick="window.openTvQrModal('${sub.id}', '${sub.service}')" class="w-full bg-gradient-to-r from-amber-500 via-cuycito-gold to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs py-3 px-3 rounded-xl transition shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider">
+                        <i class="${btnIcon} text-sm"></i>
+                        <span>${btnText}</span>
+                    </button>
+                `;
+            } else {
+                // Otros servicios estándar
+                credentialsBlockHTML = `
+                    <div class="bg-yellow-950/20 border border-yellow-500/30 rounded-2xl p-3 text-center space-y-1">
+                        <div class="flex items-center justify-center gap-1.5 text-yellow-400 text-xs font-bold">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                            <span>Activación en Proceso</span>
+                        </div>
+                        <p class="text-[10px] text-gray-400">Tu cuenta está siendo configurada por el equipo de CuycitoGO.</p>
                     </div>
                 `;
             }
@@ -532,17 +650,7 @@ function renderClientSubscriptions(subs) {
             `;
         }
 
-        let actionBtnHTML = '';
-        if (isPending) {
-            const btnText = sub.tvQrImage ? 'Cambiar Foto QR de mi TV' : 'Tomar Foto QR de mi TV (1 TV)';
-            const btnIcon = sub.tvQrImage ? 'fa-solid fa-rotate' : 'fa-solid fa-camera';
-            actionBtnHTML = `
-                <button onclick="window.openTvQrModal('${sub.id}', '${sub.service}')" class="w-full bg-gradient-to-r from-amber-500 via-cuycito-gold to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs py-3 px-3 rounded-xl transition shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider">
-                    <i class="${btnIcon} text-sm"></i>
-                    <span>${btnText}</span>
-                </button>
-            `;
-        } else {
+        if (!isPending) {
             const renewPrice = parseFloat(sub.price || (VIP_CATALOG[sub.service] ? VIP_CATALOG[sub.service].price : 15.00));
             actionBtnHTML = `
                 <button onclick="window.promptSubRenewal('${sub.id}')" class="w-full bg-gradient-to-r from-cuycito-red via-orange-500 to-amber-500 hover:from-cuycito-redHover hover:to-yellow-400 text-white hover:text-black font-black text-xs py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg glow-gold uppercase tracking-wider">
@@ -903,6 +1011,63 @@ window.submitTvQrForActivation = async () => {
     calculateMetrics(clientSubscriptions);
 
     alert(`📺 ¡Foto QR de tu TV enviada y sanitizada con éxito!\n\nTu asesor ha recibido la captura del código QR de tu televisor (${activeActivationServiceName}) y procederá a activarlo de inmediato.`);
+};
+
+// 4.1. CONTROLADORES PARA ACTIVACIÓN DE SPOTIFY (CREDENCIALES Y CÓDIGO OTP DE 6 DÍGITOS)
+window.submitSpotifyCredentials = async (subId) => {
+    const emailInput = document.getElementById(`spotifyEmail_${subId}`);
+    const passInput = document.getElementById(`spotifyPass_${subId}`);
+    const email = emailInput ? emailInput.value.trim() : '';
+    const pass = passInput ? passInput.value.trim() : '';
+
+    if (!email || !pass) {
+        alert("⚠️ Por favor ingresa el correo y la contraseña de tu cuenta Spotify.");
+        return;
+    }
+
+    const sub = clientSubscriptions.find(s => s.id === subId);
+    if (sub) {
+        sub.spotifyEmail = email;
+        sub.spotifyPassword = pass;
+        sub.status = 'pending_activation';
+    }
+
+    try {
+        await setDoc(doc(db, "subscriptions", subId), {
+            spotifyEmail: email,
+            spotifyPassword: pass,
+            spotifySubmittedAt: new Date().toISOString(),
+            status: 'pending_activation'
+        }, { merge: true });
+    } catch(e) {}
+
+    renderClientSubscriptions(clientSubscriptions);
+    alert("🚀 ¡Datos de Spotify enviados al asesor!\n\nTu solicitud de activación está en proceso. Si Spotify te solicita código de aprobación, ingrésalo en la casilla de abajo.");
+};
+
+window.submitSpotifyOtp = async (subId) => {
+    const otpInput = document.getElementById(`spotifyOtp_${subId}`);
+    const otp = otpInput ? otpInput.value.trim() : '';
+
+    if (!otp || otp.length < 4) {
+        alert("⚠️ Por favor ingresa el código de 6 dígitos enviado por Spotify.");
+        return;
+    }
+
+    const sub = clientSubscriptions.find(s => s.id === subId);
+    if (sub) {
+        sub.spotifyOtpCode = otp;
+    }
+
+    try {
+        await setDoc(doc(db, "subscriptions", subId), {
+            spotifyOtpCode: otp,
+            otpSubmittedAt: new Date().toISOString()
+        }, { merge: true });
+    } catch(e) {}
+
+    renderClientSubscriptions(clientSubscriptions);
+    alert(`🔑 ¡Código OTP (${otp}) enviado al asesor!\n\nTu cuenta Spotify está siendo verificada y activada.`);
 };
 
 // =========================================================

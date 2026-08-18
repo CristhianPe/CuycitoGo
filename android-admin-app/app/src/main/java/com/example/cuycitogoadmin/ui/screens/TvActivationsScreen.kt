@@ -1,4 +1,4 @@
-﻿package com.example.cuycitogoadmin.ui.screens
+package com.example.cuycitogoadmin.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -200,11 +200,22 @@ fun TvActivationCard(
     onViewQr: () -> Unit,
     onActivate: () -> Unit
 ) {
+    val sLower = item.service.lowercase()
+    val isSpotify = sLower.contains("spotify")
+    val isCrunchy = sLower.contains("crunchyroll") || sLower.contains("crunchy")
+    val isTv = sLower.contains("netflix") || sLower.contains("disney") || sLower.contains("prime") || sLower.contains("hbo") || sLower.contains("max")
+
+    val cardColor = when {
+        isSpotify -> CuycitoGreen
+        isCrunchy -> CuycitoGold
+        else -> CuycitoCyan
+    }
+
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CuycitoDarkCard),
         border = CardDefaults.outlinedCardBorder().copy(
-            brush = androidx.compose.ui.graphics.SolidColor(CuycitoCyan)
+            brush = androidx.compose.ui.graphics.SolidColor(cardColor)
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -216,9 +227,13 @@ fun TvActivationCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Default.Tv,
+                        imageVector = when {
+                            isSpotify -> Icons.Default.Headphones
+                            isCrunchy -> Icons.Default.Movie
+                            else -> Icons.Default.Tv
+                        },
                         contentDescription = null,
-                        tint = CuycitoCyan,
+                        tint = cardColor,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -239,19 +254,24 @@ fun TvActivationCard(
 
                 Box(
                     modifier = Modifier
-                        .background(Color(0xFF083344), RoundedCornerShape(8.dp))
+                        .background(cardColor.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "TV SMART",
-                        color = CuycitoCyan,
+                        text = when {
+                            isSpotify -> "SPOTIFY VIP"
+                            isCrunchy -> "CRUNCHYROLL"
+                            else -> "TV SMART"
+                        },
+                        color = cardColor,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Black
                     )
                 }
             }
 
-            if (item.pinCode.isNotBlank()) {
+            // Si es TV Smart con PIN
+            if (isTv && item.pinCode.isNotBlank()) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     modifier = Modifier
@@ -261,25 +281,73 @@ fun TvActivationCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("C�digo Num�rico TV:", color = CuycitoTextSecondary, fontSize = 11.sp)
+                    Text("Codigo TV:", color = CuycitoTextSecondary, fontSize = 11.sp)
                     Text(
                         text = item.pinCode,
                         color = CuycitoGold,
-                        fontSize = 16.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 2.sp
                     )
                 }
             }
 
+            // Si es Spotify con datos de acceso y código OTP
+            if (isSpotify && (item.spotifyEmail.isNotBlank() || item.spotifyOtpCode.isNotBlank())) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF0F1B15), RoundedCornerShape(10.dp))
+                        .border(1.dp, CuycitoGreen.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                        .padding(10.dp)
+                ) {
+                    if (item.spotifyEmail.isNotBlank()) {
+                        Text("Correo Spotify: ${item.spotifyEmail}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    if (item.spotifyPassword.isNotBlank()) {
+                        Text("Clave Spotify: ${item.spotifyPassword}", color = CuycitoGold, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    if (item.spotifyOtpCode.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(CuycitoGreen.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+                                .padding(vertical = 6.dp, horizontal = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("CODIGO OTP 6 DIGITOS: ${item.spotifyOtpCode}", color = CuycitoGreen, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+            }
+
+            // Si es Crunchyroll con credenciales
+            if (isCrunchy && item.accountEmail.isNotBlank()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Black, RoundedCornerShape(10.dp))
+                        .border(1.dp, CuycitoGold.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                        .padding(10.dp)
+                ) {
+                    Text("Cuenta: ${item.accountEmail}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    if (item.accountPassword.isNotBlank()) {
+                        Text("Clave: ${item.accountPassword}", color = CuycitoGold, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Botones de acci�n
+            // Botones de accion
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (item.qrImageUrl.isNotBlank()) {
+                if (isTv && item.qrImageUrl.isNotBlank()) {
                     OutlinedButton(
                         onClick = onViewQr,
                         border = androidx.compose.foundation.BorderStroke(1.dp, CuycitoCyan),
@@ -300,7 +368,16 @@ fun TvActivationCard(
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("ACTIVAR", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        text = when {
+                            isSpotify -> "ACTIVAR SPOTIFY"
+                            isCrunchy -> "ENTREGAR CUENTA"
+                            else -> "ACTIVAR"
+                        },
+                        color = Color.Black,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black
+                    )
                 }
             }
         }
