@@ -291,12 +291,13 @@ window.copyInfoText = () => {
 };
 
 window.switchTab = (tabId) => {
+    let cleanId = (tabId || '').replace(/^view-/, '');
     ['subs', 'master', 'finance', 'clients', 'catalog', 'recharges', 'games', 'news', 'cartelera', 'ai-agent'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const btn = document.getElementById('tab-btn-' + id);
         if(view) {
             view.classList.add('hidden');
-            if(id === tabId) {
+            if(id === cleanId) {
                 view.classList.remove('hidden');
                 if(id==='subs') view.classList.add('block');
                 if(id==='master' || id==='finance' || id==='clients' || id==='catalog' || id==='recharges' || id==='games' || id==='news' || id==='cartelera' || id==='ai-agent') {
@@ -312,30 +313,33 @@ window.switchTab = (tabId) => {
             if (id === 'recharges') activeColorClass = "text-yellow-400 border-b-2 border-yellow-400";
             if (id === 'ai-agent') activeColorClass = "text-cyan-400 border-b-2 border-cyan-400";
 
-            btn.className = (id === tabId) 
+            btn.className = (id === cleanId) 
                 ? `${activeColorClass} pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5` 
                 : "text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5";
         }
     });
-    if(tabId === 'finance') window.renderFinance();
-    if(tabId === 'clients') {
+    if(cleanId === 'finance') window.renderFinance();
+    if(cleanId === 'clients') {
         window.renderClients();
         window.renderPendingRegistrationsTable();
         window.renderAdminReferralLogsTable();
     }
-    if(tabId === 'recharges') {
+    if(cleanId === 'recharges') {
         window.renderRechargesTable();
         window.loadPaymentQRSettings();
         window.loadRouletteHouseStats();
     }
-    if(tabId === 'games') {
+    if(cleanId === 'games') {
         window.renderGamesSection();
     }
-    if(tabId === 'news') {
-        window.renderAdminNewsList();
+    if(cleanId === 'news') {
+        if (typeof window.renderAdminNewsList === 'function') window.renderAdminNewsList();
+        if (typeof window.renderAdminSubdestacada === 'function') window.renderAdminSubdestacada();
+        if (typeof window.renderAdminThematicGrid === 'function') window.renderAdminThematicGrid();
+        if (typeof window.renderAdminTop5 === 'function') window.renderAdminTop5();
     }
-    if(tabId === 'cartelera') {
-        window.renderAdminCarteleraList();
+    if(cleanId === 'cartelera') {
+        if (typeof window.renderAdminCarteleraList === 'function') window.renderAdminCarteleraList();
     }
 };
 

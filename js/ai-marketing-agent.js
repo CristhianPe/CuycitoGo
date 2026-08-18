@@ -923,6 +923,14 @@ window.publishAiAsCartelera = async () => {
     list.unshift(newCarteleraItem);
     localStorage.setItem("cuycito_portal_cartelera", JSON.stringify(list));
 
+    // Sincronizar en la Nube Firestore
+    try {
+        const { db, doc, setDoc } = await import('./firebase-config.js');
+        if (db) {
+            await setDoc(doc(db, "portal_cartelera", newCarteleraItem.id), newCarteleraItem, { merge: true });
+        }
+    } catch(e) {}
+
     if (typeof window.renderAdminCarteleraList === 'function') {
         window.renderAdminCarteleraList();
     }
@@ -930,7 +938,7 @@ window.publishAiAsCartelera = async () => {
     alert(`🎉 ¡Título publicado con éxito en Cartelera y Estrenos!\n\n"${title}" ya está visible con el encuadre personalizado (${imagePosition}).`);
     
     if (typeof window.switchTab === 'function') {
-        window.switchTab('view-cartelera');
+        window.switchTab('cartelera');
     }
 };
 
@@ -973,7 +981,8 @@ window.publishAiAsNews = async () => {
         imagePosition,
         excerpt,
         content,
-        isHero: false
+        isHero: false,
+        createdAt: new Date().toISOString()
     };
 
     let newsList = [];
@@ -984,6 +993,14 @@ window.publishAiAsNews = async () => {
 
     newsList.unshift(newArticle);
     localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
+
+    // Sincronizar en la Nube Firestore
+    try {
+        const { db, doc, setDoc } = await import('./firebase-config.js');
+        if (db) {
+            await setDoc(doc(db, "portal_news", newArticle.id), newArticle, { merge: true });
+        }
+    } catch(e) {}
 
     // Alimentar automáticamente "Lo Más Leído" con esta nueva noticia
     try {
@@ -1002,6 +1019,11 @@ window.publishAiAsNews = async () => {
         if (top5.length > 5) top5 = top5.slice(0, 5);
         top5.forEach((t, i) => t.rank = i + 1);
         localStorage.setItem("cuycito_portal_top5", JSON.stringify(top5));
+
+        try {
+            const { db, doc, setDoc } = await import('./firebase-config.js');
+            if (db) await setDoc(doc(db, "portal_config", "top5"), { list: top5 }, { merge: true });
+        } catch(e) {}
     } catch(e) {}
 
     if (typeof window.renderAdminNewsList === 'function') {
@@ -1011,7 +1033,7 @@ window.publishAiAsNews = async () => {
     alert(`📰 ¡Noticia publicada con éxito en Portada!\n\n"${title}" ya está visible en el carrusel con el encuadre personalizado (${imagePosition}).`);
 
     if (typeof window.switchTab === 'function') {
-        window.switchTab('view-news');
+        window.switchTab('news');
     }
 };
 
@@ -1037,10 +1059,19 @@ window.publishAiAsSubdestacada = async () => {
         imagePosition,
         category: "HARDWARE & REDES",
         date: "Actualizado Hoy",
-        content
+        content,
+        createdAt: new Date().toISOString()
     };
 
     localStorage.setItem("cuycito_portal_subdestacada", JSON.stringify(subItem));
+
+    // Sincronizar en la Nube Firestore
+    try {
+        const { db, doc, setDoc } = await import('./firebase-config.js');
+        if (db) {
+            await setDoc(doc(db, "portal_config", "subdestacada"), subItem, { merge: true });
+        }
+    } catch(e) {}
 
     if (typeof window.renderAdminSubdestacada === 'function') {
         window.renderAdminSubdestacada();
@@ -1049,7 +1080,7 @@ window.publishAiAsSubdestacada = async () => {
     alert(`⚡ ¡Sub-destacada tecnológica publicada con éxito!\n\n"${title}" ahora ocupa el banner tecnológico de portada.`);
 
     if (typeof window.switchTab === 'function') {
-        window.switchTab('view-news');
+        window.switchTab('news');
     }
 };
 
@@ -1081,7 +1112,8 @@ window.publishAiAsThematic = async () => {
         date: "Actualizado Hoy",
         image,
         imagePosition,
-        content
+        content,
+        createdAt: new Date().toISOString()
     };
 
     let list = [];
@@ -1094,6 +1126,14 @@ window.publishAiAsThematic = async () => {
     if (list.length > 3) list = list.slice(0, 3);
     localStorage.setItem("cuycito_portal_thematic", JSON.stringify(list));
 
+    // Sincronizar en la Nube Firestore
+    try {
+        const { db, doc, setDoc } = await import('./firebase-config.js');
+        if (db) {
+            await setDoc(doc(db, "portal_config", "thematic"), { list: list }, { merge: true });
+        }
+    } catch(e) {}
+
     if (typeof window.renderAdminThematicGrid === 'function') {
         window.renderAdminThematicGrid();
     }
@@ -1101,7 +1141,7 @@ window.publishAiAsThematic = async () => {
     alert(`🎨 ¡Publicado en Grilla Temática de Portada!\n\n"${title}" se ha integrado en la columna de ${catInfo.cat}.`);
 
     if (typeof window.switchTab === 'function') {
-        window.switchTab('view-news');
+        window.switchTab('news');
     }
 };
 
@@ -1123,7 +1163,8 @@ window.publishAiAsTop5 = async () => {
         rank: 1,
         title,
         tag: currentAiGeneratedData.tag || "Tendencia Nacional",
-        content
+        content,
+        createdAt: new Date().toISOString()
     };
 
     list.unshift(newItem);
@@ -1132,6 +1173,14 @@ window.publishAiAsTop5 = async () => {
 
     localStorage.setItem("cuycito_portal_top5", JSON.stringify(list));
 
+    // Sincronizar en la Nube Firestore
+    try {
+        const { db, doc, setDoc } = await import('./firebase-config.js');
+        if (db) {
+            await setDoc(doc(db, "portal_config", "top5"), { list: list }, { merge: true });
+        }
+    } catch(e) {}
+
     if (typeof window.renderAdminTop5 === 'function') {
         window.renderAdminTop5();
     }
@@ -1139,7 +1188,7 @@ window.publishAiAsTop5 = async () => {
     alert(`🔥 ¡Publicado como #1 en 'Lo Más Leído'!\n\n"${title}" ahora encabeza el ranking lateral.`);
 
     if (typeof window.switchTab === 'function') {
-        window.switchTab('view-news');
+        window.switchTab('news');
     }
 };
 

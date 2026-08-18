@@ -1186,7 +1186,7 @@ window.renderPortalTop5 = () => {
     `).join('');
 };
 
-// 12. INICIALIZACIÓN GLOBAL
+// 12. INICIALIZACIÓN GLOBAL & SINCRONIZACIÓN CON LA NUBE
 document.addEventListener('DOMContentLoaded', () => {
     initPortalAuth();
     window.initHeroSlider();
@@ -1197,7 +1197,99 @@ document.addEventListener('DOMContentLoaded', () => {
     window.renderCarteleraPage();
     window.renderEstrenosPage();
     initPriceComparator();
+    syncPortalWithCloud();
 });
+
+// Sincronización Automática con la Nube Firestore para que cualquier visitante vea las noticias
+async function syncPortalWithCloud() {
+    try {
+        const { db, collection, getDocs } = await import('./firebase-config.js');
+        if (!db) return;
+
+        // 1. Sincronizar Noticias de Portada
+        const newsSnap = await getDocs(collection(db, "portal_news"));
+        if (!newsSnap.empty) {
+            const cloudNews = [];
+            newsSnap.forEach(d => {
+                const data = d.data();
+                cloudNews.push({ id: d.id, ...data });
+            });
+            if (cloudNews.length > 0) {
+                // Preservar noticias por defecto y fusionar con las creadas en la nube
+                let localNews = [];
+                try {
+                    const st = localStorage.getItem("cuycito_portal_news");
+                    if (st) localNews = JSON.parse(st);
+                } catch(e) {}
+
+                const map = new Map();
+                cloudNews.forEach(item => map.set(item.id, item));
+                localNews.forEach(item => {
+                    if (!map.has(item.id)) map.set(item.id, item);
+                });
+
+                const mergedNews = Array.from(map.values());
+                localStorage.setItem("cuycito_portal_news", JSON.stringify(mergedNews));
+                if (typeof window.initHeroSlider === 'function') window.initHeroSlider();
+                if (typeof window.renderAdminNewsList === 'function') window.renderAdminNewsList();
+            }
+        }
+
+        // 2. Sincronizar Cartelera y Estrenos
+        const cartSnap = await getDocs(collection(db, "portal_cartelera"));
+        if (!cartSnap.empty) {
+            const cloudCart = [];
+            cartSnap.forEach(d => {
+                const data = d.data();
+                cloudCart.push({ id: d.id, ...data });
+            });
+            if (cloudCart.length > 0) {
+                let localCart = [];
+                try {
+                    const st = localStorage.getItem("cuycito_portal_cartelera");
+                    if (st) localCart = JSON.parse(st);
+                } catch(e) {}
+
+                const map = new Map();
+                cloudCart.forEach(item => map.set(item.id, item));
+                localCart.forEach(item => {
+                    if (!map.has(item.id)) map.set(item.id, item);
+                });
+
+                const mergedCart = Array.from(map.values());
+                localStorage.setItem("cuycito_portal_cartelera", JSON.stringify(mergedCart));
+                if (typeof window.renderIndexCarteleraAndEstrenos === 'function') window.renderIndexCarteleraAndEstrenos();
+                if (typeof window.renderCarteleraPage === 'function') window.renderCarteleraPage();
+                if (typeof window.renderEstrenosPage === 'function') window.renderEstrenosPage();
+                if (typeof window.renderAdminCarteleraList === 'function') window.renderAdminCarteleraList();
+            }
+        }
+
+        // 3. Sincronizar Subdestacada, Temáticas y Top 5
+        const configSnap = await getDocs(collection(db, "portal_config"));
+        if (!configSnap.empty) {
+            configSnap.forEach(d => {
+                if (d.id === "subdestacada") {
+                    localStorage.setItem("cuycito_portal_subdestacada", JSON.stringify(d.data()));
+                    if (typeof window.renderPortalSubdestacada === 'function') window.renderPortalSubdestacada();
+                    if (typeof window.renderAdminSubdestacada === 'function') window.renderAdminSubdestacada();
+                }
+                if (d.id === "thematic") {
+                    localStorage.setItem("cuycito_portal_thematic", JSON.stringify(d.data().list || []));
+                    if (typeof window.renderPortalThematicGrid === 'function') window.renderPortalThematicGrid();
+                    if (typeof window.renderAdminThematicGrid === 'function') window.renderAdminThematicGrid();
+                }
+                if (d.id === "top5") {
+                    localStorage.setItem("cuycito_portal_top5", JSON.stringify(d.data().list || []));
+                    if (typeof window.renderPortalTop5 === 'function') window.renderPortalTop5();
+                    if (typeof window.renderAdminTop5 === 'function') window.renderAdminTop5();
+                }
+            });
+        }
+    } catch(e) {
+        console.log("Portal funcionando con cache local offline");
+    }
+}
 
 function initPortalAuth() {
     const authContainer = document.getElementById('navAuthContainer');

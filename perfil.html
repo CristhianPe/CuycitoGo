@@ -1081,7 +1081,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE CAPTURA / SUBIDA DE FOTO QR DE LA TV (SOLO 1 IMAGEN / NO VIDEO) -->
+    <!-- MODAL DE CAPTURA / SUBIDA DE FOTO QR DE LA TV (BLINDADO CON CIBERSEGURIDAD ZERO-TRUST) -->
     <div id="tvQrUploadModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-gradient-to-b from-[#1c1c1c] via-[#121212] to-black border-2 border-cuycito-gold rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl glow-gold relative animate-fade-in">
             <button onclick="window.closeTvQrUploadModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl transition">
@@ -1098,13 +1098,25 @@
                 <p class="text-[11px] text-gray-400">Abre la app en tu TV ➔ Elige "Iniciar sesión con código/QR" ➔ Toma la foto aquí.</p>
             </div>
 
-            <!-- Contenedor de Vista Previa de la Foto -->
+            <!-- Contenedor de Vista Previa de la Foto Sanitizada -->
             <div id="tvQrPreviewContainer" class="w-full h-56 bg-black/80 border-2 border-dashed border-gray-700 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group">
-                <img id="tvQrPreviewImage" src="" alt="Vista previa QR TV" class="w-full h-full object-contain hidden">
+                <img id="tvQrPreviewImage" src="" alt="Vista previa QR TV" class="w-full h-full object-contain hidden" referrerpolicy="no-referrer">
                 <div id="tvQrPlaceholder" class="space-y-2 p-4 text-center">
-                    <i class="fa-solid fa-camera text-4xl text-gray-600"></i>
-                    <p class="text-xs text-gray-400 font-bold">Toma una foto con tu cámara o selecciona 1 imagen</p>
-                    <span class="text-[10px] text-gray-500 font-mono block">Solo 1 imagen (JPG, PNG o WEBP). No se permiten videos.</span>
+                    <i class="fa-solid fa-shield-halved text-4xl text-cuycito-gold animate-pulse"></i>
+                    <p class="text-xs text-gray-300 font-bold">Toma una foto con tu cámara o selecciona 1 imagen</p>
+                    <span class="text-[10px] text-gray-500 font-mono block">🛡️ Sanitización activa: Solo 1 imagen (JPG, PNG, WEBP). No videos.</span>
+                </div>
+            </div>
+
+            <!-- Badges Dinámicos de Verificación de Seguridad y Detección de QR -->
+            <div id="tvQrSecurityStatusBox" class="space-y-1.5 hidden">
+                <div id="tvQrSecurityBadge" class="text-[11px] font-bold py-1 px-3 rounded-lg flex items-center justify-center gap-1.5 bg-emerald-950/80 text-emerald-400 border border-emerald-500/40">
+                    <i class="fa-solid fa-shield-check"></i>
+                    <span id="tvQrSecurityText">Imagen sanitizada (Metadatos EXIF eliminados)</span>
+                </div>
+                <div id="tvQrDetectionBadge" class="text-[10px] font-bold py-0.5 px-2 rounded-lg flex items-center justify-center gap-1 text-yellow-300 bg-yellow-950/60 border border-yellow-500/30">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <span id="tvQrDetectionText">Patrón visual verificado</span>
                 </div>
             </div>
 
@@ -1119,8 +1131,12 @@
 
                 <button id="btnSubmitTvQr" type="button" onclick="window.submitTvQrForActivation()" class="w-full bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-500 hover:from-orange-400 hover:to-emerald-400 text-black font-black text-xs py-3.5 rounded-xl transition shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed" disabled>
                     <i class="fa-solid fa-paper-plane text-sm"></i>
-                    <span>Enviar Foto QR para Activación</span>
+                    <span id="btnSubmitTvQrText">Enviar Foto QR para Activación</span>
                 </button>
+
+                <p id="tvQrCooldownNotice" class="text-[10px] text-amber-400 font-mono hidden">
+                    <i class="fa-solid fa-clock-rotate-left"></i> <span id="tvQrCooldownTimeText">Protección Anti-Spam: Espera 60s antes de volver a enviar.</span>
+                </p>
             </div>
         </div>
     </div>

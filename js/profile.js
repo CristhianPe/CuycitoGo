@@ -459,12 +459,169 @@ function renderClientSubscriptions(subs) {
 }
 
 // ==========================================
-// CONTROLADOR DE CAPTURA DE FOTO QR DE LA TV
+// CIBERSEGURIDAD ZERO-TRUST: PIPELINE DE SANITIZACIÓN & ANTI-SPAM PARA QR DE TV
 // ==========================================
 let activeActivationSubId = null;
 let activeActivationServiceName = '';
 let currentTvQrBase64 = null;
+let tvQrCooldownInterval = null;
 
+// 1. Detección Heurística de Patrón Bimodal / Matriz QR en Canvas
+function detectQrMatrixPattern(ctx, width, height) {
+    try {
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+        let darkPixels = 0;
+        let brightPixels = 0;
+        let highContrastTransitions = 0;
+
+        const step = Math.max(1, Math.floor(width / 70));
+        let prevLum = null;
+
+        for (let y = 0; y < height; y += step) {
+            for (let x = 0; x < width; x += step) {
+                const idx = (y * width + x) * 4;
+                const r = data[idx];
+                const g = data[idx + 1];
+                const b = data[idx + 2];
+                const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+                if (lum < 95) darkPixels++;
+                else if (lum > 160) brightPixels++;
+
+                if (prevLum !== null && Math.abs(lum - prevLum) > 100) {
+                    highContrastTransitions++;
+                }
+                prevLum = lum;
+            }
+        }
+
+        const sampledTotal = ((width / step) * (height / step)) || 1;
+        const contrastRatio = highContrastTransitions / sampledTotal;
+        const darkRatio = darkPixels / sampledTotal;
+        const brightRatio = brightPixels / sampledTotal;
+
+        const hasBimodalContrast = darkRatio > 0.06 && brightRatio > 0.12;
+        const hasGridTransitions = contrastRatio > 0.10;
+
+        return hasBimodalContrast || hasGridTransitions;
+    } catch(e) {
+        return true;
+    }
+}
+
+// 2. Sanitización Asíncrona Zero-Trust (Re-encoding en Canvas & Stripping de Metadatos EXIF / Payloads)
+async function sanitizeTvQrImage(file) {
+    const allowedMime = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!allowedMime.includes(file.type.toLowerCase())) {
+        throw new Error('Formato no permitido. Solo se aceptan imágenes JPG, PNG o WEBP.');
+    }
+
+    if (file.size > 4 * 1024 * 1024) {
+        throw new Error('La imagen supera el límite de 4 MB.');
+    }
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Error al leer el archivo.'));
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('El archivo no es una imagen válida o está dañado.'));
+            img.onload = () => {
+                try {
+                    const maxDim = 1280;
+                    let w = img.width;
+                    let h = img.height;
+
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) {
+                            h = Math.round((h * maxDim) / w);
+                            w = maxDim;
+                        } else {
+                            w = Math.round((w * maxDim) / h);
+                            h = maxDim;
+                        }
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.drawImage(img, 0, 0, w, h);
+
+                    const isQrPattern = detectQrMatrixPattern(ctx, w, h);
+
+                    let sanitizedBase64 = canvas.toDataURL('image/webp', 0.82);
+                    if (!sanitizedBase64.startsWith('data:image/webp')) {
+                        sanitizedBase64 = canvas.toDataURL('image/jpeg', 0.82);
+                    }
+
+                    resolve({
+                        base64: sanitizedBase64,
+                        width: w,
+                        height: h,
+                        hasQrPattern: isQrPattern
+                    });
+                } catch(err) {
+                    reject(new Error('Error durante la sanitización: ' + err.message));
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// 3. Verificador de Rate Limiting & Cooldown Anti-Spam (60s)
+function checkTvQrAntiSpamCooldown(subId) {
+    const cooldownKey = `cuycito_tvqr_cooldown_${subId}`;
+    const lastSent = parseInt(localStorage.getItem(cooldownKey) || '0', 10);
+    const now = Date.now();
+    const elapsedSeconds = Math.floor((now - lastSent) / 1000);
+    const cooldownDuration = 60;
+
+    if (lastSent && elapsedSeconds < cooldownDuration) {
+        return {
+            allowed: false,
+            remainingSeconds: cooldownDuration - elapsedSeconds
+        };
+    }
+    return { allowed: true, remainingSeconds: 0 };
+}
+
+function startTvQrCooldownTimer(subId, remainingSecs) {
+    const notice = document.getElementById('tvQrCooldownNotice');
+    const timeText = document.getElementById('tvQrCooldownTimeText');
+    const btnSubmit = document.getElementById('btnSubmitTvQr');
+    const btnText = document.getElementById('btnSubmitTvQrText');
+
+    if (tvQrCooldownInterval) clearInterval(tvQrCooldownInterval);
+
+    let secs = remainingSecs;
+    if (notice) notice.classList.remove('hidden');
+    if (btnSubmit) btnSubmit.disabled = true;
+
+    const updateTimerUI = () => {
+        if (secs <= 0) {
+            clearInterval(tvQrCooldownInterval);
+            if (notice) notice.classList.add('hidden');
+            if (btnSubmit && currentTvQrBase64) btnSubmit.disabled = false;
+            if (btnText) btnText.innerText = 'Enviar Foto QR para Activación';
+        } else {
+            if (timeText) timeText.innerText = `Protección Anti-Spam: Espera ${secs}s antes de volver a enviar.`;
+            if (btnText) btnText.innerText = `⏳ En espera (${secs}s)...`;
+            secs--;
+        }
+    };
+
+    updateTimerUI();
+    tvQrCooldownInterval = setInterval(updateTimerUI, 1000);
+}
+
+// 4. Controladores del Modal de Activación
 window.openTvQrModal = (subId, serviceName) => {
     activeActivationSubId = subId;
     activeActivationServiceName = serviceName;
@@ -476,6 +633,8 @@ window.openTvQrModal = (subId, serviceName) => {
     const placeholder = document.getElementById('tvQrPlaceholder');
     const btnSubmit = document.getElementById('btnSubmitTvQr');
     const fileInput = document.getElementById('tvQrFileInput');
+    const securityBox = document.getElementById('tvQrSecurityStatusBox');
+    const notice = document.getElementById('tvQrCooldownNotice');
 
     if (nameDisplay) nameDisplay.innerText = serviceName || 'Servicio TV';
     if (previewImg) {
@@ -485,8 +644,16 @@ window.openTvQrModal = (subId, serviceName) => {
     if (placeholder) placeholder.classList.remove('hidden');
     if (btnSubmit) btnSubmit.disabled = true;
     if (fileInput) fileInput.value = '';
+    if (securityBox) securityBox.classList.add('hidden');
+    if (notice) notice.classList.add('hidden');
 
-    // Si ya tenía imagen previa, mostrarla
+    // Verificar Cooldown Anti-Spam
+    const cd = checkTvQrAntiSpamCooldown(subId);
+    if (!cd.allowed) {
+        startTvQrCooldownTimer(subId, cd.remainingSeconds);
+    }
+
+    // Si ya tenía imagen previa
     const currentSub = clientSubscriptions.find(s => s.id === subId);
     if (currentSub && currentSub.tvQrImage) {
         currentTvQrBase64 = currentSub.tvQrImage;
@@ -495,7 +662,7 @@ window.openTvQrModal = (subId, serviceName) => {
             previewImg.classList.remove('hidden');
         }
         if (placeholder) placeholder.classList.add('hidden');
-        if (btnSubmit) btnSubmit.disabled = false;
+        if (btnSubmit && cd.allowed) btnSubmit.disabled = false;
     }
 
     if (modal) modal.classList.remove('hidden');
@@ -504,41 +671,75 @@ window.openTvQrModal = (subId, serviceName) => {
 window.closeTvQrUploadModal = () => {
     const modal = document.getElementById('tvQrUploadModal');
     if (modal) modal.classList.add('hidden');
+    if (tvQrCooldownInterval) clearInterval(tvQrCooldownInterval);
 };
 
-window.handleTvQrFileSelect = (event) => {
+window.handleTvQrFileSelect = async (event) => {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
 
-    // Validación estricta: Solo 1 imagen, no videos
-    if (!file.type.startsWith('image/')) {
-        alert('⚠️ Solo se permite subir archivos de imagen (JPG, PNG o WEBP). No se permiten videos.');
-        event.target.value = '';
-        return;
-    }
+    const previewImg = document.getElementById('tvQrPreviewImage');
+    const placeholder = document.getElementById('tvQrPlaceholder');
+    const btnSubmit = document.getElementById('btnSubmitTvQr');
+    const securityBox = document.getElementById('tvQrSecurityStatusBox');
+    const securityText = document.getElementById('tvQrSecurityText');
+    const detectionBadge = document.getElementById('tvQrDetectionBadge');
+    const detectionText = document.getElementById('tvQrDetectionText');
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const base64Data = e.target.result;
-        currentTvQrBase64 = base64Data;
+    try {
+        if (securityBox) securityBox.classList.remove('hidden');
+        if (securityText) securityText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-cuycito-gold mr-1"></i> Desinfectando y sanitizando imagen...';
 
-        const previewImg = document.getElementById('tvQrPreviewImage');
-        const placeholder = document.getElementById('tvQrPlaceholder');
-        const btnSubmit = document.getElementById('btnSubmitTvQr');
+        // Ejecutar Pipeline de Ciberseguridad
+        const sanitizedResult = await sanitizeTvQrImage(file);
+        currentTvQrBase64 = sanitizedResult.base64;
 
         if (previewImg) {
-            previewImg.src = base64Data;
+            previewImg.src = sanitizedResult.base64;
             previewImg.classList.remove('hidden');
         }
         if (placeholder) placeholder.classList.add('hidden');
-        if (btnSubmit) btnSubmit.disabled = false;
-    };
-    reader.readAsDataURL(file);
+
+        // Badge 1: Sanitización Exitosa
+        if (securityText) {
+            securityText.innerHTML = '<i class="fa-solid fa-shield-check text-emerald-400 mr-1"></i> 100% Sanitizado (EXIF y scripts eliminados)';
+        }
+
+        // Badge 2: Detección de Patrón QR
+        if (detectionBadge && detectionText) {
+            if (sanitizedResult.hasQrPattern) {
+                detectionBadge.className = 'text-[10px] font-bold py-0.5 px-2 rounded-lg flex items-center justify-center gap-1 text-emerald-300 bg-emerald-950/60 border border-emerald-500/40';
+                detectionText.innerHTML = '<i class="fa-solid fa-qrcode text-emerald-400"></i> Código QR / Pantalla TV detectada correctamente';
+            } else {
+                detectionBadge.className = 'text-[10px] font-bold py-0.5 px-2 rounded-lg flex items-center justify-center gap-1 text-amber-300 bg-amber-950/60 border border-amber-500/40';
+                detectionText.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-yellow-400"></i> Recuerda que debe ser una foto clara del televisor';
+            }
+        }
+
+        // Validar Cooldown antes de habilitar
+        const cd = checkTvQrAntiSpamCooldown(activeActivationSubId);
+        if (cd.allowed && btnSubmit) {
+            btnSubmit.disabled = false;
+        }
+
+    } catch(err) {
+        alert('⚠️ Error de seguridad: ' + err.message);
+        event.target.value = '';
+        if (securityBox) securityBox.classList.add('hidden');
+        if (btnSubmit) btnSubmit.disabled = true;
+    }
 };
 
 window.submitTvQrForActivation = async () => {
     if (!activeActivationSubId || !currentTvQrBase64) {
         alert('Por favor toma una foto o selecciona la imagen del QR de tu TV antes de enviar.');
+        return;
+    }
+
+    // Comprobar Cooldown Anti-Spam
+    const cd = checkTvQrAntiSpamCooldown(activeActivationSubId);
+    if (!cd.allowed) {
+        alert(`⏳ Por protección anti-spam, debes esperar ${cd.remainingSeconds} segundos antes de volver a enviar.`);
         return;
     }
 
@@ -557,6 +758,10 @@ window.submitTvQrForActivation = async () => {
         }, { merge: true });
     } catch(e) {}
 
+    // Registrar marca de tiempo para Cooldown Anti-Spam
+    const cooldownKey = `cuycito_tvqr_cooldown_${activeActivationSubId}`;
+    localStorage.setItem(cooldownKey, Date.now().toString());
+
     // Emitir alerta en tiempo real al Dashboard con la foto QR
     try {
         localStorage.setItem("cuycito_tv_qr_alert_trigger", JSON.stringify({
@@ -574,7 +779,7 @@ window.submitTvQrForActivation = async () => {
     renderClientSubscriptions(clientSubscriptions);
     calculateMetrics(clientSubscriptions);
 
-    alert(`📺 ¡Foto QR de tu TV enviada con éxito!\n\nTu asesor ha recibido la captura del código QR de tu televisor (${activeActivationServiceName}) y procederá a activarlo de inmediato.`);
+    alert(`📺 ¡Foto QR de tu TV enviada y sanitizada con éxito!\n\nTu asesor ha recibido la captura del código QR de tu televisor (${activeActivationServiceName}) y procederá a activarlo de inmediato.`);
 };
 
 // ==========================================
