@@ -904,49 +904,81 @@
                         </button>
                     </div>
 
+                    <!-- SELECTOR DE FORMATO DE CONTENIDO (16:9 Noticia vs 2:3 Cartelera) -->
+                    <div class="space-y-2 pt-1 border-b border-gray-800/80 pb-4">
+                        <label class="text-xs font-black text-cyan-300 uppercase tracking-wider block flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[10px] font-mono font-bold border border-cyan-500/40">1</span>
+                            Selecciona el Tipo de Publicación &amp; Relación de Aspecto:
+                        </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <!-- Opción A: Noticia Destacada / Tecnología (16:9) -->
+                            <button 
+                                type="button" 
+                                id="aiTypeBtnNews" 
+                                onclick="window.setAiContentType('NEWS')" 
+                                class="flex items-start gap-3 p-4 rounded-2xl border-2 border-orange-500 bg-orange-950/40 text-left transition transform hover:scale-[1.01] shadow-lg glow-gold cursor-pointer"
+                            >
+                                <div class="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center text-xl shrink-0 shadow">
+                                    <i class="fa-solid fa-newspaper"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <strong class="text-white text-sm font-black">Noticia Destacada / Tecnología</strong>
+                                        <span class="bg-orange-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase">16:9 Horizontal</span>
+                                    </div>
+                                    <p class="text-[11px] text-gray-300 mt-1">Artículos, reportajes de mercado, noticias tecnológicas y novedades de streaming para la portada.</p>
+                                </div>
+                            </button>
+
+                            <!-- Opción B: Cartelera y Estrenos (2:3) -->
+                            <button 
+                                type="button" 
+                                id="aiTypeBtnCartelera" 
+                                onclick="window.setAiContentType('CARTELERA')" 
+                                class="flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-800 bg-black/60 text-left transition hover:border-cuycito-gold/50 opacity-70 hover:opacity-100 cursor-pointer"
+                            >
+                                <div class="w-10 h-10 rounded-xl bg-cuycito-gold/30 text-cuycito-gold flex items-center justify-center text-xl shrink-0">
+                                    <i class="fa-solid fa-film"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <strong class="text-white text-sm font-black">Cartelera y Estrenos</strong>
+                                        <span class="bg-cuycito-gold text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase">2:3 Vertical / Póster</span>
+                                    </div>
+                                    <p class="text-[11px] text-gray-300 mt-1">Fichas de series y películas con calidad 4K, fecha de emisión, sinopsis y póster de cine.</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Caja de Entrada / Chat del Agente -->
                     <div class="space-y-3 pt-1">
                         <label class="text-xs font-bold text-gray-300 flex items-center justify-between">
-                            <span><i class="fa-solid fa-message text-cyan-400 mr-1.5"></i> ¿Qué contenido o estreno deseas crear hoy?</span>
-                            <span class="text-[10px] text-gray-400">Escribe el título, serie o idea libremente</span>
+                            <span id="aiPromptLabel"><i class="fa-solid fa-message text-cyan-400 mr-1.5"></i> ¿Qué noticia o reportaje tecnológico deseas redactar?</span>
+                            <span class="text-[10px] text-gray-400">Escribe el título, tema o idea libremente</span>
                         </label>
 
                         <div class="flex flex-col sm:flex-row gap-3">
                             <input 
                                 type="text" 
                                 id="aiAgentPrompt" 
-                                placeholder="Ej: 'Estreno de Deadpool & Wolverine en Disney+', 'Temporada 5 de Stranger Things', 'Anime de moda en Crunchyroll'..." 
+                                placeholder="Ej: 'El futuro del streaming 4K en Perú', 'Spider-Man Brand New Day todo lo que debes saber', 'Subida de tarifas Netflix'..." 
                                 class="flex-1 bg-black/90 border border-cyan-500/40 focus:border-cyan-400 rounded-2xl px-4 py-3.5 text-sm text-white placeholder-gray-500 outline-none transition shadow-inner"
                                 onkeydown="if(event.key==='Enter') window.generateMarketingContent();"
                             >
                             <button 
                                 id="btnAiGenerate" 
                                 onclick="window.generateMarketingContent()" 
-                                class="bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs px-6 py-3.5 rounded-2xl transition shadow-lg glow-cyan flex items-center justify-center gap-2 uppercase tracking-wider shrink-0 transform hover:scale-105 duration-200"
+                                class="bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs px-6 py-3.5 rounded-2xl transition shadow-lg glow-cyan flex items-center justify-center gap-2 uppercase tracking-wider shrink-0 transform hover:scale-105 duration-200 cursor-pointer"
                             >
                                 <i class="fa-solid fa-wand-magic-sparkles"></i>
-                                <span>Generar con IA & Buscar Imágenes</span>
+                                <span>Generar con IA &amp; Buscar Imágenes</span>
                             </button>
                         </div>
 
-                        <!-- Chips de Sugerencias Rápidas -->
-                        <div class="flex flex-wrap items-center gap-2 pt-1">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-1"><i class="fa-solid fa-lightbulb text-yellow-400 mr-1"></i> Ideas Rápidas:</span>
-                            <button onclick="window.setAiPromptSuggestion('Estreno de Deadpool & Wolverine en Disney+ en calidad 4K UHD')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
-                                🎬 Deadpool & Wolverine
-                            </button>
-                            <button onclick="window.setAiPromptSuggestion('Temporada Final de Stranger Things 5 en Netflix')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
-                                📺 Stranger Things 5
-                            </button>
-                            <button onclick="window.setAiPromptSuggestion('Cien Años de Soledad Parte 2 en Netflix fecha de estreno y sinopsis')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
-                                🍿 Cien Años de Soledad
-                            </button>
-                            <button onclick="window.setAiPromptSuggestion('Nuevo anime Demon Slayer El Castillo Infinito en Crunchyroll')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
-                                ⚔️ Demon Slayer Cine
-                            </button>
-                            <button onclick="window.setAiPromptSuggestion('Subida de tarifas en Netflix y cómo ahorrar con cuentas compartidas en CuzcitoGo')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
-                                💰 Reporte de Precios Streaming
-                            </button>
+                        <!-- Chips de Sugerencias Rápidas Dinámicas -->
+                        <div id="aiPromptSuggestionsContainer" class="flex flex-wrap items-center gap-2 pt-1">
+                            <!-- Generado dinámicamente por js/ai-marketing-agent.js -->
                         </div>
                     </div>
 

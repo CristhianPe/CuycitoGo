@@ -1,5 +1,32 @@
 import { db, collection, getDocs, getDoc, doc, setDoc } from "./firebase-config.js";
 
+// Catálogo de Precios de Servicios VIP (para renovaciones y cálculos)
+const VIP_CATALOG = {
+    "Netflix": { price: 15.00 },
+    "HBO Max": { price: 14.00 },
+    "Max": { price: 9.00 },
+    "Disney+": { price: 10.00 },
+    "Disney": { price: 10.00 },
+    "Prime Video": { price: 6.00 },
+    "Prime": { price: 6.00 },
+    "Crunchyroll": { price: 10.00 },
+    "Spotify": { price: 8.00 },
+    "YouTube Premium": { price: 10.00 },
+    "Paramount+": { price: 7.00 },
+    "Apple TV+": { price: 8.00 },
+    "IPTV Pro": { price: 15.00 }
+};
+
+function getDaysRemaining(endDateStr) {
+    if (!endDateStr) return 0;
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const end = new Date(endDateStr + (endDateStr.includes('T') ? '' : 'T23:59:59'));
+    if (isNaN(end)) return 0;
+    return Math.ceil((end - today) / (1000 * 60 * 60 * 24));
+}
+window.getDaysRemaining = getDaysRemaining;
+
 // Estado de la sesión del cliente
 let currentClientUser = null;
 let clientSubscriptions = [];
@@ -93,17 +120,32 @@ const DEFAULT_CATALOG_PRODUCTS = [
 // ==========================================
 // 1. INICIALIZACIÓN Y VALIDACIÓN DE SESIÓN
 // ==========================================
-document.addEventListener("DOMContentLoaded", async () => {
-    // 1. Validar si el cliente tiene sesión activa en localStorage
-    const savedClient = localStorage.getItem("cuycitoClient");
+async function initProfilePage() {
+    let savedClient = localStorage.getItem("cuycitoClient");
     
-    if (!savedClient) {
-        window.location.replace("login-cliente.html");
-        return;
+    try {
+        currentClientUser = savedClient ? JSON.parse(savedClient) : null;
+    } catch(e) {
+        currentClientUser = null;
     }
 
-    try {
-        currentClientUser = JSON.parse(savedClient);
+    // Si no hay sesión o los datos están incompletos, restaurar sesión Demo VIP
+    if (!currentClientUser || !currentClientUser.name || !currentClientUser.id) {
+        currentClientUser = {
+            id: "demo_cuycito_user",
+            name: "Cuycito Demo VIP 🐹",
+            nickname: "cuycitogodemo",
+            phone: "cuycitogodemo",
+            email: "demo@cuycitogo.pe",
+            pass: "cuycito123",
+            balance: 50.00,
+            isDemo: true,
+            referredCodeUsed: "VIP-JUAN-7K9A",
+            referralDiscountUsed: false,
+            createdAt: new Date().toISOString()
+        };
+        localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+    } else {
         if (currentClientUser.isDemo || currentClientUser.phone === 'cuycitogodemo' || currentClientUser.id === 'demo_cuycito_user') {
             if (currentClientUser.balance === undefined || currentClientUser.balance === null || currentClientUser.balance <= 0) {
                 currentClientUser.balance = 50.00;
@@ -113,15 +155,34 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
             localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
         }
-        updateProfileUI();
-        window.loadClientPaymentQR();
-        await loadClientSubscriptions();
-        await refreshUserDataFromFirestore();
-    } catch (e) {
-        console.error("Error al procesar sesión:", e);
-        window.location.replace("login-cliente.html");
     }
-});
+
+    // Actualizar interfaz y cargar servicios inmediatamente
+    updateProfileUI();
+    await loadClientSubscriptions();
+
+    try {
+        if (typeof window.loadClientPaymentQR === 'function') {
+            await window.loadClientPaymentQR();
+        } else if (typeof loadClientPaymentQR === 'function') {
+            await loadClientPaymentQR();
+        }
+    } catch(qrErr) {
+        console.warn("QR no cargado de inmediato:", qrErr);
+    }
+
+    try {
+        await refreshUserDataFromFirestore();
+    } catch(fireErr) {
+        console.warn("Usuario no refrescado de Firestore:", fireErr);
+    }
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initProfilePage);
+} else {
+    initProfilePage();
+}
 
 // Sincroniza los datos más recientes del usuario desde Firestore (saldo, nickname, etc.)
 async function refreshUserDataFromFirestore() {
@@ -185,53 +246,114 @@ function updateProfileUI() {
 // ==========================================
 // 2. CARGA DE SUSCRIPCIONES DEL CLIENTE
 // ==========================================
+
+// Helper para vincular suscripciones con el cliente mediante múltiples criterios
+function isSubscriptionBelongingToClient(sub, client) {
+    if (!sub || !client) return false;
+
+    const normalize = (str) => (str || '').toString().trim().toLowerCase().replace(/^@/, '');
+
+    const clientName = normalize(client.name);
+    const clientNickname = normalize(client.nickname);
+    const clientPhone = (client.phone || '').toString().replace(/\D/g, '');
+    const clientEmail = normalize(client.email);
+    const clientId = normalize(client.id);
+
+    const subPerson = normalize(sub.person);
+    const subNickname = normalize(sub.userNickname || sub.nickname);
+    const subClientId = normalize(sub.userId || sub.clientId);
+    const subClientEmail = normalize(sub.clientEmail || sub.userEmail);
+    const subPhone = (sub.phone || sub.clientPhone || '').toString().replace(/\D/g, '');
+
+    // 1. Coincidencia por ID de cliente
+    if (clientId && subClientId && clientId === subClientId) return true;
+
+    // 2. Coincidencia por Teléfono (mínimo 7 dígitos)
+    if (clientPhone && subPhone && clientPhone.length >= 7 && (clientPhone.endsWith(subPhone) || subPhone.endsWith(clientPhone))) return true;
+
+    // 3. Coincidencia por Correo de cliente
+    if (clientEmail && subClientEmail && clientEmail === subClientEmail) return true;
+
+    // 4. Coincidencia por Nickname
+    if (clientNickname && subNickname && clientNickname === subNickname) return true;
+    if (clientNickname && subPerson && (clientNickname === subPerson || subPerson.includes(clientNickname) || clientNickname.includes(subPerson))) return true;
+
+    // 5. Coincidencia por Nombre
+    if (clientName && subPerson && (clientName === subPerson || subPerson.includes(clientName) || clientName.includes(subPerson))) return true;
+
+    // 6. Si es cuenta demo
+    if (client.isDemo && (sub.isDemo || subPerson === 'cliente demo' || subPerson === 'cuycitogodemo' || subPerson === normalize(client.name))) return true;
+
+    return false;
+}
+
 async function loadClientSubscriptions() {
     const container = document.getElementById('servicesContainer');
     if (!container || !currentClientUser) return;
 
+    // 1. CARGA INMEDIATA (0ms) DESDE CACHÉ LOCAL O DATOS DEMO
+    let cachedSubs = [];
+    try {
+        cachedSubs = JSON.parse(localStorage.getItem("cuycito_client_subscriptions") || "[]");
+    } catch(e) {}
+
+    clientSubscriptions = [];
+    cachedSubs.forEach(data => {
+        if (isSubscriptionBelongingToClient(data, currentClientUser)) {
+            clientSubscriptions.push(data);
+        }
+    });
+
+    if (currentClientUser.isDemo && clientSubscriptions.length === 0) {
+        const today = new Date();
+        const in3Days = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const nextMonth = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        clientSubscriptions = [
+            { id: "sub_demo_netflix", person: currentClientUser.name, service: "Netflix", price: 15.00, email: "demo.netflix@cuycitogo.pe", pass: "cuycitoVIP4K", pin: "1234", endDate: in3Days, isMasterActive: true, isDemo: true },
+            { id: "sub_demo_hbo", person: currentClientUser.name, service: "HBO Max", price: 14.00, email: "demo.hbo@cuycitogo.pe", pass: "cuycitoHBO2026", pin: "4321", endDate: nextMonth, isMasterActive: true, isDemo: true },
+            { id: "sub_demo_crunchyroll", person: currentClientUser.name, service: "Crunchyroll", price: 10.00, email: "demo.crunchy@cuycitogo.pe", pass: "cuycitoAnime99", pin: "", endDate: nextMonth, isMasterActive: true, isDemo: true }
+        ];
+    }
+
+    // Renderizar inmediatamente en 0ms
+    renderClientSubscriptions(clientSubscriptions);
+    calculateMetrics(clientSubscriptions);
+    if (typeof window.checkExpiringSubscriptionsAlert === 'function') {
+        window.checkExpiringSubscriptionsAlert(clientSubscriptions);
+    }
+
+    // 2. SINCRONIZACIÓN EN SEGUNDO PLANO CON FIRESTORE
     try {
         const [subSnap, masterSnap] = await Promise.all([
             getDocs(collection(db, "subscriptions")),
             getDocs(collection(db, "masterAccounts"))
         ]);
 
-        allMasterAccounts = [];
-        masterSnap.forEach(d => allMasterAccounts.push(d.data()));
+        const remoteMasterDocs = [];
+        masterSnap.forEach(d => remoteMasterDocs.push({ id: d.id, ...d.data() }));
+        allMasterAccounts = remoteMasterDocs;
 
-        const clientNameNorm = (currentClientUser.name || '').trim().toLowerCase();
-        
-        clientSubscriptions = [];
-        subSnap.forEach(d => {
-            const data = d.data();
-            if (data.person && data.person.trim().toLowerCase() === clientNameNorm) {
-                clientSubscriptions.push(data);
+        const remoteSubDocs = [];
+        subSnap.forEach(d => remoteSubDocs.push({ id: d.id, ...d.data() }));
+        localStorage.setItem("cuycito_client_subscriptions", JSON.stringify(remoteSubDocs));
+
+        const matchedRemote = [];
+        remoteSubDocs.forEach(data => {
+            if (isSubscriptionBelongingToClient(data, currentClientUser)) {
+                matchedRemote.push(data);
             }
         });
 
-        // Si es cuenta Demo y no tiene suscripciones en BD, inyectar 3 servicios de prueba
-        if (currentClientUser.isDemo && clientSubscriptions.length === 0) {
-            const today = new Date();
-            const nextMonth = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-            clientSubscriptions = [
-                { id: "sub_demo_netflix", person: currentClientUser.name, service: "Netflix", email: "demo.netflix@cuycitogo.pe", pass: "cuycitoVIP4K", pin: "1234", endDate: nextMonth, isMasterActive: true, isDemo: true },
-                { id: "sub_demo_hbo", person: currentClientUser.name, service: "HBO Max", email: "demo.hbo@cuycitogo.pe", pass: "cuycitoHBO2026", pin: "4321", endDate: nextMonth, isMasterActive: true, isDemo: true },
-                { id: "sub_demo_crunchyroll", person: currentClientUser.name, service: "Crunchyroll", email: "demo.crunchy@cuycitogo.pe", pass: "cuycitoAnime99", pin: "", endDate: nextMonth, isMasterActive: true, isDemo: true }
-            ];
+        if (matchedRemote.length > 0) {
+            clientSubscriptions = matchedRemote;
+            renderClientSubscriptions(clientSubscriptions);
+            calculateMetrics(clientSubscriptions);
+            if (typeof window.checkExpiringSubscriptionsAlert === 'function') {
+                window.checkExpiringSubscriptionsAlert(clientSubscriptions);
+            }
         }
-
-        renderClientSubscriptions(clientSubscriptions);
-        updateMetrics(clientSubscriptions);
-
-    } catch (e) {
-        console.error("Error al cargar suscripciones del cliente:", e);
-        if (container) {
-            container.innerHTML = `
-                <div class="col-span-full text-center text-red-400 py-10 bg-[#121212] rounded-3xl border border-red-500/30 p-6">
-                    <i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i>
-                    <p class="font-bold text-sm">No pudimos conectar con la base de datos de tus servicios.</p>
-                </div>
-            `;
-        }
+    } catch (dbErr) {
+        console.warn("Sincronización en segundo plano con Firestore omitida:", dbErr);
     }
 }
 
@@ -421,10 +543,11 @@ function renderClientSubscriptions(subs) {
                 </button>
             `;
         } else {
+            const renewPrice = parseFloat(sub.price || (VIP_CATALOG[sub.service] ? VIP_CATALOG[sub.service].price : 15.00));
             actionBtnHTML = `
-                <button onclick="window.requestRenewalWhatsApp('${sub.service}', '${sub.endDate}')" class="w-full bg-gradient-to-r from-cuycito-red to-cuycito-redHover hover:from-cuycito-redHover hover:to-cuycito-gold text-white font-extrabold text-xs py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-2 shadow glow-red">
+                <button onclick="window.promptSubRenewal('${sub.id}')" class="w-full bg-gradient-to-r from-cuycito-red via-orange-500 to-amber-500 hover:from-cuycito-redHover hover:to-yellow-400 text-white hover:text-black font-black text-xs py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg glow-gold uppercase tracking-wider">
                     <i class="fa-solid fa-rotate-right text-sm"></i>
-                    <span>Renovar Servicio</span>
+                    <span>Renovar con Saldo (S/ ${renewPrice.toFixed(2)})</span>
                 </button>
             `;
         }
@@ -782,10 +905,239 @@ window.submitTvQrForActivation = async () => {
     alert(`📺 ¡Foto QR de tu TV enviada y sanitizada con éxito!\n\nTu asesor ha recibido la captura del código QR de tu televisor (${activeActivationServiceName}) y procederá a activarlo de inmediato.`);
 };
 
+// =========================================================
+// 5. RENOVACIÓN DE SUSCRIPCIÓN CON SALDO VIP DEL CLIENTE
+// =========================================================
+let activeRenewalSubId = null;
+let activeRenewalPrice = 0;
+let activeRenewalServiceName = '';
+
+window.promptSubRenewal = (subId) => {
+    const sub = clientSubscriptions.find(s => s.id === subId);
+    if (!sub) return;
+
+    const price = parseFloat(sub.price || (VIP_CATALOG[sub.service] ? VIP_CATALOG[sub.service].price : 15.00));
+    const currentBalance = parseFloat(currentClientUser ? (currentClientUser.balance || 0) : 0);
+
+    activeRenewalSubId = sub.id;
+    activeRenewalPrice = price;
+    activeRenewalServiceName = sub.service;
+
+    if (currentBalance < price) {
+        // Saldo Insuficiente
+        const missing = price - currentBalance;
+        if (document.getElementById('insufficientRequiredPrice')) document.getElementById('insufficientRequiredPrice').innerText = `S/ ${price.toFixed(2)}`;
+        if (document.getElementById('insufficientCurrentBalance')) document.getElementById('insufficientCurrentBalance').innerText = `S/ ${currentBalance.toFixed(2)}`;
+        if (document.getElementById('insufficientMissingAmount')) document.getElementById('insufficientMissingAmount').innerText = `S/ ${missing.toFixed(2)}`;
+        
+        const modal = document.getElementById('insufficientBalanceModal');
+        if (modal) modal.classList.remove('hidden');
+    } else {
+        // Confirmación de Renovación
+        const remaining = currentBalance - price;
+        if (document.getElementById('renewModalServiceName')) document.getElementById('renewModalServiceName').innerText = sub.service;
+        if (document.getElementById('renewModalPrice')) document.getElementById('renewModalPrice').innerText = `S/ ${price.toFixed(2)}`;
+        if (document.getElementById('renewModalCurrentBalance')) document.getElementById('renewModalCurrentBalance').innerText = `S/ ${currentBalance.toFixed(2)}`;
+        if (document.getElementById('renewModalRemainingBalance')) document.getElementById('renewModalRemainingBalance').innerText = `S/ ${remaining.toFixed(2)}`;
+
+        const modal = document.getElementById('renewalConfirmModal');
+        if (modal) modal.classList.remove('hidden');
+    }
+};
+
+window.closeRenewalConfirmModal = () => {
+    const modal = document.getElementById('renewalConfirmModal');
+    if (modal) modal.classList.add('hidden');
+    activeRenewalSubId = null;
+};
+
+window.closeInsufficientBalanceModal = () => {
+    const modal = document.getElementById('insufficientBalanceModal');
+    if (modal) modal.classList.add('hidden');
+};
+
+window.executeSubRenewalWithBalance = async () => {
+    if (!activeRenewalSubId || !currentClientUser) return;
+    const sub = clientSubscriptions.find(s => s.id === activeRenewalSubId);
+    if (!sub) return;
+
+    const btn = document.getElementById('btnExecuteRenewal');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Procesando Renovación...';
+    }
+
+    const currentBalance = parseFloat(currentClientUser.balance || 0);
+    const price = activeRenewalPrice;
+    const newBalance = Math.max(0, currentBalance - price);
+
+    // 1. Calcular nueva fecha de vencimiento (+30 días)
+    let baseDate = new Date();
+    if (sub.endDate) {
+        const subExp = new Date(sub.endDate + "T23:59:59");
+        if (!isNaN(subExp) && subExp > new Date()) {
+            baseDate = subExp;
+        }
+    }
+    baseDate.setDate(baseDate.getDate() + 30);
+    const yyyy = baseDate.getFullYear();
+    const mm = String(baseDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(baseDate.getDate()).padStart(2, '0');
+    const newEndDate = `${yyyy}-${mm}-${dd}`;
+
+    // 2. Actualizar saldo de usuario
+    currentClientUser.balance = newBalance;
+    localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+
+    const headerBal = document.getElementById('headerBalance');
+    const walletBal = document.getElementById('walletBalance');
+    if (headerBal) headerBal.innerText = `S/ ${newBalance.toFixed(2)}`;
+    if (walletBal) walletBal.innerText = `S/ ${newBalance.toFixed(2)}`;
+
+    try {
+        await setDoc(doc(db, "users", currentClientUser.id), {
+            balance: newBalance,
+            lastRenewalAt: new Date().toISOString()
+        }, { merge: true });
+    } catch(e) {}
+
+    // 3. Actualizar suscripción
+    sub.endDate = newEndDate;
+    sub.status = 'active';
+    sub.lastRenewalAt = new Date().toISOString();
+
+    try {
+        await setDoc(doc(db, "subscriptions", sub.id), {
+            endDate: newEndDate,
+            status: 'active',
+            lastRenewalAt: new Date().toISOString()
+        }, { merge: true });
+    } catch(e) {}
+
+    // 4. Emitir alerta en tiempo real al Dashboard del Administrador
+    try {
+        localStorage.setItem("cuycito_admin_notification_trigger", JSON.stringify({
+            type: 'auto_renewal',
+            title: '🔄 Renovación Automática de Servicio',
+            userName: currentClientUser.name || 'Cliente VIP',
+            userNickname: currentClientUser.nickname || currentClientUser.name || 'Cliente VIP',
+            serviceName: sub.service,
+            amount: price,
+            newEndDate: newEndDate,
+            subId: sub.id,
+            timestamp: Date.now()
+        }));
+    } catch(e) {}
+
+    window.closeRenewalConfirmModal();
+    renderClientSubscriptions(clientSubscriptions);
+    calculateMetrics(clientSubscriptions);
+
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check text-sm"></i> Confirmar y Descontar Saldo';
+    }
+
+    alert(`🎉 ¡Renovación Exitosa!\n\nTu servicio de ${sub.service} ha sido renovado por 30 días adicionales hasta el ${newEndDate}.\nSe descontaron S/ ${price.toFixed(2)} de tu saldo VIP.`);
+};
+
+// =========================================================
+// 6. ALERTA DE RENOVACIÓN PREVENTIVA PERSONALIZADA (5 DÍAS)
+// =========================================================
+window.checkExpiringSubscriptionsAlert = (subs) => {
+    if (!subs || subs.length === 0 || !currentClientUser) return;
+
+    const now = new Date();
+    const expiringList = subs.filter(sub => {
+        if (sub.status === 'pending_activation') return false;
+        if (!sub.endDate) return false;
+        const exp = new Date(sub.endDate + "T23:59:59");
+        const diffDays = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+        return diffDays <= 5 && diffDays >= 0;
+    });
+
+    const banner = document.getElementById('profilePersonalizedAlarmBanner');
+    const greeting = document.getElementById('alarmBannerClientGreeting');
+    const bannerTitle = document.getElementById('alarmBannerTitle');
+    const bannerDesc = document.getElementById('alarmBannerDescription');
+    const modalTitle = document.getElementById('renewalAlertModalTitle');
+    const modalBody = document.getElementById('renewalAlertModalBody');
+
+    const clientNick = currentClientUser.nickname || currentClientUser.name || 'Cliente VIP';
+
+    if (expiringList.length > 0) {
+        const firstService = expiringList[0];
+        const expFirst = new Date(firstService.endDate + "T23:59:59");
+        const daysFirst = Math.ceil((expFirst - now) / (1000 * 60 * 60 * 24));
+        const daysText = daysFirst === 0 ? 'HOY' : `en ${daysFirst} día(s)`;
+
+        if (greeting) greeting.innerText = `¡Atención @${clientNick}!`;
+        if (bannerTitle) bannerTitle.innerText = `Tu servicio de ${firstService.service} vence ${daysText}`;
+        if (bannerDesc) bannerDesc.innerText = `¿Desea activar el sistema de alerta para que no te quedes sin servicio? Solo dale en aceptar.`;
+        if (banner) banner.classList.remove('hidden');
+
+        if (modalTitle) modalTitle.innerText = `¡Hola @${clientNick}! Tu servicio está por vencer`;
+        if (modalBody) modalBody.innerText = `Tu servicio de ${firstService.service} vence ${daysText} (${firstService.endDate}). ¿Desea activar el sistema de alerta para que no te quedes sin servicio? Solo dale en aceptar.`;
+
+        // Renderizar lista en modal
+        const container = document.getElementById('renewalAlertServicesList');
+        if (container) {
+            container.innerHTML = expiringList.map(s => {
+                const exp = new Date(s.endDate + "T23:59:59");
+                const diffDays = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+                const price = parseFloat(s.price || (VIP_CATALOG[s.service] ? VIP_CATALOG[s.service].price : 15.00));
+                return `
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-gray-900/90 border border-amber-500/30">
+                    <div>
+                        <strong class="text-white text-xs block">${s.service}</strong>
+                        <span class="text-[10px] text-amber-400 font-mono">⚠️ Vence ${diffDays === 0 ? 'HOY' : 'en ' + diffDays + ' día(s)'} (${s.endDate})</span>
+                    </div>
+                    <button onclick="window.closeRenewalAlertModal(); window.promptSubRenewal('${s.id}')" class="bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-[10px] py-1.5 px-3 rounded-lg shadow uppercase transition">
+                        Renovar S/ ${price.toFixed(2)}
+                    </button>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // Abrir modal automáticamente si no se ha cerrado manualmente en esta sesión
+        const isDismissed = sessionStorage.getItem("cuycito_renewal_alert_dismissed");
+        if (!isDismissed) {
+            const modal = document.getElementById('renewalAlertModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+    } else {
+        if (banner) banner.classList.add('hidden');
+    }
+};
+
+window.openRenewalAlertModal = () => {
+    const modal = document.getElementById('renewalAlertModal');
+    if (modal) modal.classList.remove('hidden');
+};
+
+window.closeRenewalAlertModal = () => {
+    const modal = document.getElementById('renewalAlertModal');
+    if (modal) modal.classList.add('hidden');
+    sessionStorage.setItem("cuycito_renewal_alert_dismissed", "true");
+};
+
+window.acceptRenewalAlerts = async () => {
+    if ('Notification' in window && Notification.permission !== 'granted') {
+        try {
+            await Notification.requestPermission();
+        } catch(e) {}
+    }
+
+    localStorage.setItem("cuycito_renewal_alerts_enabled", "true");
+    window.closeRenewalAlertModal();
+    alert("🔔 ¡Sistema de alertas activado con éxito!\n\nTe avisaremos oportunamente para que disfrutes de tu entretenimiento sin interrupciones.");
+};
+
 // ==========================================
-// 3. RECARGA DUAL: LEMON CASH & MANUAL QR
+// 7. RECARGA DUAL: LEMON CASH & MANUAL QR
 // ==========================================
-window.loadClientPaymentQR = async () => {
+async function loadClientPaymentQR() {
     const cachedQr = localStorage.getItem("paymentQrUrl");
     const cachedTag = localStorage.getItem("lemonTag");
     const cachedPhone = localStorage.getItem("whatsappPhone");
@@ -830,7 +1182,8 @@ window.loadClientPaymentQR = async () => {
     } catch(e) {
         console.error("Error al cargar QR en cliente:", e);
     }
-};
+}
+window.loadClientPaymentQR = loadClientPaymentQR;
 
 window.openRechargeModal = async () => {
     const modal = document.getElementById('rechargeModal');
@@ -1227,15 +1580,6 @@ window.logoutClient = () => {
     window.location.replace("login-cliente.html");
 };
 
-function getDaysRemaining(endDateStr) {
-    if (!endDateStr) return 0;
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const end = new Date(endDateStr);
-    return Math.ceil((end - today) / 86400000);
-}
-window.getDaysRemaining = getDaysRemaining;
-
 // ==========================================
 // 5. MÓDULO DE JUEGOS: RULETA DE PREMIOS VIP
 // ==========================================
@@ -1358,20 +1702,20 @@ window.switchProfileTab = (tab) => {
     if (tab === 'services') {
         if (btnServices) btnServices.className = "text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0";
         if (viewServices) viewServices.classList.remove('hidden');
-    } else if (tab === 'store') {
+    } else if (tab === 'store' || tab === 'catalog') {
         if (btnStore) btnStore.className = "text-emerald-400 border-b-2 border-emerald-400 pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0";
         if (viewStore) viewStore.classList.remove('hidden');
-        window.loadProfileStoreCatalog();
-    } else if (tab === 'roulette') {
+        if (typeof window.loadProfileStoreCatalog === 'function') window.loadProfileStoreCatalog();
+    } else if (tab === 'roulette' || tab === 'games') {
         if (btnRoulette) btnRoulette.className = "text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0 relative";
         if (viewRoulette) viewRoulette.classList.remove('hidden');
 
         // Validar acceso según cantidad de servicios activos (>= 3)
-        window.checkRouletteEligibility();
+        if (typeof window.checkRouletteEligibility === 'function') window.checkRouletteEligibility();
     } else if (tab === 'referrals') {
         if (btnReferrals) btnReferrals.className = "text-orange-400 border-b-2 border-orange-400 pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0";
         if (viewReferrals) viewReferrals.classList.remove('hidden');
-        window.loadProfileReferralProgram();
+        if (typeof window.loadProfileReferralProgram === 'function') window.loadProfileReferralProgram();
     }
 };
 

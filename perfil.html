@@ -193,6 +193,32 @@
                 </div>
             </div>
 
+            <!-- ========================================================= -->
+            <!-- BANNER DINÁMICO DE ALARMA PERSONALIZADA POR CLIENTE       -->
+            <!-- ========================================================= -->
+            <div id="profilePersonalizedAlarmBanner" class="hidden bg-gradient-to-r from-amber-950/90 via-[#181206] to-amber-950/70 border-2 border-yellow-500/70 rounded-3xl p-5 sm:p-6 shadow-2xl glow-gold relative overflow-hidden animate-fade-in">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="flex items-start sm:items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-black flex items-center justify-center text-2xl shadow-lg shrink-0 animate-bounce">
+                            🔔
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Alarma Preventiva</span>
+                                <span class="text-xs text-amber-300 font-bold" id="alarmBannerClientGreeting">¡Atención @Cliente!</span>
+                            </div>
+                            <h3 class="text-sm sm:text-base font-black text-white" id="alarmBannerTitle">Tienes servicios por vencer en menos de 5 días</h3>
+                            <p class="text-xs text-amber-200/90 leading-snug" id="alarmBannerDescription">¿Desea activar el sistema de alerta para que no te quedes sin servicio? Solo dale en aceptar.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                        <button onclick="window.openRenewalAlertModal()" class="w-full sm:w-auto bg-gradient-to-r from-amber-500 via-cuycito-gold to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs px-4 py-3 rounded-xl shadow-lg glow-gold uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer">
+                            <i class="fa-solid fa-bell-ring"></i> Ver Alarma & Renovar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Lista de Servicios Comprados -->
             <div class="bg-[#121212] border border-gray-800/80 rounded-3xl overflow-hidden shadow-2xl space-y-4">
                 <div class="p-5 border-b border-gray-800 bg-[#0a0a0a]/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
@@ -1137,6 +1163,143 @@
                 <p id="tvQrCooldownNotice" class="text-[10px] text-amber-400 font-mono hidden">
                     <i class="fa-solid fa-clock-rotate-left"></i> <span id="tvQrCooldownTimeText">Protección Anti-Spam: Espera 60s antes de volver a enviar.</span>
                 </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- MODAL FLOTANTE: ALERTA DE RENOVACIÓN (5 DÍAS DE ANTICIPACIÓN) -->
+    <!-- ========================================================= -->
+    <div id="renewalAlertModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden animate-fade-in">
+        <div class="bg-gradient-to-b from-[#1e1708] via-[#121212] to-black border-2 border-cuycito-gold rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl glow-gold relative">
+            <button onclick="window.closeRenewalAlertModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-amber-500 via-yellow-400 to-amber-600 flex items-center justify-center text-3xl shadow-lg animate-bounce">
+                🔔
+            </div>
+
+            <div class="space-y-2">
+                <span class="bg-amber-950/90 text-yellow-300 border border-yellow-500/40 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-block">
+                    ⚠️ Alerta Preventiva VIP
+                </span>
+                <h3 class="text-lg font-black text-white glow-gold" id="renewalAlertModalTitle">
+                    ¡Tu servicio está por vencer!
+                </h3>
+                <p class="text-xs text-amber-200/90 font-medium leading-relaxed" id="renewalAlertModalBody">
+                    ¿Desea activar el sistema de alerta para que no te quedes sin servicio? Solo dale en aceptar.
+                </p>
+            </div>
+
+            <!-- Lista de Servicios por Vencer -->
+            <div id="renewalAlertServicesList" class="space-y-2 bg-black/60 border border-gray-800 rounded-2xl p-3 text-left max-h-44 overflow-y-auto custom-scrollbar"></div>
+
+            <div class="flex flex-col gap-2 pt-2">
+                <button type="button" onclick="window.acceptRenewalAlerts()" class="w-full bg-gradient-to-r from-amber-500 via-cuycito-gold to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs py-3.5 px-4 rounded-xl transition shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider">
+                    <i class="fa-solid fa-bell-check text-sm"></i>
+                    <span>Aceptar y Activar Alertas</span>
+                </button>
+
+                <button type="button" onclick="window.closeRenewalAlertModal()" class="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-white font-bold text-xs py-2.5 rounded-xl transition">
+                    Más tarde
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- MODAL DE CONFIRMACIÓN: RENOVAR SERVICIO CON SALDO VIP     -->
+    <!-- ========================================================= -->
+    <div id="renewalConfirmModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden animate-fade-in">
+        <div class="bg-gradient-to-b from-[#181818] via-[#121212] to-black border-2 border-cuycito-gold rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl glow-gold relative">
+            <button onclick="window.closeRenewalConfirmModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-green-600 flex items-center justify-center text-3xl shadow-lg">
+                🔄
+            </div>
+
+            <div class="space-y-1">
+                <h3 class="text-lg font-black text-white glow-gold">Renovación de Suscripción</h3>
+                <p class="text-xs text-gray-400">El monto se debitará directamente de tu saldo VIP en tiempo real.</p>
+            </div>
+
+            <div class="bg-black/70 border border-gray-800 rounded-2xl p-4 text-left space-y-2.5 font-mono text-xs">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Servicio:</span>
+                    <strong class="text-white font-bold" id="renewModalServiceName">Netflix 4K</strong>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Costo de Renovación (30 días):</span>
+                    <strong class="text-cuycito-gold font-black text-sm" id="renewModalPrice">S/ 15.00</strong>
+                </div>
+                <div class="flex justify-between items-center border-t border-gray-800/80 pt-2">
+                    <span class="text-gray-400">Tu Saldo Actual:</span>
+                    <span class="text-emerald-400 font-bold" id="renewModalCurrentBalance">S/ 50.00</span>
+                </div>
+                <div class="flex justify-between items-center border-t border-gray-800/80 pt-2">
+                    <span class="text-gray-400">Saldo Restante:</span>
+                    <strong class="text-yellow-300 font-black" id="renewModalRemainingBalance">S/ 35.00</strong>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2 pt-2">
+                <button id="btnExecuteRenewal" type="button" onclick="window.executeSubRenewalWithBalance()" class="w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-green-400 hover:from-emerald-400 hover:to-green-300 text-black font-black text-xs py-3.5 px-4 rounded-xl transition shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider">
+                    <i class="fa-solid fa-check text-sm"></i>
+                    <span>Confirmar y Descontar Saldo</span>
+                </button>
+
+                <button type="button" onclick="window.closeRenewalConfirmModal()" class="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-white font-bold text-xs py-2.5 rounded-xl transition">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- MODAL DE SALDO INSUFICIENTE                              -->
+    <!-- ========================================================= -->
+    <div id="insufficientBalanceModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden animate-fade-in">
+        <div class="bg-gradient-to-b from-[#1a0808] via-[#121212] to-black border-2 border-red-500/70 rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl glow-red relative">
+            <button onclick="window.closeInsufficientBalanceModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-red-600 to-orange-500 flex items-center justify-center text-3xl shadow-lg animate-pulse">
+                💳
+            </div>
+
+            <div class="space-y-1">
+                <h3 class="text-lg font-black text-white glow-red">Saldo Insuficiente</h3>
+                <p class="text-xs text-red-300">No cuentas con saldo suficiente para renovar este servicio.</p>
+            </div>
+
+            <div class="bg-black/70 border border-gray-800 rounded-2xl p-4 text-left space-y-2 font-mono text-xs">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Costo del Servicio:</span>
+                    <strong class="text-white" id="insufficientRequiredPrice">S/ 15.00</strong>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Tu Saldo Disponible:</span>
+                    <span class="text-red-400 font-bold" id="insufficientCurrentBalance">S/ 0.00</span>
+                </div>
+                <div class="flex justify-between items-center border-t border-gray-800/80 pt-2">
+                    <span class="text-gray-400">Monto Faltante:</span>
+                    <strong class="text-amber-400 font-black" id="insufficientMissingAmount">S/ 15.00</strong>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2 pt-2">
+                <button type="button" onclick="window.closeInsufficientBalanceModal(); window.openProfileRechargeModal();" class="w-full bg-gradient-to-r from-amber-500 via-cuycito-gold to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs py-3.5 px-4 rounded-xl transition shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider">
+                    <i class="fa-solid fa-wallet text-sm"></i>
+                    <span>Recargar Saldo Ahora</span>
+                </button>
+
+                <button type="button" onclick="window.closeInsufficientBalanceModal()" class="w-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-white font-bold text-xs py-2.5 rounded-xl transition">
+                    Cerrar
+                </button>
             </div>
         </div>
     </div>

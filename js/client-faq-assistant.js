@@ -145,11 +145,11 @@ function injectFaqWidget() {
     if (document.getElementById('cuzcitoFaqWidget')) return;
 
     const widgetHtml = `
-        <!-- BOTÓN FLOTANTE DE AYUDA Y CONDICIONES -->
+        <!-- BOTÓN FLOTANTE DE AYUDA Y CONDICIONES (IZQUIERDA PARA NO CHOCAR CON CARRITO) -->
         <button 
             id="btnToggleFaqModal" 
             onclick="window.toggleFaqModal()" 
-            class="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-amber-600 via-cuycito-gold to-yellow-400 hover:from-amber-500 hover:to-yellow-300 text-black font-black text-xs px-4 py-3 rounded-full shadow-2xl glow-gold flex items-center gap-2 transform hover:scale-105 transition duration-300 cursor-pointer"
+            class="fixed bottom-6 left-6 z-40 bg-gradient-to-r from-amber-600 via-cuycito-gold to-yellow-400 hover:from-amber-500 hover:to-yellow-300 text-black font-black text-xs px-4 py-3 rounded-full shadow-2xl glow-gold flex items-center gap-2 transform hover:scale-105 transition duration-300 cursor-pointer border border-yellow-300/40"
             title="Preguntas frecuentes y condiciones de servicios"
         >
             <i class="fa-solid fa-circle-question text-base"></i>

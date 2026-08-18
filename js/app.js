@@ -2131,6 +2131,10 @@ window.renderActiveTable = () => {
                             <i class="fa-solid fa-circle-check text-sm"></i>
                             <span>Activar Servicio</span>
                         </button>
+
+                        <button onclick="window.deletePendingActivation('${sub.id}')" class="bg-red-950/80 hover:bg-red-900 text-red-300 hover:text-white border border-red-500/40 font-bold text-xs p-2.5 rounded-xl transition flex items-center justify-center gap-1 shrink-0" title="Eliminar / Rechazar Solicitud">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
                     </div>
                 </div>`;
             }).join('');
@@ -2144,52 +2148,75 @@ window.renderActiveTable = () => {
     const serviceFilter = document.getElementById('filterActiveService') ? document.getElementById('filterActiveService').value : '';
     const statusFilter = document.getElementById('filterActiveStatus') ? document.getElementById('filterActiveStatus').value : 'VIGENTE';
 
-    const filteredSubs = appState.subscriptions.filter(sub => {
-        const isPending = sub.status === 'pending_activation' || sub.status === 'pending' || !!sub.tvQrImage;
-        const isVigente = !isPending && window.getDaysRemaining(sub.endDate) >= 0;
-        const matchSearch = (sub.person || '').toLowerCase().includes(search) || (sub.service || '').toLowerCase().includes(search);
-        const matchService = !serviceFilter || sub.service === serviceFilter;
+    let list = (appState.subscriptions || []).filter(sub => {
+        let matchSearch = (sub.person && sub.person.toLowerCase().includes(search)) || 
+                          (sub.service && sub.service.toLowerCase().includes(search)) || 
+                          (sub.phone && sub.phone.toLowerCase().includes(search));
+        let matchService = serviceFilter === '' || sub.service === serviceFilter;
         let matchStatus = true;
-        if (statusFilter === 'VIGENTE') matchStatus = isVigente;
-        if (statusFilter === 'VENCIDO') matchStatus = !isPending && !isVigente;
-        if (statusFilter === 'PENDING') matchStatus = isPending;
+        let isExpired = window.getDaysRemaining(sub.endDate) < 0;
+        let isPending = sub.status === 'pending_activation' || sub.status === 'pending' || !!sub.tvQrImage;
+
+        if(statusFilter === 'VIGENTE') matchStatus = !isExpired && !isPending;
+        if(statusFilter === 'VENCIDO') matchStatus = isExpired && !isPending;
+        if(statusFilter === 'PENDING') matchStatus = isPending;
+
         return matchSearch && matchService && matchStatus;
     });
 
-    const badge = document.getElementById('activeCountBadge');
-    if(badge) badge.innerText = filteredSubs.length;
+    const activeCountBadge = document.getElementById('activeCountBadge');
+    if (activeCountBadge) activeCountBadge.innerText = list.length;
 
-    filteredSubs.forEach(sub => {
-        const isPending = sub.status === 'pending_activation' || sub.status === 'pending' || !!sub.tvQrImage;
-        const days = window.getDaysRemaining(sub.endDate);
-        const badgeColor = isPending 
-            ? 'bg-yellow-950/80 text-yellow-300 border-yellow-500/50 animate-pulse'
-            : (days < 0 ? 'bg-cuycito-red/20 text-red-400 border-cuycito-red/50' : (days <= 3 ? 'bg-cuycito-gold/20 text-cuycito-gold border-cuycito-gold/50' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'));
-        const rowStyle = isPending 
-            ? 'bg-yellow-950/10 hover:bg-yellow-950/20 border-l-2 border-yellow-500 transition' 
-            : (days < 0 ? 'bg-cuycito-red/5 hover:bg-cuycito-red/10 transition' : 'hover:bg-gray-800 transition');
-        const typeBadge = sub.type === 'VENTA' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400';
-        const hidePassBadge = sub.hidePassword 
-            ? `<span class="bg-red-950/80 text-red-400 border border-cuycito-red/40 px-1.5 py-0.5 rounded text-[9px] font-bold">🔒 Clave Oculta</span>` 
-            : `<span class="bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold">👁️ Clave Visible</span>`;
+    tbody.innerHTML = list.map(sub => {
+        let isExp = window.getDaysRemaining(sub.endDate) < 0;
+        let isPending = sub.status === 'pending_activation' || sub.status === 'pending' || !!sub.tvQrImage;
+        let statusBadge = isPending 
+            ? `<span class="bg-yellow-950 text-yellow-300 border border-yellow-500/40 text-[10px] font-black px-2 py-0.5 rounded animate-pulse">⏳ Pendiente</span>`
+            : isExp 
+                ? `<span class="bg-red-950 text-red-400 border border-red-500/40 text-[10px] font-black px-2 py-0.5 rounded">🔴 Vencido</span>` 
+                : `<span class="bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded">🟢 Activo</span>`;
 
-        tbody.innerHTML += `
-            <tr class="${rowStyle}">
-                <td class="p-4"><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${typeBadge}">${sub.type || 'VENTA'}</span><div class="font-bold text-white mt-1.5">${sub.person}</div></td>
-                <td class="p-4 font-bold text-gray-300">${sub.service}</td>
-                <td class="p-4 font-mono text-[11px] bg-black/20 rounded-lg">
-                    <div class="flex items-center justify-between gap-2">
-                        <span class="text-white">${sub.email || '<span class="text-gray-600 italic">Sin asignar</span>'}</span>
-                        ${hidePassBadge}
-                    </div>
-                    <div class="text-cuycito-gold mt-1">Pass: ${sub.pass || '-'} | PIN: ${sub.pin || '-'}</div>
-                </td>
-                <td class="p-4 font-mono text-gray-400 text-xs">${sub.endDate}</td>
-                <td class="p-4"><span class="border px-2.5 py-1 rounded text-[11px] font-black ${badgeColor}">${isPending ? '⏳ Pendiente' : (days < 0 ? 'Expiró' : days + ' d')}</span></td>
-                <td class="p-4 text-center"><div class="flex items-center justify-center gap-1 bg-black p-1 rounded-lg border border-gray-800"><input type="number" id="renew_${sub.id}" value="1" min="1" class="w-10 bg-transparent text-center text-cuycito-gold font-bold outline-none"><button onclick="window.renewSubscription('${sub.id}', 'renew_${sub.id}')" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black px-2 py-1 rounded font-black transition"><i class="fa-solid fa-rotate-right"></i></button></div></td>
-                <td class="p-4 text-center"><div class="flex items-center justify-center gap-2"><button onclick="window.triggerWhatsApp('${sub.id}')" class="bg-[#25D366] text-black p-2 rounded transition"><i class="fa-brands fa-whatsapp text-sm"></i></button><button onclick="window.triggerInfo('${sub.id}')" class="bg-[#0ea5e9] text-black p-2 rounded transition"><i class="fa-solid fa-circle-info text-sm"></i></button><button onclick="window.openEditModal('${sub.id}')" class="bg-gray-700 text-white p-2 rounded transition"><i class="fa-solid fa-pen text-sm"></i></button></div></td>
-            </tr>`;
-    });
+        return `
+        <tr class="hover:bg-gray-900/50 transition">
+            <td class="p-4 font-bold text-white">${sub.person}</td>
+            <td class="p-4 font-black text-cuycito-gold">${sub.service}</td>
+            <td class="p-4 font-mono text-[11px] text-gray-400">${sub.email || 'Sin correo asignado'}</td>
+            <td class="p-4 font-mono text-[11px] text-gray-300">${sub.endDate}</td>
+            <td class="p-4 text-center">${statusBadge}</td>
+            <td class="p-4 text-center">
+                <div class="flex items-center justify-center gap-1 bg-black p-1 rounded-lg border border-gray-800">
+                    <input type="number" id="renew_${sub.id}" value="1" min="1" class="w-10 bg-transparent text-center text-cuycito-gold font-bold outline-none">
+                    <button onclick="window.renewSubscription('${sub.id}', 'renew_${sub.id}')" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black px-2 py-1 rounded font-black transition">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </td>
+            <td class="p-4 text-center">
+                <div class="flex items-center justify-center gap-2">
+                    <button onclick="window.openEditModal('${sub.id}')" class="bg-blue-950 hover:bg-blue-900 text-blue-300 p-2 rounded-lg transition" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="window.deleteSubscription('${sub.id}')" class="bg-red-950 hover:bg-red-900 text-red-400 p-2 rounded-lg transition" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </td>
+        </tr>
+        `;
+    }).join('');
+};
+
+window.deletePendingActivation = async (subId) => {
+    const sub = (appState.subscriptions || []).find(s => s.id === subId);
+    if (!sub) return;
+
+    if (!confirm(`⚠️ ¿Seguro que deseas eliminar/descartar la solicitud de activación de ${sub.service} del cliente "${sub.person}"?`)) return;
+
+    appState.subscriptions = appState.subscriptions.filter(s => s.id !== subId);
+
+    try {
+        await deleteDoc(doc(db, "subscriptions", subId));
+    } catch(e) {}
+
+    saveLocal();
+    window.renderActiveTable();
+    alert(`🗑️ Solicitud de activación de ${sub.service} eliminada.`);
 };
 
 window.openFullscreenQrModal = (subId) => {
@@ -3885,21 +3912,41 @@ window.renderAdminNewsList = () => {
 
         container.innerHTML = list.map((item, idx) => `
             <div class="bg-black/60 border border-gray-800 p-3 rounded-xl flex items-center justify-between gap-3 text-xs">
-                <div class="flex items-center gap-3">
-                    <img src="${item.image}" class="w-12 h-9 object-cover rounded-lg border border-gray-800">
-                    <div>
-                        <span class="text-[10px] font-black text-orange-400 uppercase">${item.category}</span>
-                        <h5 class="font-bold text-white line-clamp-1">${item.title}</h5>
+                <div class="flex items-center gap-3 min-w-0">
+                    <img src="${item.image}" class="w-12 h-9 object-cover rounded-lg border border-gray-800 shrink-0">
+                    <div class="truncate">
+                        <span class="text-[10px] font-black text-orange-400 uppercase block">${item.category}</span>
+                        <h5 class="font-bold text-white truncate">${item.title}</h5>
                     </div>
                 </div>
-                <button onclick="window.editThematicItem(${idx})" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-[11px] font-bold px-2.5 py-1 rounded-lg transition shrink-0">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button onclick="window.editThematicItem(${idx})" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-[11px] font-bold p-2 rounded-lg transition" title="Editar">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button onclick="window.deleteThematicItem(${idx})" class="bg-red-950/60 hover:bg-red-800 text-red-400 text-[11px] font-bold p-2 rounded-lg transition" title="Restablecer">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
             </div>
         `).join('');
     };
 
-    window.editThematicItem = (idx) => {
+    window.deleteThematicItem = async (idx) => {
+        if (!confirm("¿Deseas restablecer/eliminar este elemento temático?")) return;
+        let list = [];
+        try {
+            list = JSON.parse(localStorage.getItem("cuycito_portal_thematic") || "[]");
+        } catch(e) {}
+        list.splice(idx, 1);
+        localStorage.setItem("cuycito_portal_thematic", JSON.stringify(list));
+        try {
+            await setDoc(doc(db, "portal_config", "thematic"), { list }, { merge: true });
+        } catch(e) {}
+        window.renderAdminThematicGrid();
+        alert("🗑️ Elemento temático actualizado.");
+    };
+
+    window.editThematicItem = async (idx) => {
         let list = [];
         try {
             list = JSON.parse(localStorage.getItem("cuycito_portal_thematic") || "[]");
@@ -3914,6 +3961,9 @@ window.renderAdminNewsList = () => {
         list[idx].title = newTitle.trim() || list[idx].title;
         list[idx].image = newImg.trim() || list[idx].image;
         localStorage.setItem("cuycito_portal_thematic", JSON.stringify(list));
+        try {
+            await setDoc(doc(db, "portal_config", "thematic"), { list }, { merge: true });
+        } catch(e) {}
         window.renderAdminThematicGrid();
         alert("✅ Tarjeta temática actualizada.");
     };
@@ -3954,16 +4004,19 @@ window.renderAdminNewsList = () => {
                     placeholder="Tag" 
                     class="w-24 bg-black border border-gray-700 rounded-lg px-2 py-1 text-[10px] text-gray-400"
                 >
+                <button onclick="window.deleteTop5Item(${idx})" class="bg-red-950/60 hover:bg-red-800 text-red-400 p-1.5 rounded-lg transition" title="Limpiar">
+                    <i class="fa-solid fa-trash text-[10px]"></i>
+                </button>
             </div>
         `).join('');
     };
 
-    window.saveAdminTop5 = () => {
+    window.saveAdminTop5 = async () => {
         const updatedList = [];
         for (let i = 0; i < 5; i++) {
             const titleInput = document.getElementById(`top5Title_${i}`);
             const tagInput = document.getElementById(`top5Tag_${i}`);
-            if (titleInput) {
+            if (titleInput && titleInput.value.trim()) {
                 updatedList.push({
                     id: "top5-" + i + "-" + Date.now(),
                     rank: i + 1,
@@ -3974,7 +4027,25 @@ window.renderAdminNewsList = () => {
             }
         }
         localStorage.setItem("cuycito_portal_top5", JSON.stringify(updatedList));
-        alert("✅ Ranking 'Lo Más Leído' guardado y actualizado en portada.");
+        try {
+            await setDoc(doc(db, "portal_config", "top5"), { list: updatedList }, { merge: true });
+        } catch(e) {}
+        alert("✅ Ranking 'Lo Más Leído' guardado y sincronizado con la nube.");
+    };
+
+    window.deleteTop5Item = async (idx) => {
+        let list = [];
+        try {
+            list = JSON.parse(localStorage.getItem("cuycito_portal_top5") || "[]");
+        } catch(e) {}
+        list.splice(idx, 1);
+        list.forEach((t, i) => t.rank = i + 1);
+        localStorage.setItem("cuycito_portal_top5", JSON.stringify(list));
+        try {
+            await setDoc(doc(db, "portal_config", "top5"), { list }, { merge: true });
+        } catch(e) {}
+        window.renderAdminTop5();
+        alert("🗑️ Elemento removido de 'Lo Más Leído'.");
     };
 
     window.moveArticleUp = async (index) => {
@@ -4160,6 +4231,9 @@ window.quickDeleteAdminNewsArticle = async (id) => {
     newsList = newsList.filter(n => n.id !== id);
     localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
 
+    try {
+        await deleteDoc(doc(db, "portal_news", id));
+    } catch(e) {}
     try {
         await setDoc(doc(db, "portal_settings", "news_articles"), {
             articles: newsList,
@@ -4409,6 +4483,9 @@ window.quickDeleteAdminCarteleraItem = async (id) => {
     list = list.filter(c => c.id !== id);
     localStorage.setItem("cuycito_portal_cartelera", JSON.stringify(list));
 
+    try {
+        await deleteDoc(doc(db, "portal_cartelera", id));
+    } catch(e) {}
     try {
         await setDoc(doc(db, "portal_settings", "cartelera_titles"), {
             titles: list,

@@ -5,6 +5,7 @@
 const DEFAULT_GEMINI_API_KEY = "AQ.Ab8RN6J_V47ODKRw28_UDMbWipLw-HlRpMXMfH3rwu1qZXv5dA";
 
 // Estado interno del agente
+let currentAiContentType = "NEWS"; // "NEWS" (16:9 Horizontal) o "CARTELERA" (2:3 Vertical)
 let currentAiGeneratedData = null;
 let currentCandidateImages = [];
 let selectedImageIndex = 0;
@@ -14,7 +15,7 @@ let aiConversationHistory = [];
 let currentImagePosX = 50; // 50% = centro
 let currentImagePosY = 50; // 50% = centro
 let currentImageZoom = 100; // 100% = normal
-let currentImageAspect = "2/3"; // "2/3" vertical o "16/9" horizontal
+let currentImageAspect = "16/9"; // "16/9" para noticias o "2/3" para cartelera
 
 // Obtener API Key (desde localStorage o la por defecto)
 function getGeminiApiKey() {
@@ -30,6 +31,93 @@ window.saveCustomApiKey = (key) => {
         alert("🔄 Restablecida la API Key predeterminada.");
     }
 };
+
+// ==========================================================================
+// 0. CONTROLADOR DEL TIPO DE CONTENIDO (16:9 NOTICIAS VS 2:3 CARTELERA)
+// ==========================================================================
+window.setAiContentType = (type) => {
+    currentAiContentType = type === 'CARTELERA' ? 'CARTELERA' : 'NEWS';
+    currentImageAspect = currentAiContentType === 'NEWS' ? '16/9' : '2/3';
+
+    const btnNews = document.getElementById('aiTypeBtnNews');
+    const btnCartelera = document.getElementById('aiTypeBtnCartelera');
+    const label = document.getElementById('aiPromptLabel');
+    const input = document.getElementById('aiAgentPrompt');
+
+    if (currentAiContentType === 'NEWS') {
+        if (btnNews) {
+            btnNews.className = "flex items-start gap-3 p-4 rounded-2xl border-2 border-orange-500 bg-orange-950/40 text-left transition transform hover:scale-[1.01] shadow-lg glow-gold cursor-pointer";
+        }
+        if (btnCartelera) {
+            btnCartelera.className = "flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-800 bg-black/60 text-left transition hover:border-cuycito-gold/50 opacity-70 hover:opacity-100 cursor-pointer";
+        }
+        if (label) {
+            label.innerHTML = `<i class="fa-solid fa-newspaper text-orange-400 mr-1.5"></i> ¿Qué noticia o reportaje tecnológico deseas redactar? <span class="bg-orange-600/30 text-orange-400 border border-orange-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full ml-1">16:9 Horizontal</span>`;
+        }
+        if (input) {
+            input.placeholder = "Ej: 'El futuro del streaming 4K en Perú', 'Spider-Man Brand New Day todo lo que debes saber', 'Subida de tarifas Netflix y ahorro'...";
+        }
+    } else {
+        if (btnNews) {
+            btnNews.className = "flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-800 bg-black/60 text-left transition hover:border-orange-500/50 opacity-70 hover:opacity-100 cursor-pointer";
+        }
+        if (btnCartelera) {
+            btnCartelera.className = "flex items-start gap-3 p-4 rounded-2xl border-2 border-cuycito-gold bg-amber-950/40 text-left transition transform hover:scale-[1.01] shadow-lg glow-gold cursor-pointer";
+        }
+        if (label) {
+            label.innerHTML = `<i class="fa-solid fa-film text-cuycito-gold mr-1.5"></i> ¿Qué serie, película o estreno deseas catalogar? <span class="bg-amber-600/30 text-cuycito-gold border border-cuycito-gold/40 text-[10px] font-bold px-2 py-0.5 rounded-full ml-1">2:3 Vertical / Póster</span>`;
+        }
+        if (input) {
+            input.placeholder = "Ej: 'Estreno de Deadpool & Wolverine en Disney+', 'Temporada 5 de Stranger Things', 'Anime Demon Slayer Castillo Infinito'...";
+        }
+    }
+
+    renderAiSuggestions();
+
+    // Si ya había contenido generado, volver a renderizar con la nueva relación de aspecto
+    if (currentAiGeneratedData) {
+        renderAiGeneratedPreview();
+    }
+};
+
+function renderAiSuggestions() {
+    const cont = document.getElementById('aiPromptSuggestionsContainer');
+    if (!cont) return;
+
+    if (currentAiContentType === 'NEWS') {
+        cont.innerHTML = `
+            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-1"><i class="fa-solid fa-lightbulb text-yellow-400 mr-1"></i> Noticias 16:9:</span>
+            <button onclick="window.setAiPromptSuggestion('Spider-Man Brand New Day El regreso definitivo a sus raíces 4K')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-orange-500/40 text-gray-300 hover:text-orange-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
+                🕷️ Spider-Man 4K
+            </button>
+            <button onclick="window.setAiPromptSuggestion('Análisis de tarifas de Netflix en Perú y cómo ahorrar hasta 70% con CuzcitoGo')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-orange-500/40 text-gray-300 hover:text-orange-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
+                💰 Reporte Tarifas & Ahorro
+            </button>
+            <button onclick="window.setAiPromptSuggestion('Avances en tecnología 4K HDR Dolby Vision y las mejores pantallas para streaming')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-orange-500/40 text-gray-300 hover:text-orange-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
+                📺 Tecnología 4K & HDR
+            </button>
+            <button onclick="window.setAiPromptSuggestion('Guía definitiva de anime 2026 lo más esperado en Crunchyroll Mega Fan')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-orange-500/40 text-gray-300 hover:text-orange-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
+                ⚔️ Guía Anime 2026
+            </button>
+        `;
+    } else {
+        cont.innerHTML = `
+            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-1"><i class="fa-solid fa-film text-cuycito-gold mr-1"></i> Cartelera 2:3:</span>
+            <button onclick="window.setAiPromptSuggestion('Estreno de Deadpool & Wolverine en Disney+ con calidad 4K UHD')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
+                🎬 Deadpool & Wolverine
+            </button>
+            <button onclick="window.setAiPromptSuggestion('Temporada Final de Stranger Things 5 en Netflix')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
+                📺 Stranger Things 5
+            </button>
+            <button onclick="window.setAiPromptSuggestion('Cien Años de Soledad Parte 2 en Netflix fecha de estreno y sinopsis')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
+                🍿 Cien Años de Soledad
+            </button>
+            <button onclick="window.setAiPromptSuggestion('Nuevo anime Demon Slayer El Castillo Infinito en Crunchyroll')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
+                ⚔️ Demon Slayer Cine
+            </button>
+        `;
+    }
+}
 
 // ==========================================================================
 // 1. MOTOR DE BÚSQUEDA DE IMÁGENES REALES EN INTERNET (NO IA)
@@ -111,9 +199,9 @@ async function searchRealWebImages(query, platform = "") {
         }
     }
 
-    // 4. Búsqueda en Wikipedia / Wikimedia Commons para Producciones y Logos
+    // 4. Búsqueda en Wikipedia / Wikimedia Commons para Producciones, Artículos y Logos
     try {
-        const wikiRes = await fetch(`https://es.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&pithumbsize=1000&generator=search&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=4`);
+        const wikiRes = await fetch(`https://es.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&pithumbsize=1000&generator=search&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=5`);
         if (wikiRes.ok) {
             const wikiData = await wikiRes.json();
             if (wikiData.query && wikiData.query.pages) {
@@ -121,7 +209,7 @@ async function searchRealWebImages(query, platform = "") {
                     if (page.thumbnail && page.thumbnail.source) {
                         images.push({
                             url: page.thumbnail.source,
-                            source: `Wikipedia (${page.title})`,
+                            source: `Wikipedia Oficial (${page.title})`,
                             type: "backdrop"
                         });
                     }
@@ -135,14 +223,14 @@ async function searchRealWebImages(query, platform = "") {
     // 5. Imágenes locales de respaldo
     const platformFallbacks = {
         "NETFLIX": ["assets/img/poster_ciensoledad.jpg", "assets/img/poster_jojo.jpg", "assets/img/poster_walter.jpg", "assets/img/poster3.jpg", "assets/img/news1.jpg"],
-        "DISNEY": ["assets/img/poster1.jpg", "assets/img/news1.jpg"],
-        "MAX": ["assets/img/poster4.jpg", "assets/img/news1.jpg"],
+        "DISNEY": ["assets/img/poster1.jpg", "assets/img/news1.jpg", "assets/img/news4.jpg"],
+        "MAX": ["assets/img/poster4.jpg", "assets/img/news1.jpg", "assets/img/news3.jpg"],
         "PRIME": ["assets/img/poster5.jpg", "assets/img/news1.jpg"],
         "CRUNCHYROLL": ["assets/img/poster2.jpg", "assets/img/poster_jojo.jpg", "assets/img/news1.jpg"],
-        "SPOTIFY": ["assets/img/news1.jpg"]
+        "SPOTIFY": ["assets/img/news1.jpg", "assets/img/news6.jpg"]
     };
 
-    const fallbacks = platformFallbacks[platform.toUpperCase()] || ["assets/img/news1.jpg", "assets/img/poster1.jpg", "assets/img/poster2.jpg"];
+    const fallbacks = platformFallbacks[platform.toUpperCase()] || ["assets/img/news1.jpg", "assets/img/news2.jpg", "assets/img/news3.jpg", "assets/img/poster1.jpg", "assets/img/poster2.jpg"];
     fallbacks.forEach((fb, idx) => {
         images.push({
             url: fb,
@@ -191,8 +279,8 @@ window.generateMarketingContent = async () => {
             <div class="flex items-center gap-3 text-sm text-yellow-300">
                 <i class="fa-solid fa-circle-notch fa-spin text-xl text-cuycito-gold"></i>
                 <div>
-                    <strong class="block text-white">El Agente IA de Marketing está redactando...</strong>
-                    <span class="text-xs text-gray-300">Consultando datos de estreno, redactando copy persuasivo y buscando pósters oficiales en internet...</span>
+                    <strong class="block text-white">El Agente IA de Marketing está redactando (${currentAiContentType === 'NEWS' ? 'Noticia 16:9' : 'Cartelera 2:3'})...</strong>
+                    <span class="text-xs text-gray-300">Consultando datos oficiales, redactando copy persuasivo y buscando imágenes en internet...</span>
                 </div>
             </div>
         `;
@@ -201,27 +289,50 @@ window.generateMarketingContent = async () => {
     if (generateBtn) generateBtn.disabled = true;
 
     try {
-        const systemInstruction = `
-Eres el Copywriter Principal y Agente de Marketing de "CuzcitoGo VIP", un club exclusivo de streaming en Perú y Latinoamérica que vende pantallas privadas con PIN propio en 4K Ultra HD (Netflix, Disney+ con ESPN, Max Platino, Amazon Prime Video, Crunchyroll Mega Fan, Spotify Hi-Fi).
+        let systemInstruction = "";
 
-Tu misión: Recibir una idea o título y generar un contenido de alto impacto para la web.
-Debes devolver OBLIGATORIAMENTE un JSON válido con la siguiente estructura exacta (sin texto ni markdown adicional):
+        if (currentAiContentType === "NEWS") {
+            systemInstruction = `
+Eres el Editor en Jefe y Periodista Tecnológico de "CuzcitoGo VIP", club premium de streaming y tecnología en Perú.
+Tu misión: Redactar un artículo o reportaje de alto impacto en formato horizontal (16:9) sobre novedades de streaming, tecnología 4K, análisis de mercado o lanzamientos.
 
+Debes devolver OBLIGATORIAMENTE un JSON válido con la siguiente estructura exacta:
 {
-  "titulo": "Título llamativo y persuasivo con emojis (máx 90 caracteres)",
+  "titulo": "Titular periodístico llamativo con emojis (máx 90 caracteres)",
+  "categoria": "TECNOLOGÍA 4K",
+  "readTime": "4 min de lectura",
+  "fechaEstreno": "Actualizado Hoy",
+  "plataforma": "NETFLIX",
+  "calidad": "4K Ultra HD",
+  "rating": "9.6",
+  "tag": "REPORTAJE EXCLUSIVO",
+  "resumenCorto": "Extracto de 2 oraciones para la tarjeta de portada.",
+  "redaccionCompleta": "<p class='text-sm text-gray-300 leading-relaxed font-normal'>Primer párrafo con el gancho y contexto de la noticia...</p><h4 class='text-base font-black text-white mt-4 mb-2'>🚀 Aspectos Clave & Innovación</h4><p class='text-xs text-gray-300 leading-relaxed'>Segundo párrafo con detalles técnicos y ventajas...</p><div class='bg-black/60 border border-yellow-500/40 p-3.5 rounded-xl mt-4'><strong class='text-yellow-400 font-bold block mb-1 text-xs'><i class='fa-solid fa-crown mr-1'></i> Disfrútalo al Máximo con CuzcitoGo:</strong><p class='text-xs text-gray-300'>Accede con tu pantalla privada y la mejor calidad garantizada.</p></div>",
+  "queryBusquedaImagenes": "Término en inglés o español para buscar foto horizontal 16:9 en internet"
+}
+`;
+        } else {
+            systemInstruction = `
+Eres el Copywriter Principal y Agente de Marketing de "CuzcitoGo VIP", club exclusivo de streaming en Perú y Latinoamérica que vende pantallas privadas con PIN propio en 4K Ultra HD (Netflix, Disney+ con ESPN, Max Platino, Amazon Prime Video, Crunchyroll Mega Fan, Spotify Hi-Fi).
+
+Tu misión: Recibir una serie o película y generar una ficha de cartelera/estrenos con póster vertical (2:3).
+Debes devolver OBLIGATORIAMENTE un JSON válido con la siguiente estructura exacta:
+{
+  "titulo": "Título de la serie o película con emojis (máx 90 caracteres)",
   "tipo": "estrenos",
   "plataforma": "NETFLIX",
   "categoria": "CINE & SERIES",
-  "fechaEstreno": "Fecha aproximada o exacta (ej: '15 de Septiembre 2026' o 'En Emisión')",
+  "fechaEstreno": "Fecha aproximada o año (ej: 'Estreno Diciembre 2026' o 'En Emisión')",
   "calidad": "4K UHD • Dolby Atmos",
   "rating": "9.6",
-  "tag": "Frase gancho corta en mayúsculas (ej: 'SUPERPRODUCCIÓN MARVEL' o 'TEMPORADA FINAL')",
-  "readTime": "4 min de lectura",
-  "resumenCorto": "Sinopsis o gancho de 2 oraciones para la tarjeta rápida.",
-  "redaccionCompleta": "<p class='text-sm text-gray-300 leading-relaxed font-normal'>Párrafo 1 con gancho...</p><h4 class='text-base font-black text-white mt-4 mb-2'>🔥 Lo que debes saber</h4><p class='text-xs text-gray-300 leading-relaxed'>Párrafo 2 con detalles de la trama o actores...</p><div class='bg-black/60 border border-yellow-500/40 p-3.5 rounded-xl mt-4'><strong class='text-yellow-400 font-bold block mb-1 text-xs'><i class='fa-solid fa-crown mr-1'></i> Míralo en 4K con CuzcitoGo:</strong><p class='text-xs text-gray-300'>Disfruta este estreno con pantalla privada y el mejor precio del mercado.</p></div>",
-  "queryBusquedaImagenes": "Título limpio en inglés o español para buscar póster en internet (ej: 'Deadpool Wolverine' o 'Stranger Things')"
+  "tag": "TEMPORADA FINAL",
+  "readTime": "4 min",
+  "resumenCorto": "Sinopsis de 2 oraciones para la tarjeta de cartelera.",
+  "redaccionCompleta": "<p class='text-sm text-gray-300 leading-relaxed font-normal'>Sinopsis argumental y reparto principal...</p><h4 class='text-base font-black text-white mt-4 mb-2'>🔥 Lo que debes saber</h4><p class='text-xs text-gray-300 leading-relaxed'>Detalles de la producción...</p>",
+  "queryBusquedaImagenes": "Título limpio para buscar póster vertical oficial (ej: 'Deadpool Wolverine movie poster' o 'Stranger Things 5 poster')"
 }
 `;
+        }
 
         const requestBody = {
             contents: [
@@ -464,7 +575,7 @@ Aplica las modificaciones solicitadas manteniendo la estructura JSON obligatoria
 };
 
 // ==========================================================================
-// 4. RENDERIZADO DE LA VISTA PREVIA INTERACTIVA + HERRAMIENTA DE ENCUADRE
+// 4. RENDERIZADO DE LA VISTA PREVIA INTERACTIVA + HERRAMIENTA DE ENCUADRE (16:9 / 2:3)
 // ==========================================================================
 function renderAiGeneratedPreview() {
     const container = document.getElementById('aiAgentPreviewContainer');
@@ -472,6 +583,7 @@ function renderAiGeneratedPreview() {
 
     const data = currentAiGeneratedData;
     const currentImg = currentCandidateImages[selectedImageIndex] ? currentCandidateImages[selectedImageIndex].url : 'assets/img/news1.jpg';
+    const isNewsMode = currentAiContentType === 'NEWS';
 
     const platformColors = {
         "NETFLIX": "bg-red-600",
@@ -482,25 +594,46 @@ function renderAiGeneratedPreview() {
         "SPOTIFY": "bg-emerald-600"
     };
 
-    const tagColor = platformColors[data.plataforma.toUpperCase()] || "bg-yellow-600";
+    const categoryColors = {
+        "ANÁLISIS DE MERCADO": "bg-red-600",
+        "CINE & SERIES": "bg-cuycito-red",
+        "ANIME & GAMING": "bg-orange-500",
+        "AUDIO & HI-FI": "bg-emerald-600",
+        "TECNOLOGÍA 4K": "bg-sky-600"
+    };
+
+    const badgeColor = isNewsMode 
+        ? (categoryColors[data.categoria] || "bg-orange-600")
+        : (platformColors[(data.plataforma || '').toUpperCase()] || "bg-yellow-600");
+    const badgeLabel = isNewsMode ? (data.categoria || "NOTICIA 16:9") : (data.plataforma || "CARTELERA 2:3");
+
     const objectPosStyle = `${currentImagePosX}% ${currentImagePosY}%`;
     const zoomTransform = `scale(${currentImageZoom / 100})`;
+    const aspectClass = currentImageAspect === '16/9' ? 'aspect-[16/9] max-h-[300px]' : 'aspect-[2/3] max-h-[380px]';
 
     container.innerHTML = `
-        <div class="bg-[#121212] border-2 border-cuycito-gold/60 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-6">
+        <div class="bg-[#121212] border-2 ${isNewsMode ? 'border-orange-500/80 shadow-[0_0_25px_rgba(249,115,22,0.15)]' : 'border-cuycito-gold/80 shadow-[0_0_25px_rgba(255,183,3,0.15)]'} rounded-3xl p-5 sm:p-6 shadow-2xl space-y-6">
             
             <!-- Encabezado con Badges -->
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 pb-4">
                 <div class="flex items-center gap-2.5">
-                    <span class="px-3 py-1 rounded-full text-xs font-black text-white ${tagColor} uppercase tracking-wider shadow">
-                        ${data.plataforma}
+                    <span class="px-3 py-1 rounded-full text-xs font-black text-white ${badgeColor} uppercase tracking-wider shadow">
+                        ${badgeLabel}
                     </span>
-                    <span class="bg-yellow-950/80 border border-yellow-500/40 text-yellow-300 text-xs font-black px-2.5 py-1 rounded-lg flex items-center gap-1 shadow">
-                        <i class="fa-solid fa-sparkles text-cuycito-gold"></i> Redactado por Agente IA
+                    <span class="bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 text-xs font-black px-2.5 py-1 rounded-lg flex items-center gap-1 shadow">
+                        <i class="fa-solid fa-wand-magic-sparkles text-cyan-400"></i> Agente IA • ${isNewsMode ? 'Formato 16:9 Noticia' : 'Formato 2:3 Póster'}
                     </span>
                 </div>
-                <div class="text-xs text-gray-400 font-mono">
-                    Rating sugerido: <strong class="text-cuycito-gold">★ ${data.rating} / 10</strong>
+                
+                <!-- Selector rápido de aspecto dentro de la tarjeta -->
+                <div class="flex items-center gap-1.5 bg-black/80 p-1 rounded-xl border border-gray-800 text-[11px] font-bold">
+                    <span class="text-gray-400 px-2">Proporción:</span>
+                    <button onclick="window.setImageAspect('16/9')" class="px-2.5 py-1 rounded-lg transition ${currentImageAspect === '16/9' ? 'bg-orange-600 text-white font-black shadow' : 'text-gray-400 hover:text-white'}">
+                        16:9 (Horizontal)
+                    </button>
+                    <button onclick="window.setImageAspect('2/3')" class="px-2.5 py-1 rounded-lg transition ${currentImageAspect === '2/3' ? 'bg-cuycito-gold text-black font-black shadow' : 'text-gray-400 hover:text-white'}">
+                        2:3 (Póster)
+                    </button>
                 </div>
             </div>
 
@@ -511,10 +644,10 @@ function renderAiGeneratedPreview() {
                 <div class="lg:col-span-5 space-y-3">
                     <div class="flex items-center justify-between">
                         <label class="text-xs font-bold text-gray-300 flex items-center gap-1.5">
-                            <i class="fa-solid fa-image text-cuycito-gold"></i> Imagen Oficial de Internet
+                            <i class="fa-solid fa-crop text-cuycito-gold"></i> Encuadre Interactivo (${currentImageAspect})
                         </label>
                         <span class="text-[10px] text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                            100% Real (Sin IA)
+                            Arrastra para recortar
                         </span>
                     </div>
 
@@ -522,26 +655,26 @@ function renderAiGeneratedPreview() {
                     <div class="space-y-2">
                         <div 
                             id="aiImageFramingBox" 
-                            class="relative aspect-[2/3] max-h-[340px] w-full rounded-2xl overflow-hidden bg-black border-2 border-cyan-500/50 shadow-xl cursor-grab active:cursor-grabbing select-none group touch-none"
-                            title="Haz clic y arrastra con el ratón para centrar y ubicar la imagen"
+                            class="relative ${aspectClass} w-full rounded-2xl overflow-hidden bg-black border-2 border-cyan-500/50 shadow-xl cursor-grab active:cursor-grabbing select-none group touch-none mx-auto"
+                            title="Haz clic y arrastra con el ratón para centrar y mover la sección visible de la imagen"
                         >
                             <img 
                                 id="aiPreviewSelectedImg" 
                                 src="${currentImg}" 
-                                alt="Póster oficial" 
+                                alt="Previsualización" 
                                 class="w-full h-full object-cover transition-none pointer-events-none"
                                 style="object-position: ${objectPosStyle}; transform: ${zoomTransform};"
                             >
                             
-                            <!-- Guía de Encuadre Visual en Arrastre -->
+                            <!-- Guía de Encuadre Visual en Arrastre con Cuadrícula sutil -->
                             <div class="absolute inset-0 border-2 border-dashed border-cyan-400/40 pointer-events-none group-hover:border-cyan-400/80 transition flex items-center justify-center">
                                 <div class="w-10 h-10 border border-cyan-400/40 rounded-full flex items-center justify-center pointer-events-none opacity-40 group-hover:opacity-100 transition">
-                                    <div class="w-2 h-2 bg-cyan-400 rounded-full"></div>
+                                    <div class="w-2 h-2 bg-cyan-400 rounded-full shadow"></div>
                                 </div>
                             </div>
 
                             <span class="absolute top-2 right-2 bg-black/80 backdrop-blur-sm text-cyan-300 text-[10px] font-bold px-2 py-1 rounded-lg border border-cyan-500/40 pointer-events-none flex items-center gap-1 shadow">
-                                <i class="fa-solid fa-arrows-up-down-left-right"></i> Arrastra para centrar
+                                <i class="fa-solid fa-arrows-up-down-left-right"></i> Arrastra imagen
                             </span>
 
                             <div class="absolute bottom-2 left-2 right-2 bg-black/80 backdrop-blur-sm border border-gray-700 rounded-lg p-1.5 text-[10px] text-gray-300 truncate text-center pointer-events-none">
@@ -552,27 +685,31 @@ function renderAiGeneratedPreview() {
                         <!-- Controles Rápidos de Ajuste Fino (Sliders & Presets) -->
                         <div class="bg-black/80 border border-gray-800 rounded-xl p-3 space-y-2.5 text-xs">
                             <div class="flex items-center justify-between text-[11px] font-bold text-gray-300 border-b border-gray-800 pb-1.5">
-                                <span><i class="fa-solid fa-sliders text-cyan-400 mr-1"></i> Ajuste Fino de Posición:</span>
+                                <span><i class="fa-solid fa-sliders text-cyan-400 mr-1"></i> Posición y Margen:</span>
                                 <span id="framingPosLabel" class="text-cyan-300 font-mono">X: ${currentImagePosX}% | Y: ${currentImagePosY}%</span>
                             </div>
 
                             <!-- Botones Rápidos de Centrado -->
                             <div class="grid grid-cols-5 gap-1.5 text-[10px]">
-                                <button onclick="window.setPresetImagePosition(50, 0)" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 py-1 rounded font-bold transition">⬆️ Arriba</button>
-                                <button onclick="window.setPresetImagePosition(50, 50)" class="bg-cyan-950 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 py-1 rounded font-bold transition">🎯 Centro</button>
-                                <button onclick="window.setPresetImagePosition(50, 100)" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 py-1 rounded font-bold transition">⬇️ Abajo</button>
-                                <button onclick="window.setPresetImagePosition(0, 50)" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 py-1 rounded font-bold transition">⬅️ Izq</button>
-                                <button onclick="window.setPresetImagePosition(100, 50)" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 py-1 rounded font-bold transition">➡️ Der</button>
+                                <button onclick="window.setPresetImagePosition(50, 0)" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 py-1 rounded font-bold transition cursor-pointer">⬆️ Arriba</button>
+                                <button onclick="window.setPresetImagePosition(50, 50)" class="bg-cyan-950 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 py-1 rounded font-bold transition cursor-pointer">🎯 Centro</button>
+                                <button onclick="window.setPresetImagePosition(50, 100)" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 py-1 rounded font-bold transition cursor-pointer">⬇️ Abajo</button>
+                                <button onclick="window.setPresetImagePosition(0, 50)" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 py-1 rounded font-bold transition cursor-pointer">⬅️ Izq</button>
+                                <button onclick="window.setPresetImagePosition(100, 50)" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 py-1 rounded font-bold transition cursor-pointer">➡️ Der</button>
                             </div>
 
                             <!-- Sliders de Zoom y Posición -->
-                            <div class="grid grid-cols-2 gap-3 pt-1">
+                            <div class="grid grid-cols-3 gap-2 pt-1 text-[10px]">
                                 <div>
-                                    <span class="text-[10px] text-gray-400 block mb-1">Posición Vertical (Y):</span>
+                                    <span class="text-gray-400 block mb-1">Horizontal (X):</span>
+                                    <input type="range" min="0" max="100" value="${currentImagePosX}" oninput="window.updateFramingSliders('X', this.value)" class="w-full accent-cyan-400 h-1.5 bg-gray-800 rounded-lg cursor-pointer">
+                                </div>
+                                <div>
+                                    <span class="text-gray-400 block mb-1">Vertical (Y):</span>
                                     <input type="range" min="0" max="100" value="${currentImagePosY}" oninput="window.updateFramingSliders('Y', this.value)" class="w-full accent-cyan-400 h-1.5 bg-gray-800 rounded-lg cursor-pointer">
                                 </div>
                                 <div>
-                                    <span class="text-[10px] text-gray-400 block mb-1">Zoom (${currentImageZoom}%):</span>
+                                    <span class="text-gray-400 block mb-1">Zoom (${currentImageZoom}%):</span>
                                     <input type="range" min="100" max="180" value="${currentImageZoom}" oninput="window.updateFramingSliders('Z', this.value)" class="w-full accent-cyan-400 h-1.5 bg-gray-800 rounded-lg cursor-pointer">
                                 </div>
                             </div>
@@ -581,10 +718,10 @@ function renderAiGeneratedPreview() {
 
                     <!-- Carrusel de selección de imágenes encontradas -->
                     <div class="space-y-1.5 pt-1">
-                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Pósters Oficiales Encontrados (${currentCandidateImages.length}):</span>
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Fotos Oficiales Encontradas (${currentCandidateImages.length}):</span>
                         <div class="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
                             ${currentCandidateImages.map((img, idx) => `
-                                <button onclick="window.selectAiCandidateImage(${idx})" class="w-14 h-20 rounded-lg overflow-hidden border-2 transition shrink-0 ${idx === selectedImageIndex ? 'border-cuycito-gold shadow-[0_0_8px_rgba(255,183,3,0.8)] scale-105' : 'border-gray-800 opacity-60 hover:opacity-100'}">
+                                <button onclick="window.selectAiCandidateImage(${idx})" class="w-16 h-16 rounded-xl overflow-hidden border-2 transition shrink-0 cursor-pointer ${idx === selectedImageIndex ? 'border-cuycito-gold shadow-[0_0_10px_rgba(255,183,3,0.8)] scale-105' : 'border-gray-800 opacity-60 hover:opacity-100'}">
                                     <img src="${img.url}" class="w-full h-full object-cover" alt="Opción ${idx + 1}">
                                 </button>
                             `).join('')}
@@ -608,7 +745,7 @@ function renderAiGeneratedPreview() {
                 <div class="lg:col-span-7 space-y-4">
                     
                     <div>
-                        <label class="text-xs font-bold text-gray-300 block mb-1">Título / Gancho Comercial:</label>
+                        <label class="text-xs font-bold text-gray-300 block mb-1">${isNewsMode ? 'Título de la Noticia / Reportaje:' : 'Título de la Serie / Película:'}</label>
                         <input 
                             type="text" 
                             id="aiEditTitle" 
@@ -617,13 +754,47 @@ function renderAiGeneratedPreview() {
                         >
                     </div>
 
+                    ${isNewsMode ? `
+                    <!-- Campos para NOTICIA 16:9 -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="text-[11px] font-bold text-gray-400 block mb-1">Categoría:</label>
+                            <select id="aiEditCategory" class="w-full bg-black border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500 font-bold">
+                                <option value="TECNOLOGÍA 4K" ${data.categoria === 'TECNOLOGÍA 4K' ? 'selected' : ''}>TECNOLOGÍA 4K</option>
+                                <option value="CINE & SERIES" ${data.categoria === 'CINE & SERIES' ? 'selected' : ''}>CINE & SERIES</option>
+                                <option value="ANÁLISIS DE MERCADO" ${data.categoria === 'ANÁLISIS DE MERCADO' ? 'selected' : ''}>ANÁLISIS DE MERCADO</option>
+                                <option value="ANIME & GAMING" ${data.categoria === 'ANIME & GAMING' ? 'selected' : ''}>ANIME & GAMING</option>
+                                <option value="AUDIO & HI-FI" ${data.categoria === 'AUDIO & HI-FI' ? 'selected' : ''}>AUDIO & HI-FI</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold text-gray-400 block mb-1">Tiempo de Lectura:</label>
+                            <input 
+                                type="text" 
+                                id="aiEditReadTime" 
+                                value="${data.readTime || '4 min de lectura'}" 
+                                class="w-full bg-black border border-gray-700 rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none focus:border-orange-500"
+                            >
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold text-gray-400 block mb-1">Fecha / Estado:</label>
+                            <input 
+                                type="text" 
+                                id="aiEditDate" 
+                                value="${data.fechaEstreno || 'Actualizado Hoy'}" 
+                                class="w-full bg-black border border-gray-700 rounded-xl px-3 py-2 text-xs text-yellow-300 font-bold focus:outline-none focus:border-orange-500"
+                            >
+                        </div>
+                    </div>
+                    ` : `
+                    <!-- Campos para CARTELERA 2:3 -->
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                             <label class="text-[11px] font-bold text-gray-400 block mb-1">Plataforma:</label>
                             <select id="aiEditPlatform" class="w-full bg-black border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cuycito-gold font-bold">
                                 <option value="NETFLIX" ${data.plataforma === 'NETFLIX' ? 'selected' : ''}>Netflix</option>
-                                <option value="DISNEY" ${data.plataforma === 'DISNEY' ? 'selected' : ''}>Disney+</option>
                                 <option value="MAX" ${data.plataforma === 'MAX' ? 'selected' : ''}>Max HBO</option>
+                                <option value="DISNEY" ${data.plataforma === 'DISNEY' ? 'selected' : ''}>Disney+</option>
                                 <option value="PRIME" ${data.plataforma === 'PRIME' ? 'selected' : ''}>Prime Video</option>
                                 <option value="CRUNCHYROLL" ${data.plataforma === 'CRUNCHYROLL' ? 'selected' : ''}>Crunchyroll</option>
                                 <option value="SPOTIFY" ${data.plataforma === 'SPOTIFY' ? 'selected' : ''}>Spotify</option>
@@ -634,7 +805,7 @@ function renderAiGeneratedPreview() {
                             <input 
                                 type="text" 
                                 id="aiEditReleaseDate" 
-                                value="${data.fechaEstreno}" 
+                                value="${data.fechaEstreno || 'Estreno 2026'}" 
                                 class="w-full bg-black border border-gray-700 rounded-xl px-3 py-2 text-xs text-yellow-300 font-bold focus:outline-none focus:border-cuycito-gold"
                             >
                         </div>
@@ -648,9 +819,10 @@ function renderAiGeneratedPreview() {
                             >
                         </div>
                     </div>
+                    `}
 
                     <div>
-                        <label class="text-xs font-bold text-gray-300 block mb-1">Resumen Rápido (Tarjeta):</label>
+                        <label class="text-xs font-bold text-gray-300 block mb-1">Resumen Corto (Excerpt para tarjetas):</label>
                         <textarea 
                             id="aiEditExcerpt" 
                             rows="2" 
@@ -659,7 +831,7 @@ function renderAiGeneratedPreview() {
                     </div>
 
                     <div>
-                        <label class="text-xs font-bold text-gray-300 block mb-1">Redacción de Marketing Completa (HTML):</label>
+                        <label class="text-xs font-bold text-gray-300 block mb-1">Redacción Completa (HTML / Párrafos):</label>
                         <textarea 
                             id="aiEditContent" 
                             rows="4" 
@@ -680,14 +852,14 @@ function renderAiGeneratedPreview() {
                             <input 
                                 type="text" 
                                 id="aiAgentFeedbackInput" 
-                                placeholder="Ej: 'Busca otra imagen más horizontal', 'Haz el texto más humorístico', 'Cambia el estreno a Noviembre'..." 
+                                placeholder="Ej: 'Busca otra foto más horizontal', 'Haz el texto más técnico', 'Cambia el estreno a Diciembre'..." 
                                 class="flex-1 bg-black border border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-500 outline-none focus:border-cyan-400 transition"
                                 onkeydown="if(event.key==='Enter') window.refineAiMarketingContent();"
                             >
                             <button 
                                 id="btnAiRefine"
                                 onclick="window.refineAiMarketingContent()" 
-                                class="bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center justify-center gap-1.5 shrink-0"
+                                class="bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
                             >
                                 <i class="fa-solid fa-paper-plane"></i>
                                 <span>Refinar</span>
@@ -706,8 +878,8 @@ function renderAiGeneratedPreview() {
                             <button onclick="window.refineAiMarketingContent('Enfoca el gancho en el ahorro con pantallas privadas de CuzcitoGo')" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-[10px] px-2 py-0.5 rounded transition">
                                 💰 Enfocar en Ahorro
                             </button>
-                            <button onclick="window.refineAiMarketingContent('Haz el tono más emocionante con spoilers leves')" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-[10px] px-2 py-0.5 rounded transition">
-                                🔥 Más emocionante
+                            <button onclick="window.refineAiMarketingContent('Haz el tono más emocionante y periodístico')" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-[10px] px-2 py-0.5 rounded transition">
+                                🔥 Más periodístico
                             </button>
                         </div>
 
@@ -719,51 +891,74 @@ function renderAiGeneratedPreview() {
             <!-- Botones de Acción: Publicar en 1 Clic -->
             <div class="pt-4 border-t border-gray-800 space-y-3">
                 <div class="flex items-center justify-between">
-                    <button onclick="window.generateMarketingContent()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5">
+                    <button onclick="window.generateMarketingContent()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-rotate-right"></i> Regenerar
                     </button>
-                    <span class="text-xs text-cuycito-gold font-bold uppercase tracking-wider">🚀 Selecciona dónde publicar con 1 clic:</span>
+                    <span class="text-xs text-cuycito-gold font-bold uppercase tracking-wider">🚀 Opciones de Publicación Directa:</span>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
-                    <!-- 1. Hero Slider -->
-                    <button onclick="window.publishAiAsNews()" class="bg-gradient-to-r from-orange-600 to-cuycito-red hover:from-orange-500 hover:to-red-500 text-white font-black text-xs p-3 rounded-xl transition shadow-lg glow-red flex flex-col items-center justify-center text-center gap-1">
+                ${isNewsMode ? `
+                <!-- Botones de Publicación para NOTICIAS 16:9 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                    <!-- 1. Hero Slider Portada -->
+                    <button onclick="window.publishAiAsNews(true)" class="bg-gradient-to-r from-orange-600 to-cuycito-red hover:from-orange-500 hover:to-red-500 text-white font-black text-xs p-3.5 rounded-2xl transition shadow-lg glow-red flex flex-col items-center justify-center text-center gap-1 cursor-pointer">
                         <i class="fa-solid fa-crown text-base text-yellow-300"></i>
                         <span>Hero Slider #1 (Portada)</span>
                     </button>
 
-                    <!-- 2. Sub-Destacada -->
-                    <button onclick="window.publishAiAsSubdestacada()" class="bg-gradient-to-r from-sky-700 to-blue-600 hover:from-sky-600 hover:to-blue-500 text-white font-black text-xs p-3 rounded-xl transition shadow-lg flex flex-col items-center justify-center text-center gap-1">
+                    <!-- 2. Sub-Destacada Tecnológica -->
+                    <button onclick="window.publishAiAsSubdestacada()" class="bg-gradient-to-r from-sky-700 to-blue-600 hover:from-sky-600 hover:to-blue-500 text-white font-black text-xs p-3.5 rounded-2xl transition shadow-lg flex flex-col items-center justify-center text-center gap-1 cursor-pointer">
                         <i class="fa-solid fa-bolt text-base text-sky-200"></i>
                         <span>Sub-Destacada (Tecno)</span>
                     </button>
 
                     <!-- 3. Grilla Temática -->
-                    <button onclick="window.publishAiAsThematic()" class="bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white font-black text-xs p-3 rounded-xl transition shadow-lg flex flex-col items-center justify-center text-center gap-1">
+                    <button onclick="window.publishAiAsThematic()" class="bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white font-black text-xs p-3.5 rounded-2xl transition shadow-lg flex flex-col items-center justify-center text-center gap-1 cursor-pointer">
                         <i class="fa-solid fa-layer-group text-base text-purple-200"></i>
-                        <span>Grilla Temática (Columna)</span>
+                        <span>Grilla Temática</span>
                     </button>
 
                     <!-- 4. Lo Más Leído -->
-                    <button onclick="window.publishAiAsTop5()" class="bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-black font-black text-xs p-3 rounded-xl transition shadow-lg flex flex-col items-center justify-center text-center gap-1">
+                    <button onclick="window.publishAiAsTop5()" class="bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-black font-black text-xs p-3.5 rounded-2xl transition shadow-lg flex flex-col items-center justify-center text-center gap-1 cursor-pointer">
                         <i class="fa-solid fa-fire text-base text-orange-950"></i>
-                        <span>'Lo Más Leído' (Top 1)</span>
-                    </button>
-
-                    <!-- 5. Cartelera / Estrenos -->
-                    <button onclick="window.publishAiAsCartelera()" class="bg-gradient-to-r from-amber-700 to-cuycito-gold hover:from-amber-600 hover:to-yellow-300 text-black font-black text-xs p-3 rounded-xl transition shadow-lg flex flex-col items-center justify-center text-center gap-1">
-                        <i class="fa-solid fa-clapperboard text-base text-black"></i>
-                        <span>Cartelera / Estrenos (2:3)</span>
+                        <span>'Lo Más Leído' (#1)</span>
                     </button>
                 </div>
+                ` : `
+                <!-- Botones de Publicación para CARTELERA 2:3 -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <!-- 1. Cartelera y Estrenos (Ambos) -->
+                    <button onclick="window.publishAiAsCartelera('ambos')" class="bg-gradient-to-r from-amber-500 via-cuycito-gold to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs p-3.5 rounded-2xl transition shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider cursor-pointer">
+                        <i class="fa-solid fa-clapperboard text-lg"></i>
+                        <span>Publicar en Cartelera & Estrenos</span>
+                    </button>
+
+                    <!-- 2. Solo Cartelera -->
+                    <button onclick="window.publishAiAsCartelera('cartelera')" class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-white font-bold text-xs p-3.5 rounded-2xl transition flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-film text-cuycito-gold"></i>
+                        <span>Solo en Cartelera</span>
+                    </button>
+
+                    <!-- 3. Solo Próximos Estrenos -->
+                    <button onclick="window.publishAiAsCartelera('estrenos')" class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-white font-bold text-xs p-3.5 rounded-2xl transition flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-rocket text-yellow-400"></i>
+                        <span>Solo en Próximos Estrenos</span>
+                    </button>
+                </div>
+                `}
             </div>
 
         </div>
     `;
 
-    // Inicializar listeners de arrastre para centrar la imagen
+    // Inicializar listeners de arrastre interactivo
     initImageDragController();
 }
+
+window.setImageAspect = (aspect) => {
+    currentImageAspect = aspect;
+    renderAiGeneratedPreview();
+};
 
 // ==========================================================================
 // 5. CONTROLADOR DE ARRASTRE PARA CENTRAR / ENCUADRAR LA IMAGEN
@@ -797,8 +992,6 @@ function initImageDragController() {
         const deltaX = currentX - startX;
         const deltaY = currentY - startY;
 
-        // Convertir píxeles de arrastre en porcentaje de object-position
-        // Mover hacia la derecha debe mostrar la parte izquierda (disminuir X), hacia abajo disminuir Y
         const rect = box.getBoundingClientRect();
         const sensitivity = 1.2;
         
@@ -843,7 +1036,9 @@ window.setPresetImagePosition = (x, y) => {
 window.updateFramingSliders = (type, val) => {
     const img = document.getElementById('aiPreviewSelectedImg');
     const posLabel = document.getElementById('framingPosLabel');
-    if (type === 'Y') {
+    if (type === 'X') {
+        currentImagePosX = parseInt(val, 10);
+    } else if (type === 'Y') {
         currentImagePosY = parseInt(val, 10);
     } else if (type === 'Z') {
         currentImageZoom = parseInt(val, 10);
@@ -873,16 +1068,16 @@ window.updateAiCustomImage = (url) => {
 // ==========================================================================
 // 6. PUBLICACIÓN EN 1 CLIC A CARTELERA / ESTRENOS CON ENCUADRE
 // ==========================================================================
-window.publishAiAsCartelera = async () => {
+window.publishAiAsCartelera = async (carteleraType = 'ambos') => {
     if (!currentAiGeneratedData) return;
 
     const title = document.getElementById('aiEditTitle').value.trim();
-    const platform = document.getElementById('aiEditPlatform').value;
-    const releaseDate = document.getElementById('aiEditReleaseDate').value.trim();
-    const quality = document.getElementById('aiEditQuality').value.trim();
+    const platform = document.getElementById('aiEditPlatform')?.value || 'NETFLIX';
+    const releaseDate = document.getElementById('aiEditReleaseDate')?.value.trim() || 'Estreno 2026';
+    const quality = document.getElementById('aiEditQuality')?.value.trim() || '4K UHD • Dolby Atmos';
     const synopsis = document.getElementById('aiEditExcerpt').value.trim();
     const customImg = document.getElementById('aiCustomImageUrl')?.value.trim();
-    const image = customImg || (currentCandidateImages[selectedImageIndex] ? currentCandidateImages[selectedImageIndex].url : 'assets/img/news1.jpg');
+    const image = customImg || (currentCandidateImages[selectedImageIndex] ? currentCandidateImages[selectedImageIndex].url : 'assets/img/poster3.jpg');
     const imagePosition = `${currentImagePosX}% ${currentImagePosY}%`;
 
     if (!title) {
@@ -903,14 +1098,14 @@ window.publishAiAsCartelera = async () => {
         id: "ai-title-" + Date.now(),
         title,
         platform,
-        type: "ambos",
+        type: carteleraType,
         tag: currentAiGeneratedData.tag || `${platform} EXCLUSIVO`,
         tagColor: platformColors[platform.toUpperCase()] || "bg-yellow-600",
         rating: currentAiGeneratedData.rating || "9.5",
-        releaseDate: releaseDate || "Estreno 2026",
+        releaseDate: releaseDate,
         image,
         imagePosition,
-        quality: quality || "4K UHD • Dolby Atmos",
+        quality,
         synopsis
     };
 
@@ -945,12 +1140,13 @@ window.publishAiAsCartelera = async () => {
 // ==========================================================================
 // 7. PUBLICACIÓN EN 1 CLIC A NOTICIAS DE PORTADA CON ENCUADRE
 // ==========================================================================
-window.publishAiAsNews = async () => {
+window.publishAiAsNews = async (isHero = false) => {
     if (!currentAiGeneratedData) return;
 
     const title = document.getElementById('aiEditTitle').value.trim();
-    const platform = document.getElementById('aiEditPlatform').value;
-    const releaseDate = document.getElementById('aiEditReleaseDate').value.trim();
+    const category = document.getElementById('aiEditCategory')?.value || "TECNOLOGÍA 4K";
+    const readTime = document.getElementById('aiEditReadTime')?.value.trim() || "4 min de lectura";
+    const date = document.getElementById('aiEditDate')?.value.trim() || "Actualizado Hoy";
     const excerpt = document.getElementById('aiEditExcerpt').value.trim();
     const content = document.getElementById('aiEditContent').value.trim();
     const customImg = document.getElementById('aiCustomImageUrl')?.value.trim();
@@ -973,15 +1169,15 @@ window.publishAiAsNews = async () => {
     const newArticle = {
         id: "ai-news-" + Date.now(),
         title,
-        category: currentAiGeneratedData.categoria || "CINE & SERIES",
-        categoryColor: categoryColors[currentAiGeneratedData.categoria] || "bg-orange-600",
-        readTime: currentAiGeneratedData.readTime || "4 min de lectura",
-        date: "Actualizado Hoy",
+        category,
+        categoryColor: categoryColors[category] || "bg-orange-600",
+        readTime,
+        date,
         image,
         imagePosition,
         excerpt,
         content,
-        isHero: false,
+        isHero: !!isHero,
         createdAt: new Date().toISOString()
     };
 
@@ -990,6 +1186,10 @@ window.publishAiAsNews = async () => {
         const stored = localStorage.getItem("cuycito_portal_news");
         if (stored) newsList = JSON.parse(stored);
     } catch(e) {}
+
+    if (isHero) {
+        newsList.forEach(n => n.isHero = false);
+    }
 
     newsList.unshift(newArticle);
     localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
@@ -1098,7 +1298,8 @@ window.publishAiAsThematic = async () => {
     const categoryMap = {
         "ANIME & GAMING": { cat: "ANIME", col: "text-purple-400" },
         "AUDIO & HI-FI": { cat: "AUDIO", col: "text-emerald-400" },
-        "CINE & SERIES": { cat: "CINE", col: "text-purple-400" }
+        "CINE & SERIES": { cat: "CINE", col: "text-purple-400" },
+        "TECNOLOGÍA 4K": { cat: "TECNOLOGÍA", col: "text-sky-400" }
     };
 
     const catInfo = categoryMap[currentAiGeneratedData.categoria] || { cat: "DEPORTES", col: "text-blue-400" };
@@ -1199,3 +1400,8 @@ window.setAiPromptSuggestion = (text) => {
         input.focus();
     }
 };
+
+// Inicializar sugerencias al cargar el documento
+document.addEventListener('DOMContentLoaded', () => {
+    renderAiSuggestions();
+});

@@ -583,5 +583,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn("Error procesando alerta de foto QR de TV:", err);
             }
         }
+
+        // 6. Alerta Instantánea de Renovación Automática con Saldo VIP
+        if (e.key === 'cuycito_admin_notification_trigger' && e.newValue) {
+            try {
+                const notifData = JSON.parse(e.newValue);
+                if (notifData.type === 'auto_renewal') {
+                    const name = notifData.userNickname || notifData.userName || "Cliente VIP";
+                    const service = notifData.serviceName || "Servicio";
+                    const amount = parseFloat(notifData.amount || 0).toFixed(2);
+                    const newEnd = notifData.newEndDate || "Nueva fecha";
+
+                    window.cuzcitoNotifier.showNativeNotification({
+                        title: `🔄 [CuzcitoGo] ¡Renovación Exitosa con Saldo!`,
+                        body: `👤 Cliente: @${name}\n📺 Servicio: ${service}\n💰 Monto debitado: S/ ${amount}\n📅 Nuevo vencimiento: ${newEnd}\n👉 Haz clic para ver en Servicios Activos.`,
+                        tag: `renew-${notifData.subId || Date.now()}`,
+                        tabToOpen: 'subs',
+                        soundType: 'purchase'
+                    });
+
+                    if (typeof window.renderActiveTable === 'function') {
+                        window.renderActiveTable();
+                    }
+                    if (typeof window.renderClients === 'function') {
+                        window.renderClients();
+                    }
+                }
+            } catch(err) {
+                console.warn("Error procesando notificación de renovación:", err);
+            }
+        }
     });
 });
