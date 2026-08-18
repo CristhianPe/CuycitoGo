@@ -2,6 +2,9 @@
 /vip          /vip.html          200
 /unete        /invitacion.html   200
 /join         /invitacion.html   200
-/login        /mantenimiento.html 200
-/registro     /mantenimiento.html 200
-/perfil       /mantenimiento.html 200
+/login               /mantenimiento.html 200
+/registro            /mantenimiento.html 200
+/perfil              /mantenimiento.html 200
+/tienda              /mantenimiento.html 200
+/login-cliente.html  /mantenimiento.html 200
+/perfil.html         /mantenimiento.html 200
