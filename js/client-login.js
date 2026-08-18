@@ -244,7 +244,26 @@ window.handleClientRegisterSubmit = async (e) => {
     btn.innerHTML = '<i class="fa-solid fa-check"></i> Solicitud Registrada Correctamente';
 };
 
-// 4. Auto-selección por parámetro URL (?tab=register, ?email=..., ?ref=...)
+// 4. Utilidad de descifrado y auto-selección por parámetro URL o Token Cifrado
+function decodeInvitationToken(token) {
+    if (!token) return '';
+    try {
+        let clean = token.trim();
+        if (clean.startsWith('cz')) clean = clean.substring(2);
+        let b64 = clean.replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        const xored = atob(b64);
+        const salt = 0x5A;
+        let decoded = '';
+        for (let i = 0; i < xored.length; i++) {
+            decoded += String.fromCharCode(xored.charCodeAt(i) ^ salt);
+        }
+        return decoded.toUpperCase();
+    } catch(e) {
+        return token.toUpperCase();
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('tab') === 'register') {
@@ -254,10 +273,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const regEmail = document.getElementById('regEmail');
         if (regEmail) regEmail.value = params.get('email');
     }
-    const refParam = params.get('ref') || params.get('referral') || params.get('codigo');
-    if (refParam) {
+
+    // Token cifrado o parámetros de referido
+    const encryptedToken = params.get('token') || params.get('c') || params.get('inv') || params.get('v');
+    const rawRef = params.get('ref') || params.get('referral') || params.get('codigo');
+    const storageRef = sessionStorage.getItem('cuycito_pending_referral_code') || localStorage.getItem('cuycito_pending_referral_code');
+
+    let resolvedCode = '';
+    if (encryptedToken) {
+        resolvedCode = decodeInvitationToken(encryptedToken);
+    } else if (rawRef) {
+        resolvedCode = rawRef.toUpperCase();
+    } else if (storageRef) {
+        resolvedCode = storageRef.toUpperCase();
+    }
+
+    if (resolvedCode) {
         const regRef = document.getElementById('regReferralCode');
-        if (regRef) regRef.value = refParam.toUpperCase();
+        if (regRef) {
+            regRef.value = resolvedCode;
+            regRef.classList.add('border-emerald-500', 'bg-emerald-950/20');
+        }
         window.switchAuthTab('register');
+        try {
+            sessionStorage.removeItem('cuycito_pending_referral_code');
+            localStorage.removeItem('cuycito_pending_referral_code');
+        } catch(e) {}
     }
 });

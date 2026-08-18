@@ -1761,6 +1761,23 @@ function getOrGenerateReferralCode(user) {
     return generatedCode;
 }
 
+function encodeInvitationToken(code) {
+    if (!code) return '';
+    const clean = code.trim().toUpperCase();
+    const salt = 0x5A;
+    let xored = '';
+    for (let i = 0; i < clean.length; i++) {
+        xored += String.fromCharCode(clean.charCodeAt(i) ^ salt);
+    }
+    const b64 = btoa(xored).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return 'cz' + b64;
+}
+
+function getEncryptedReferralLink(refCode) {
+    const origin = getAppProductionOrigin();
+    return `${origin}/invitacion.html?token=${encodeInvitationToken(refCode)}`;
+}
+
 window.loadProfileReferralProgram = async () => {
     if (!currentClientUser) {
         try {
@@ -1813,8 +1830,7 @@ window.loadProfileReferralProgram = async () => {
     const metricEffectuated = document.getElementById('metricEffectuatedCount');
     const metricEarnings = document.getElementById('metricReferredEarnings');
 
-    const origin = getAppProductionOrigin();
-    const refLink = `${origin}/login-cliente.html?tab=register&ref=${encodeURIComponent(refCode)}`;
+    const refLink = getEncryptedReferralLink(refCode);
 
     if (codeDisplay) codeDisplay.innerText = refCode;
     if (linkInput) linkInput.value = refLink;
@@ -1940,18 +1956,16 @@ window.copyReferralLink = () => {
 
 window.shareReferralWhatsApp = () => {
     const refCode = getOrGenerateReferralCode(currentClientUser);
-    const origin = getAppProductionOrigin();
-    const refLink = `${origin}/login-cliente.html?tab=register&ref=${encodeURIComponent(refCode)}`;
+    const refLink = getEncryptedReferralLink(refCode);
 
-    const text = `🔥 ¡Los mejores precios en CuycitoGO! 🐹🍿 Accede a pantallas privadas de Netflix 4K, Disney+, Max Platino, Crunchyroll y Spotify.\n\n🎉 ¡APROVECHA HOY S/ 1.00 SOL DE CRÉDITO DE BIENVENIDA al solicitar tu cuenta gratis!\n\n🎁 Código VIP de Invitación: *${refCode}*\n🔗 Solicita tu cuenta en 1 clic aquí: ${refLink}`;
+    const text = `🔥 ¡Los mejores precios en CuycitoGO! 🐹🍿 Accede a pantallas privadas de Netflix 4K, Disney+, Max Platino, Crunchyroll y Spotify.\n\n🎉 ¡APROVECHA HOY S/ 1.00 SOL DE CRÉDITO DE BIENVENIDA al solicitar tu cuenta gratis!\n\n🎁 Pase VIP de Invitación: *${refCode}*\n🔗 Solicita tu cuenta en 1 clic aquí: ${refLink}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
 };
 
 window.shareReferralGlobalAction = async () => {
     if (!currentClientUser) return;
     const refCode = getOrGenerateReferralCode(currentClientUser);
-    const origin = getAppProductionOrigin();
-    const refLink = `${origin}/login-cliente.html?tab=register&ref=${encodeURIComponent(refCode)}`;
+    const refLink = getEncryptedReferralLink(refCode);
 
     const shareTitle = "¡Los mejores precios en CuycitoGO - S/ 1.00 Gratis de Crédito!";
     const shareText = `🔥 ¡Los mejores precios en CuycitoGO! 🐹🍿 Accede a pantallas privadas de Netflix 4K, Disney+, Max Platino y Spotify al mejor precio.\n\n🎉 ¡APROVECHA HOY! Recibe S/ 1.00 Sol de crédito de bienvenida de regalo al solicitar tu cuenta gratis.\n\n🎁 Código VIP de Invitación: *${refCode}*\n🔗 Solicita tu cuenta aquí:`;
