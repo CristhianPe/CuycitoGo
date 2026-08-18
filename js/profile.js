@@ -248,6 +248,9 @@ async function initProfilePage() {
     } catch(fireErr) {
         console.warn("Usuario no refrescado de Firestore:", fireErr);
     }
+
+    // Iniciar listener de mantenimiento de tienda en tiempo real
+    initClientStoreMaintenanceListener();
 }
 
 if (document.readyState === "loading") {
@@ -255,6 +258,50 @@ if (document.readyState === "loading") {
 } else {
     initProfilePage();
 }
+
+// ==========================================================================
+// CONTROL DE ACCESO A TIENDA & MODO MANTENIMIENTO EN CLIENTE
+// ==========================================================================
+let isStoreMaintenanceActive = false;
+let storeSettingsSnapshotUnsubscribe = null;
+
+function initClientStoreMaintenanceListener() {
+    try {
+        if (storeSettingsSnapshotUnsubscribe) return;
+        storeSettingsSnapshotUnsubscribe = onSnapshot(doc(db, "system_config", "store_settings"), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                isStoreMaintenanceActive = data.maintenanceMode === true;
+            } else {
+                isStoreMaintenanceActive = false;
+            }
+            updateClientStoreMaintenanceState();
+        });
+    } catch(err) {
+        console.warn("No se pudo iniciar listener de mantenimiento en cliente:", err);
+    }
+}
+
+function updateClientStoreMaintenanceState() {
+    const storeTabBtn = document.getElementById('tabBtnStore');
+    const storeMaintenanceNotice = document.getElementById('profileStoreMaintenanceNotice');
+    const storeContent = document.getElementById('profileStoreNormalContent');
+
+    if (isStoreMaintenanceActive) {
+        if (storeTabBtn) {
+            storeTabBtn.innerHTML = '<i class="fa-solid fa-store text-amber-400"></i> Tienda VIP <span class="bg-red-950 text-red-400 border border-red-500/50 text-[9px] px-1.5 py-0.5 rounded-full font-black ml-1">🛠️ Mantenimiento</span>';
+        }
+        if (storeMaintenanceNotice) storeMaintenanceNotice.classList.remove('hidden');
+        if (storeContent) storeContent.classList.add('hidden');
+    } else {
+        if (storeTabBtn) {
+            storeTabBtn.innerHTML = '<i class="fa-solid fa-store text-emerald-400"></i> Tienda VIP';
+        }
+        if (storeMaintenanceNotice) storeMaintenanceNotice.classList.add('hidden');
+        if (storeContent) storeContent.classList.remove('hidden');
+    }
+}
+window.updateClientStoreMaintenanceState = updateClientStoreMaintenanceState;
 
 // Sincroniza los datos más recientes del usuario desde Firestore (saldo, nickname, etc.)
 let userSnapshotUnsubscribe = null;
@@ -1995,7 +2042,8 @@ window.switchProfileTab = (tab) => {
     } else if (tab === 'store' || tab === 'catalog') {
         if (btnStore) btnStore.className = "text-emerald-400 border-b-2 border-emerald-400 pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0";
         if (viewStore) viewStore.classList.remove('hidden');
-        if (typeof window.loadProfileStoreCatalog === 'function') window.loadProfileStoreCatalog();
+        updateClientStoreMaintenanceState();
+        if (!isStoreMaintenanceActive && typeof window.loadProfileStoreCatalog === 'function') window.loadProfileStoreCatalog();
     } else if (tab === 'roulette' || tab === 'games') {
         if (btnRoulette) btnRoulette.className = "text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-2 shrink-0 relative";
         if (viewRoulette) viewRoulette.classList.remove('hidden');
@@ -2700,6 +2748,10 @@ window.toggleProfileCartModal = () => {
 };
 
 window.addToProfileCart = (id, titleEncoded, price) => {
+    if (isStoreMaintenanceActive) {
+        alert("⚠️ La tienda se encuentra en mantenimiento técnico en este momento. Por favor intenta más tarde.");
+        return;
+    }
     const title = decodeURIComponent(titleEncoded || '');
     const existingIndex = profileCart.findIndex(item => item.id === id || item.title === title);
 
@@ -2733,6 +2785,10 @@ window.addToProfileCart = (id, titleEncoded, price) => {
 window.addToCart = window.addToProfileCart;
 window.toggleCartModal = window.toggleProfileCartModal;
 window.openCartModal = () => {
+    if (isStoreMaintenanceActive) {
+        alert("⚠️ La tienda se encuentra en mantenimiento técnico en este momento.");
+        return;
+    }
     const modal = document.getElementById('profileCartModal');
     if (modal) modal.classList.remove('hidden');
     window.renderProfileCartUI();
@@ -2854,6 +2910,10 @@ window.renderProfileCartUI = () => {
 };
 
 window.confirmCartCheckout = async () => {
+    if (isStoreMaintenanceActive) {
+        alert('⚠️ La tienda se encuentra en mantenimiento técnico en este momento. No se pueden procesar compras.');
+        return;
+    }
     if (!currentClientUser) return alert('Por favor inicia sesión.');
     if (profileCart.length === 0) return alert('Tu carrito está vacío.');
 

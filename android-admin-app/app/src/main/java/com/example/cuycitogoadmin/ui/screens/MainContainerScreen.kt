@@ -1,4 +1,5 @@
-package com.example.cuycitogoadmin.ui.screens
+﻿package com.example.cuycitogoadmin.ui.screens
+import kotlinx.coroutines.launch
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -53,6 +54,8 @@ fun MainContainerScreen(
     val tvActivations by firebaseManager.getTvActivationsFlow().collectAsState(initial = emptyList())
     val clients by firebaseManager.getClientsFlow().collectAsState(initial = emptyList())
     val catalog by firebaseManager.getCatalogFlow().collectAsState(initial = emptyList())
+    val isStoreMaintenance by firebaseManager.getStoreMaintenanceFlow().collectAsState(initial = false)
+    val scope = rememberCoroutineScope()
 
     // Contadores de pendientes
     val totalPendingAlarms = remember(liveAlarms) {
@@ -65,7 +68,7 @@ fun MainContainerScreen(
         tvActivations.count { it.status.contains("Pendiente", ignoreCase = true) }
     }
 
-    // Monitoreo reactivo de nuevas alertas con audio y vibraci�n
+    // Monitoreo reactivo de nuevas alertas con audio y vibración
     var lastPendingAlarmsCount by remember { mutableStateOf(-1) }
 
     LaunchedEffect(totalPendingAlarms) {
@@ -271,8 +274,11 @@ fun MainContainerScreen(
                     onMarkActivated = { firebaseManager.markTvActivated(it) }
                 )
                 AdminTab.CLIENTES -> ClientesScreen(clients = clients)
-                AdminTab.TIENDA -> TiendaScreen(products = catalog)
+                AdminTab.TIENDA -> TiendaScreen(products = catalog, isMaintenance = isStoreMaintenance, onToggleMaintenance = { isM -> scope.launch { firebaseManager.setStoreMaintenance(isM) } })
             }
         }
     }
 }
+
+
+

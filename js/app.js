@@ -222,6 +222,7 @@ onAuthStateChanged(auth, async (user) => {
             
             window.calculateEndDate();
             window.renderAll();
+            window.initStoreMaintenanceListener();
         } catch (error) {
             console.error("Error leyendo DB:", error);
             document.getElementById('dbStatus').innerHTML = '<span class="text-red-500">Error Cloud</span>';
@@ -2043,6 +2044,136 @@ window.renderFinance = () => {
             },
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#374151' }, ticks: { color: '#9ca3af' } }, x: { grid: { display: false }, ticks: { color: '#9ca3af' } } }, plugins: { legend: { labels: { color: '#9ca3af' } } } }
         });
+    }
+};
+
+// ==========================================================================
+// CONTROL DE ACCESO A TIENDA & MODO MANTENIMIENTO DE EMERGENCIA
+// ==========================================================================
+window.isStoreMaintenanceActive = false;
+
+window.initStoreMaintenanceListener = () => {
+    try {
+        onSnapshot(doc(db, "system_config", "store_settings"), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                window.isStoreMaintenanceActive = data.maintenanceMode === true;
+                window.updateStoreMaintenanceUI(window.isStoreMaintenanceActive);
+            } else {
+                window.isStoreMaintenanceActive = false;
+                window.updateStoreMaintenanceUI(false);
+            }
+        });
+    } catch(err) {
+        console.warn("Error en listener de mantenimiento de tienda:", err);
+    }
+};
+
+window.updateStoreMaintenanceUI = (isMaintenance) => {
+    // 1. Switches
+    const switchEl1 = document.getElementById('storeMaintenanceSwitch');
+    const switchEl2 = document.getElementById('storeMaintenanceSwitchCatalog');
+    if (switchEl1) switchEl1.checked = isMaintenance;
+    if (switchEl2) switchEl2.checked = isMaintenance;
+
+    // 2. Badges e Indicadores en Tab 4 y Tab 5
+    const badges = document.querySelectorAll('.store-status-badge');
+    badges.forEach(b => {
+        if (isMaintenance) {
+            b.className = "store-status-badge bg-red-950 text-red-300 border border-red-500/60 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 animate-pulse";
+            b.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400 animate-ping"></span> Clientes Desactivados (En Mantenimiento)';
+        } else {
+            b.className = "store-status-badge bg-emerald-950 text-emerald-300 border border-emerald-500/60 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1";
+            b.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Clientes Activados (Tienda Abierta)';
+        }
+    });
+
+    // 3. Textos y Cards
+    const descEls = document.querySelectorAll('.store-status-desc');
+    descEls.forEach(d => {
+        if (isMaintenance) {
+            d.innerHTML = '<strong class="text-red-400">MODO CRÍTICO ACTIVO:</strong> El acceso a la tienda está bloqueado para los clientes. Al entrar verán el mensaje "Estamos en mantenimiento".';
+        } else {
+            d.innerHTML = 'Los clientes pueden explorar el catálogo, agregar saldo y adquirir pantallas con normalidad.';
+        }
+    });
+
+    const labelEls = document.querySelectorAll('.store-switch-label');
+    labelEls.forEach(l => {
+        l.innerText = isMaintenance ? "MODO MANTENIMIENTO" : "TIENDA OPERATIVA";
+        l.className = isMaintenance ? "store-switch-label block text-xs font-black uppercase text-red-400" : "store-switch-label block text-xs font-black uppercase text-emerald-400";
+    });
+
+    const subLabelEls = document.querySelectorAll('.store-switch-sublabel');
+    subLabelEls.forEach(sl => {
+        sl.innerText = isMaintenance ? "Acceso Clientes Bloqueado" : "Mantenimiento Desactivado";
+    });
+
+    const cardEls = document.querySelectorAll('.store-maintenance-card');
+    cardEls.forEach(c => {
+        if (isMaintenance) {
+            c.classList.remove('border-emerald-500/50');
+            c.classList.add('border-red-500/70', 'shadow-[0_0_25px_rgba(239,68,68,0.2)]');
+        } else {
+            c.classList.remove('border-red-500/70', 'shadow-[0_0_25px_rgba(239,68,68,0.2)]');
+            c.classList.add('border-emerald-500/50');
+        }
+    });
+
+    const iconBoxEls = document.querySelectorAll('.store-control-icon-box');
+    iconBoxEls.forEach(ib => {
+        if (isMaintenance) {
+            ib.className = "store-control-icon-box w-12 h-12 rounded-2xl bg-red-500/20 text-red-400 border border-red-500/50 flex items-center justify-center text-2xl shadow shrink-0 animate-bounce";
+            ib.innerHTML = '<i class="fa-solid fa-store-slash"></i>';
+        } else {
+            ib.className = "store-control-icon-box w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-2xl shadow shrink-0";
+            ib.innerHTML = '<i class="fa-solid fa-store"></i>';
+        }
+    });
+
+    // 4. Header Badge
+    const headerBtn = document.getElementById('headerStoreStatusBtn');
+    const headerText = document.getElementById('headerStoreStatusText');
+    if (headerBtn && headerText) {
+        if (isMaintenance) {
+            headerBtn.className = "cursor-pointer transition text-[11px] font-black uppercase tracking-wider px-3 py-2 rounded-xl bg-red-950/90 border border-red-500/70 text-red-300 flex items-center gap-2 shadow glow-red animate-pulse";
+            headerText.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Mantenimiento';
+        } else {
+            headerBtn.className = "cursor-pointer transition text-[11px] font-black uppercase tracking-wider px-3 py-2 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 flex items-center gap-2 shadow glow-gold";
+            headerText.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Tienda: ACTIVA';
+        }
+    }
+};
+
+window.handleStoreMaintenanceToggle = async (isChecked) => {
+    try {
+        await setDoc(doc(db, "system_config", "store_settings"), {
+            maintenanceMode: isChecked,
+            status: isChecked ? 'disabled' : 'active',
+            updatedAt: new Date().toISOString(),
+            updatedBy: 'Dashboard Admin'
+        }, { merge: true });
+
+        window.updateStoreMaintenanceUI(isChecked);
+        
+        if (isChecked) {
+            alert("🛑 ACCESO A TIENDA DESACTIVADO\n\nSe ha activado el Modo Mantenimiento. Los clientes no podrán ver el catálogo de compra y verán la pantalla de mantenimiento.");
+        } else {
+            alert("✅ ACCESO A TIENDA ACTIVADO\n\nLa tienda vuelve a estar operativa para todos los clientes.");
+        }
+    } catch(err) {
+        console.error("Error al actualizar modo mantenimiento de tienda:", err);
+        alert("Error al actualizar configuración en la nube: " + err.message);
+    }
+};
+
+window.toggleStoreMaintenancePrompt = () => {
+    const newState = !window.isStoreMaintenanceActive;
+    const msg = newState 
+        ? "¿Deseas DESACTIVAR el acceso a la tienda y ponerla en MODO MANTENIMIENTO para todos los clientes?" 
+        : "¿Deseas ACTIVAR nuevamente el acceso a la tienda para todos los clientes?";
+    if (confirm(msg)) {
+        window.handleStoreMaintenanceToggle(newState);
     }
 };
 

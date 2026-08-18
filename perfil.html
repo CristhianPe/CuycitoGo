@@ -270,7 +270,33 @@
         <!-- VISTA 2: TIENDA VIP & CATÁLOGO DE PRODUCTOS               -->
         <!-- ========================================================= -->
         <section id="viewProfileStore" class="hidden space-y-6">
-            <div class="bg-[#121212] border border-gray-800/80 rounded-3xl p-6 shadow-2xl space-y-6">
+            <!-- PANTALLA DE BLOQUEO POR MANTENIMIENTO TÉCNICO -->
+            <div id="profileStoreMaintenanceNotice" class="hidden bg-gradient-to-b from-amber-950/40 via-black to-[#121212] border-2 border-amber-500/50 rounded-3xl p-8 sm:p-12 text-center space-y-5 shadow-2xl glow-gold max-w-2xl mx-auto my-6 animate-fade-in">
+                <div class="w-20 h-20 mx-auto rounded-3xl bg-amber-500/10 border-2 border-amber-500 flex items-center justify-center text-4xl text-amber-400 shadow-lg animate-bounce">
+                    🛠️
+                </div>
+                <div class="space-y-2">
+                    <span class="bg-red-950/80 text-red-400 border border-red-500/50 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                        Mantenimiento Técnico en Curso
+                    </span>
+                    <h2 class="text-2xl sm:text-3xl font-black text-white">Estamos en Mantenimiento</h2>
+                    <p class="text-sm text-gray-300 leading-relaxed max-w-md mx-auto">
+                        El acceso a la tienda VIP se encuentra temporalmente deshabilitado por actualización de servidores e inventario. 
+                        <br><span class="text-cuycito-gold font-semibold">¡Volveremos muy pronto con nuevos servicios y mejores ofertas!</span>
+                    </p>
+                </div>
+                <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <button onclick="window.switchProfileTab('services')" class="w-full sm:w-auto bg-gray-900 hover:bg-gray-800 border border-gray-700 text-white font-bold text-xs px-5 py-3 rounded-xl transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-layer-group text-cuycito-gold"></i> Volver a Mis Servicios
+                    </button>
+                    <a href="https://wa.me/51936938927?text=Hola,%20tengo%20una%20consulta%20sobre%20el%20mantenimiento%20de%20la%20tienda" target="_blank" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-5 py-3 rounded-xl transition flex items-center justify-center gap-2 shadow glow-green">
+                        <i class="fa-brands fa-whatsapp text-sm"></i> Soporte VIP WhatsApp
+                    </a>
+                </div>
+            </div>
+
+            <!-- CONTENIDO NORMAL DE LA TIENDA (SE OCULTA EN MANTENIMIENTO) -->
+            <div id="profileStoreNormalContent" class="bg-[#121212] border border-gray-800/80 rounded-3xl p-6 shadow-2xl space-y-6">
                 
                 <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-gray-800 pb-5">
                     <div>

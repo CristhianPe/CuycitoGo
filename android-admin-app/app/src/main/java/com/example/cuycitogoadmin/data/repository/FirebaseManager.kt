@@ -1,4 +1,4 @@
-package com.example.cuycitogoadmin.data.repository
+﻿package com.example.cuycitogoadmin.data.repository
 
 import android.content.Context
 import com.example.cuycitogoadmin.data.model.*
@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -150,7 +152,7 @@ class FirebaseManager(private val context: Context) {
                 } catch (e: Exception) {}
             }
 
-            // 2.B. Si no se actualizó por ID, buscar por teléfono
+            // 2.B. Si no se actualizÃ³ por ID, buscar por telÃ©fono
             if (!userUpdated && recarga.clientPhone.isNotBlank()) {
                 try {
                     val phoneQuery = firestore.collection("users")
@@ -169,7 +171,7 @@ class FirebaseManager(private val context: Context) {
                 } catch (e: Exception) {}
             }
 
-            // 2.C. Si no se actualizó, buscar por email
+            // 2.C. Si no se actualizÃ³, buscar por email
             if (!userUpdated && recarga.clientEmail.isNotBlank() && !recarga.clientEmail.contains("Sin correo", ignoreCase = true)) {
                 try {
                     val emailQuery = firestore.collection("users")
@@ -188,7 +190,7 @@ class FirebaseManager(private val context: Context) {
                 } catch (e: Exception) {}
             }
 
-            // 2.D. Si no se actualizó, buscar por coincidencia de nombre o nickname en todos los usuarios
+            // 2.D. Si no se actualizÃ³, buscar por coincidencia de nombre o nickname en todos los usuarios
             if (!userUpdated && recarga.clientName.isNotBlank() && recarga.clientName != "Cliente") {
                 try {
                     val allUsers = firestore.collection("users").get().await()
@@ -396,7 +398,7 @@ class FirebaseManager(private val context: Context) {
                 )
             }
 
-            // Ordenar por más reciente primero
+            // Ordenar por mÃ¡s reciente primero
             alarmList.sortedByDescending { it.rawTimestamp }
         }
     }
@@ -479,4 +481,28 @@ class FirebaseManager(private val context: Context) {
             }
         awaitClose { listener.remove() }
     }
+
+    // --- MODO MANTENIMIENTO DE TIENDA ---
+    fun getStoreMaintenanceFlow(): Flow<Boolean> = callbackFlow {
+        val listener: ListenerRegistration = firestore.collection("system_config")
+            .document("store_settings")
+            .addSnapshotListener { snapshot, _ ->
+                val isMaintenance = snapshot?.getBoolean("maintenanceMode") ?: false
+                trySend(isMaintenance)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun setStoreMaintenance(isMaintenance: Boolean) {
+        withContext(Dispatchers.IO) {
+            val map = hashMapOf(
+                "maintenanceMode" to isMaintenance,
+                "status" to if (isMaintenance) "disabled" else "active",
+                "updatedAt" to java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).format(java.util.Date()),
+                "updatedBy" to "Android APK Admin"
+            )
+            firestore.collection("system_config").document("store_settings").set(map, com.google.firebase.firestore.SetOptions.merge())
+        }
+    }
 }
+
