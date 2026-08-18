@@ -724,21 +724,21 @@ window.toggleMasterCredentialsVisibility = async (accId) => {
     acc.showCredentialsToClient = !acc.showCredentialsToClient;
     acc.hidePasswordFromClient = !acc.showCredentialsToClient;
 
-    if (acc.profiles) {
-        acc.profiles.forEach(async (subId) => {
-            if (subId) {
-                const sub = appState.subscriptions.find(s => s.id === subId);
-                if (sub) {
-                    sub.hidePassword = acc.hidePasswordFromClient;
-                    sub.showCredentials = acc.showCredentialsToClient;
-                    try { await setDoc(doc(db, "subscriptions", sub.id), sub); } catch(e){}
-                }
-            }
-        });
-    }
+    // Sincronizar todas las suscripciones de esta Cuenta Raíz (por perfiles, masterAccountId o email)
+    appState.subscriptions.forEach(async (sub) => {
+        const isLinkedByProfile = acc.profiles && acc.profiles.includes(sub.id);
+        const isLinkedById = sub.masterAccountId === acc.id;
+        const isLinkedByEmail = sub.email && acc.email && sub.email.trim().toLowerCase() === acc.email.trim().toLowerCase();
+
+        if (isLinkedByProfile || isLinkedById || isLinkedByEmail) {
+            sub.hidePassword = acc.hidePasswordFromClient;
+            sub.showCredentials = acc.showCredentialsToClient;
+            try { await setDoc(doc(db, "subscriptions", sub.id), sub, { merge: true }); } catch(e){}
+        }
+    });
 
     try {
-        await setDoc(doc(db, "masterAccounts", acc.id), acc);
+        await setDoc(doc(db, "masterAccounts", acc.id), acc, { merge: true });
     } catch(e) { console.error(e); }
 
     window.renderMasterAccounts();
@@ -779,22 +779,21 @@ window.saveEditMasterModal = async () => {
     }
     acc.capacity = newCapacity;
 
-    if (acc.profiles) {
-        acc.profiles.forEach(async (subId) => {
-            if (subId) {
-                const sub = appState.subscriptions.find(s => s.id === subId);
-                if (sub) {
-                    sub.email = acc.email;
-                    sub.pass = acc.pass;
-                    sub.hidePassword = acc.hidePasswordFromClient;
-                    sub.showCredentials = acc.showCredentialsToClient;
-                    try { await setDoc(doc(db, "subscriptions", sub.id), sub); } catch(e){}
-                }
-            }
-        });
-    }
+    appState.subscriptions.forEach(async (sub) => {
+        const isLinkedByProfile = acc.profiles && acc.profiles.includes(sub.id);
+        const isLinkedById = sub.masterAccountId === acc.id;
+        const isLinkedByEmail = sub.email && acc.email && sub.email.trim().toLowerCase() === acc.email.trim().toLowerCase();
 
-    try { await setDoc(doc(db, "masterAccounts", id), acc); } catch(e){}
+        if (isLinkedByProfile || isLinkedById || isLinkedByEmail) {
+            sub.email = acc.email;
+            sub.pass = acc.pass;
+            sub.hidePassword = acc.hidePasswordFromClient;
+            sub.showCredentials = acc.showCredentialsToClient;
+            try { await setDoc(doc(db, "subscriptions", sub.id), sub, { merge: true }); } catch(e){}
+        }
+    });
+
+    try { await setDoc(doc(db, "masterAccounts", id), acc, { merge: true }); } catch(e){}
     document.getElementById('editMasterModal').classList.add('hidden');
     window.renderAll();
 };

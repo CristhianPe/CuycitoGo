@@ -44,6 +44,49 @@ function getSubscriptionPrice(sub) {
 }
 window.getSubscriptionPrice = getSubscriptionPrice;
 
+// POLÍTICA DE SEGURIDAD ZERO-TRUST: VISIBILIDAD DE CREDENCIALES
+// Categorizada como GRAVE: Ningún servicio muestra credenciales excepto Crunchyroll 
+// o si la Cuenta Raíz / Dashboard autorizó explícitamente la visibilidad.
+function isCredentialsVisibleForClient(sub) {
+    if (!sub) return false;
+    const sName = (sub.service || '').toLowerCase();
+
+    // 1. REGLA CRUNCHYROLL: Entrega directa de credenciales autorizada
+    if (sName.includes('crunchyroll') || sName.includes('crunchy')) {
+        return true;
+    }
+
+    // 2. REGLA DE CUENTA RAÍZ / DASHBOARD ADMIN:
+    // Buscar la cuenta raíz (Master Account) en el inventario por ID o por Correo
+    let masterAcc = null;
+    if (sub.masterAccountId) {
+        masterAcc = allMasterAccounts.find(m => m.id === sub.masterAccountId);
+    }
+    if (!masterAcc && sub.email) {
+        masterAcc = allMasterAccounts.find(m => m.email && m.email.trim().toLowerCase() === sub.email.trim().toLowerCase());
+    }
+
+    // Si la cuenta raíz tiene hidePasswordFromClient === true, es ESTRICTAMENTE OCULTA
+    if (masterAcc) {
+        if (masterAcc.hidePasswordFromClient === true || masterAcc.showCredentialsToClient === false) {
+            return false;
+        }
+        if (masterAcc.showCredentialsToClient === true || masterAcc.hidePasswordFromClient === false) {
+            return true;
+        }
+    }
+
+    // 3. REGLA DE SUSCRIPCIÓN INDIVIDUAL:
+    if (sub.hidePassword === true) return false;
+    if (sub.showCredentials === true) return true;
+    if (sub.hidePassword === false) return true;
+
+    // POR DEFECTO EN TODOS LOS DEMÁS SERVICIOS (Netflix, Disney+, Prime, HBO, Spotify, etc.):
+    // CERO REVELACIÓN DE CREDENCIALES (Protegido por Servidor)
+    return false;
+}
+window.isCredentialsVisibleForClient = isCredentialsVisibleForClient;
+
 function getDaysRemaining(endDateStr) {
     if (!endDateStr) return 0;
     const today = new Date();
@@ -61,6 +104,8 @@ let allMasterAccounts = [];
 let activeRechargeOrderId = null;
 let rechargePollingInterval = null;
 let rechargeCountdownInterval = null;
+let masterAccountsSnapshotUnsubscribe = null;
+let subscriptionsSnapshotUnsubscribe = null;
 
 const CENTRAL_WHATSAPP_PHONE = "";
 const BACKEND_API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
@@ -371,35 +416,39 @@ async function loadClientSubscriptions() {
         window.checkExpiringSubscriptionsAlert(clientSubscriptions);
     }
 
-    // 2. SINCRONIZACIÓN EN SEGUNDO PLANO CON FIRESTORE
+    // 2. SINCRONIZACIÓN EN TIEMPO REAL CON FIRESTORE
     try {
-        const [subSnap, masterSnap] = await Promise.all([
-            getDocs(collection(db, "subscriptions")),
-            getDocs(collection(db, "masterAccounts"))
-        ]);
+        if (!masterAccountsSnapshotUnsubscribe) {
+            masterAccountsSnapshotUnsubscribe = onSnapshot(collection(db, "masterAccounts"), (masterSnap) => {
+                const remoteMasterDocs = [];
+                masterSnap.forEach(d => remoteMasterDocs.push({ id: d.id, ...d.data() }));
+                allMasterAccounts = remoteMasterDocs;
+                renderClientSubscriptions(clientSubscriptions);
+            });
+        }
 
-        const remoteMasterDocs = [];
-        masterSnap.forEach(d => remoteMasterDocs.push({ id: d.id, ...d.data() }));
-        allMasterAccounts = remoteMasterDocs;
+        if (!subscriptionsSnapshotUnsubscribe) {
+            subscriptionsSnapshotUnsubscribe = onSnapshot(collection(db, "subscriptions"), (subSnap) => {
+                const remoteSubDocs = [];
+                subSnap.forEach(d => remoteSubDocs.push({ id: d.id, ...d.data() }));
+                localStorage.setItem("cuycito_client_subscriptions", JSON.stringify(remoteSubDocs));
 
-        const remoteSubDocs = [];
-        subSnap.forEach(d => remoteSubDocs.push({ id: d.id, ...d.data() }));
-        localStorage.setItem("cuycito_client_subscriptions", JSON.stringify(remoteSubDocs));
+                const matchedRemote = [];
+                remoteSubDocs.forEach(data => {
+                    if (isSubscriptionBelongingToClient(data, currentClientUser)) {
+                        matchedRemote.push(data);
+                    }
+                });
 
-        const matchedRemote = [];
-        remoteSubDocs.forEach(data => {
-            if (isSubscriptionBelongingToClient(data, currentClientUser)) {
-                matchedRemote.push(data);
-            }
-        });
-
-        if (matchedRemote.length > 0) {
-            clientSubscriptions = matchedRemote;
-            renderClientSubscriptions(clientSubscriptions);
-            calculateMetrics(clientSubscriptions);
-            if (typeof window.checkExpiringSubscriptionsAlert === 'function') {
-                window.checkExpiringSubscriptionsAlert(clientSubscriptions);
-            }
+                if (matchedRemote.length > 0 || !currentClientUser.isDemo) {
+                    clientSubscriptions = matchedRemote;
+                    renderClientSubscriptions(clientSubscriptions);
+                    calculateMetrics(clientSubscriptions);
+                    if (typeof window.checkExpiringSubscriptionsAlert === 'function') {
+                        window.checkExpiringSubscriptionsAlert(clientSubscriptions);
+                    }
+                }
+            });
         }
     } catch (dbErr) {
         console.warn("Sincronización en segundo plano con Firestore omitida:", dbErr);
@@ -661,42 +710,57 @@ function renderClientSubscriptions(subs) {
                     </div>
                 `;
             }
-        } else if (sub.email || sub.pass) {
-            credentialsBlockHTML = `
-                <div class="bg-black/60 border border-gray-800/90 rounded-2xl p-3.5 space-y-2 font-mono text-xs">
-                    <div class="flex items-center justify-between">
-                        <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Correo:</span>
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-white font-bold truncate max-w-[170px] select-all">${sub.email || 'Sin correo'}</span>
-                            <button onclick="window.copyText('${sub.email || ''}')" class="text-gray-400 hover:text-cuycito-gold p-1 transition" title="Copiar correo"><i class="fa-regular fa-copy text-xs"></i></button>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center justify-between pt-1 border-t border-gray-800/60">
-                        <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Contraseña:</span>
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-cuycito-gold font-black select-all">${sub.pass || '••••••••'}</span>
-                            <button onclick="window.copyText('${sub.pass || ''}')" class="text-gray-400 hover:text-cuycito-gold p-1 transition" title="Copiar contraseña"><i class="fa-regular fa-copy text-xs"></i></button>
-                        </div>
-                    </div>
-
-                    ${sub.pin ? `
-                    <div class="flex items-center justify-between pt-1 border-t border-gray-800/60">
-                        <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">PIN / Perfil:</span>
-                        <span class="text-emerald-400 font-black">${sub.pin}</span>
-                    </div>` : ''}
-                </div>
-            `;
         } else {
-            credentialsBlockHTML = `
-                <div class="bg-emerald-950/20 border border-emerald-500/30 rounded-2xl p-3 text-center space-y-1">
-                    <div class="flex items-center justify-center gap-1.5 text-emerald-400 text-xs font-bold">
-                        <i class="fa-solid fa-shield-halved"></i>
-                        <span>Servicio Activo & Garantizado</span>
+            // SERVICIO ACTIVO O EXPIRADO (No pendiente)
+            const showCreds = isCredentialsVisibleForClient(sub);
+
+            if (showCreds && (sub.email || sub.pass || sub.accountEmail || sub.accountPassword)) {
+                // SOLO si es Crunchyroll o si la Cuenta Raíz / Dashboard autorizó explícitamente la visibilidad
+                const displayEmail = sub.email || sub.accountEmail || 'Sin correo';
+                const displayPass = sub.pass || sub.accountPassword || '••••••••';
+
+                credentialsBlockHTML = `
+                    <div class="bg-black/80 border border-gray-800/90 rounded-2xl p-3.5 space-y-2 font-mono text-xs shadow-inner">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Correo:</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-white font-bold truncate max-w-[170px] select-all">${displayEmail}</span>
+                                <button onclick="window.copyText('${displayEmail}')" class="text-gray-400 hover:text-cuycito-gold p-1 transition" title="Copiar correo"><i class="fa-regular fa-copy text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-1 border-t border-gray-800/60">
+                            <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Contraseña:</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-cuycito-gold font-black select-all">${displayPass}</span>
+                                <button onclick="window.copyText('${displayPass}')" class="text-gray-400 hover:text-cuycito-gold p-1 transition" title="Copiar contraseña"><i class="fa-regular fa-copy text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        ${sub.pin ? `
+                        <div class="flex items-center justify-between pt-1 border-t border-gray-800/60">
+                            <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">PIN / Perfil:</span>
+                            <span class="text-emerald-400 font-black">${sub.pin}</span>
+                        </div>` : ''}
                     </div>
-                    <p class="text-[10px] text-gray-400">Tu acceso directo se encuentra sincronizado con nuestro servidor.</p>
-                </div>
-            `;
+                `;
+            } else {
+                // PROTECCIÓN ESTRICTA GRAVE: NINGÚN OTRO SERVICIO REVELA CONTRASEÑA NI CORREO DE CUENTA RAÍZ
+                credentialsBlockHTML = `
+                    <div class="bg-gradient-to-r from-emerald-950/30 via-black to-emerald-950/20 border border-emerald-500/40 rounded-2xl p-3 text-center space-y-1.5">
+                        <div class="flex items-center justify-center gap-1.5 text-emerald-400 text-xs font-bold">
+                            <i class="fa-solid fa-shield-halved text-sm"></i>
+                            <span>Pantalla Vinculada & Activa</span>
+                        </div>
+                        <p class="text-[10px] text-gray-300">Tu servicio se encuentra sincronizado con nuestro servidor.</p>
+                        ${sub.pin ? `
+                        <div class="inline-flex items-center gap-1.5 bg-black/90 border border-gray-800 px-3 py-1 rounded-xl text-xs font-mono mt-1">
+                            <span class="text-gray-500 text-[10px] uppercase font-bold">Perfil Asignado:</span>
+                            <span class="text-emerald-400 font-black">${sub.pin}</span>
+                        </div>` : ''}
+                    </div>
+                `;
+            }
         }
 
         if (!isPending) {
