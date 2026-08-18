@@ -1,0 +1,43 @@
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
+[[redirects]]
+  from = "/login"
+  to = "/mantenimiento.html"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/registro"
+  to = "/mantenimiento.html"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/perfil"
+  to = "/mantenimiento.html"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/login-cliente.html"
+  to = "/mantenimiento.html"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/perfil.html"
+  to = "/mantenimiento.html"
+  status = 302
+  force = true
