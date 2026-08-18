@@ -217,9 +217,18 @@ window.handleClientRegisterSubmit = async (e) => {
         localStorage.setItem("cuycito_leads", JSON.stringify(leads));
     } catch(err) {}
 
-    // Mensaje WhatsApp
-    const msg = `¡Hola CuycitoGO! 🐹👋\n\nHe enviado una solicitud de *Cuenta Gratis VIP*:\n- *Nombre:* ${name}\n- *Celular:* ${phone}${email ? `\n- *Email:* ${email}` : ''}${referralCode ? `\n- *Código Referido:* ${referralCode}` : ''}\n\nQuedo a la espera de la verificación de mi cuenta en el dashboard. ¡Gracias! 🙌`;
-    
+    // Disparar evento de alerta de registro para el Dashboard
+    try {
+        localStorage.setItem("cuycito_registration_alert_trigger", JSON.stringify({
+            id: reqId,
+            name: name,
+            email: email || phone,
+            phone: phone,
+            referralCode: referralCode || 'Directo (Sin referido)',
+            timestamp: Date.now()
+        }));
+    } catch(e) {}
+
     alertBox.innerHTML = `
         <div class="space-y-1 text-center">
             <div class="flex items-center justify-center gap-1.5 text-emerald-400 font-black text-sm">
@@ -232,10 +241,7 @@ window.handleClientRegisterSubmit = async (e) => {
     alertBox.classList.remove('hidden');
 
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Notificar también por WhatsApp';
-    btn.onclick = () => {
-        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-    };
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Solicitud Registrada Correctamente';
 };
 
 // 4. Auto-selección por parámetro URL (?tab=register, ?email=..., ?ref=...)

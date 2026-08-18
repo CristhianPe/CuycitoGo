@@ -150,8 +150,8 @@
         <!-- VISTA 1: MIS SERVICIOS CONTRATADOS                        -->
         <!-- ========================================================= -->
         <section id="viewProfileServices" class="space-y-6">
-            <!-- Tarjetas de Métricas de Servicios -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <!-- Tarjetas de Métricas de Servicios (5 Estados Oficiales) -->
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
                 <div class="bg-[#121212] border border-gray-800/80 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
                     <div class="flex items-center justify-between text-gray-400 mb-2">
                         <span class="text-[11px] uppercase font-extrabold tracking-wider">Total Comprados</span>
@@ -166,6 +166,14 @@
                         <i class="fa-solid fa-circle-check"></i>
                     </div>
                     <p id="metricActive" class="text-2xl sm:text-3xl font-black text-emerald-400">0</p>
+                </div>
+
+                <div class="bg-[#121212] border border-yellow-900/50 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-yellow-400 mb-2">
+                        <span class="text-[11px] uppercase font-extrabold tracking-wider">⏳ Pendientes</span>
+                        <i class="fa-solid fa-hourglass-half animate-spin"></i>
+                    </div>
+                    <p id="metricPending" class="text-2xl sm:text-3xl font-black text-yellow-400">0</p>
                 </div>
 
                 <div class="bg-[#121212] border border-amber-900/40 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
@@ -214,6 +222,7 @@
                         >
                             <option value="ALL">Todos los Estados</option>
                             <option value="ACTIVE">🟢 Solo Activos</option>
+                            <option value="PENDING">⏳ Pendientes de Activación</option>
                             <option value="EXPIRING">🟡 Próximos a Vencer</option>
                             <option value="EXPIRED">🔴 Vencidos</option>
                         </select>
@@ -805,8 +814,8 @@
                         </p>
                     </div>
 
-                    <div class="flex justify-end gap-3 pt-2">
-                        <button type="button" onclick="window.closeRechargeModal()" class="bg-gray-800 text-gray-400 hover:text-white text-xs px-4 py-2.5 rounded-xl transition">Cancelar</button>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" onclick="window.closeRechargeModal()" class="text-gray-400 hover:text-white text-xs px-4 py-2">Cancelar</button>
                         <button type="button" onclick="window.generateRechargeOrder()" class="bg-emerald-600 hover:bg-emerald-500 text-black font-black text-xs px-6 py-2.5 rounded-xl transition shadow glow-gold flex items-center gap-2">
                             <span>Generar Orden con Céntimos</span> <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -877,7 +886,7 @@
             </div>
 
             <!-- ==================================================== -->
-            <!-- VISTA 2: MODO MANUAL (QR DE PAGO & ENVÍO A WHATSAPP) -->
+            <!-- VISTA 2: MODO MANUAL (QR DE PAGO & REGISTRO DIRECTO) -->
             <!-- ==================================================== -->
             <div id="rechargeManualContainer" class="hidden space-y-4">
                 <div class="bg-black/70 border border-cuycito-gold/40 rounded-2xl p-4 text-center space-y-3">
@@ -890,8 +899,8 @@
                     </div>
 
                     <div class="bg-gray-900 border border-gray-800 rounded-xl p-2.5 text-xs text-left space-y-1 font-mono">
-                        <p class="text-gray-300"><span class="text-gray-500">Soporte Directo:</span> <strong id="manualWhatsappDisplay" class="text-white">WhatsApp Oficial CuycitoGO</strong></p>
-                        <p class="text-gray-300"><span class="text-gray-500">Titular / Lemon:</span> <strong id="manualLemonTagDisplay" class="text-cuycito-gold">$cmancocambillo</strong></p>
+                        <p class="text-gray-300"><span class="text-gray-500">Canal de Acreditación:</span> <strong class="text-white">Central VIP de Verificación</strong></p>
+                        <p class="text-gray-300"><span class="text-gray-500">Titular / Destino:</span> <strong id="manualLemonTagDisplay" class="text-cuycito-gold">$cmancocambillo</strong></p>
                     </div>
                 </div>
 
@@ -903,9 +912,9 @@
                     </div>
                 </div>
 
-                <button type="button" onclick="window.sendManualRechargeWhatsApp()" class="w-full bg-[#25D366] hover:bg-emerald-500 text-black font-black text-xs py-3 px-4 rounded-xl transition shadow glow-gold flex items-center justify-center gap-2">
-                    <i class="fa-brands fa-whatsapp text-base"></i>
-                    <span>Enviar Comprobante por WhatsApp</span>
+                <button type="button" onclick="window.submitManualRechargeRequest()" class="w-full bg-gradient-to-r from-amber-600 via-cuycito-gold to-yellow-400 hover:from-amber-500 hover:to-yellow-300 text-black font-black text-xs py-3.5 px-4 rounded-xl transition shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider">
+                    <i class="fa-solid fa-bolt text-black text-sm"></i>
+                    <span>Notificar y Solicitar Acreditación de Saldo</span>
                 </button>
             </div>
 
@@ -967,6 +976,8 @@
                     <i class="fa-solid fa-rotate-right"></i> <span>Girar la Ruleta de Nuevo (S/ 1.00)</span>
                 </button>
             </div>
+        </div>
+    </div>
 
     <!-- BOTÓN FLOTANTE DEL CARRITO DE COMPRAS VIP -->
     <div id="profileCartFloatingBtn" class="fixed bottom-6 right-6 z-40">
@@ -1048,7 +1059,74 @@
         </div>
     </div>
 
+    <!-- MODAL DE CINEMÁTICA DE PAGO VIP -->
+    <div id="paymentCinematicModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gradient-to-b from-[#1c1c1c] via-[#101010] to-black border-2 border-cuycito-gold/80 rounded-3xl max-w-sm w-full p-6 text-center space-y-5 shadow-[0_0_50px_rgba(255,183,3,0.3)] animate-fade-in">
+            <div class="relative w-20 h-20 mx-auto flex items-center justify-center">
+                <div class="absolute inset-0 rounded-full border-4 border-cuycito-gold border-t-transparent animate-spin"></div>
+                <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-2xl shadow-lg">
+                    🐹
+                </div>
+            </div>
+            <div class="space-y-1.5">
+                <h4 id="cinematicTitle" class="text-lg font-black text-white glow-gold">Procesando Pago VIP...</h4>
+                <p id="cinematicSubtitle" class="text-xs text-gray-300 font-mono">Descontando saldo y generando suscripciones</p>
+            </div>
+            <div class="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
+                <div id="cinematicProgressBar" class="bg-gradient-to-r from-amber-500 to-yellow-300 h-full w-1/3 transition-all duration-500"></div>
+            </div>
+            <div id="cinematicStatusText" class="text-[11px] text-cuycito-gold font-bold uppercase tracking-wider font-mono">
+                1. Verificando saldo VIP
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CAPTURA / SUBIDA DE FOTO QR DE LA TV (SOLO 1 IMAGEN / NO VIDEO) -->
+    <div id="tvQrUploadModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gradient-to-b from-[#1c1c1c] via-[#121212] to-black border-2 border-cuycito-gold rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl glow-gold relative animate-fade-in">
+            <button onclick="window.closeTvQrUploadModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-3xl shadow-lg">
+                📺
+            </div>
+
+            <div class="space-y-1">
+                <h3 class="text-lg font-black text-white glow-gold">Activación de tu TV (<span id="tvQrServiceNameDisplay">Servicio</span>)</h3>
+                <p class="text-xs text-amber-300 font-bold">⚠️ Se necesita captura del código QR de activación de tu televisor.</p>
+                <p class="text-[11px] text-gray-400">Abre la app en tu TV ➔ Elige "Iniciar sesión con código/QR" ➔ Toma la foto aquí.</p>
+            </div>
+
+            <!-- Contenedor de Vista Previa de la Foto -->
+            <div id="tvQrPreviewContainer" class="w-full h-56 bg-black/80 border-2 border-dashed border-gray-700 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group">
+                <img id="tvQrPreviewImage" src="" alt="Vista previa QR TV" class="w-full h-full object-contain hidden">
+                <div id="tvQrPlaceholder" class="space-y-2 p-4 text-center">
+                    <i class="fa-solid fa-camera text-4xl text-gray-600"></i>
+                    <p class="text-xs text-gray-400 font-bold">Toma una foto con tu cámara o selecciona 1 imagen</p>
+                    <span class="text-[10px] text-gray-500 font-mono block">Solo 1 imagen (JPG, PNG o WEBP). No se permiten videos.</span>
+                </div>
+            </div>
+
+            <!-- Input oculto para cámara (accept="image/*" solo imágenes) -->
+            <input type="file" id="tvQrFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" capture="environment" onchange="window.handleTvQrFileSelect(event)" class="hidden">
+
+            <div class="flex flex-col gap-2 pt-2">
+                <button type="button" onclick="document.getElementById('tvQrFileInput').click()" class="w-full bg-gray-900 hover:bg-gray-800 border border-cuycito-gold/60 text-cuycito-gold font-black text-xs py-3 rounded-xl transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-camera text-sm"></i>
+                    <span id="btnSelectTvQrText">📸 Tomar Foto o Seleccionar Imagen del QR</span>
+                </button>
+
+                <button id="btnSubmitTvQr" type="button" onclick="window.submitTvQrForActivation()" class="w-full bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-500 hover:from-orange-400 hover:to-emerald-400 text-black font-black text-xs py-3.5 rounded-xl transition shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                    <i class="fa-solid fa-paper-plane text-sm"></i>
+                    <span>Enviar Foto QR para Activación</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/security-guard.js"></script>
     <script type="module" src="js/profile.js"></script>
+    <script src="js/client-faq-assistant.js"></script>
 </body>
 </html>

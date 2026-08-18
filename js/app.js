@@ -291,7 +291,7 @@ window.copyInfoText = () => {
 };
 
 window.switchTab = (tabId) => {
-    ['subs', 'master', 'finance', 'clients', 'catalog', 'recharges', 'games', 'news', 'cartelera'].forEach(id => {
+    ['subs', 'master', 'finance', 'clients', 'catalog', 'recharges', 'games', 'news', 'cartelera', 'ai-agent'].forEach(id => {
         const view = document.getElementById('view-' + id);
         const btn = document.getElementById('tab-btn-' + id);
         if(view) {
@@ -299,7 +299,7 @@ window.switchTab = (tabId) => {
             if(id === tabId) {
                 view.classList.remove('hidden');
                 if(id==='subs') view.classList.add('block');
-                if(id==='master' || id==='finance' || id==='clients' || id==='catalog' || id==='recharges' || id==='games' || id==='news' || id==='cartelera') {
+                if(id==='master' || id==='finance' || id==='clients' || id==='catalog' || id==='recharges' || id==='games' || id==='news' || id==='cartelera' || id==='ai-agent') {
                     view.className = view.className.replace('hidden', 'block space-y-4');
                 }
             }
@@ -310,6 +310,7 @@ window.switchTab = (tabId) => {
             if (id === 'cartelera') activeColorClass = "text-cuycito-gold border-b-2 border-cuycito-gold";
             if (id === 'games') activeColorClass = "text-purple-400 border-b-2 border-purple-400";
             if (id === 'recharges') activeColorClass = "text-yellow-400 border-b-2 border-yellow-400";
+            if (id === 'ai-agent') activeColorClass = "text-cyan-400 border-b-2 border-cyan-400";
 
             btn.className = (id === tabId) 
                 ? `${activeColorClass} pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5` 
@@ -2043,19 +2044,111 @@ window.renderFinance = () => {
 };
 
 window.renderActiveTable = () => {
-    const tbody = document.getElementById('activeTableBody'); if(!tbody) return;
+    const tbody = document.getElementById('activeTableBody'); 
+    const pendingContainer = document.getElementById('pendingTvQrContainer');
+    const pendingBadge = document.getElementById('pendingTvQrBadge');
+
+    // 1. RENDERIZAR SOLICITUDES DE ACTIVACIÓN DE TV (FOTOS QR)
+    const pendingSubs = (appState.subscriptions || []).filter(sub => 
+        sub.status === 'pending_activation' || sub.status === 'pending' || !!sub.tvQrImage
+    );
+
+    if (pendingBadge) pendingBadge.innerText = pendingSubs.length;
+
+    if (pendingContainer) {
+        if (pendingSubs.length === 0) {
+            pendingContainer.innerHTML = `
+                <div class="col-span-full py-8 text-center text-gray-500 space-y-1">
+                    <i class="fa-solid fa-tv text-2xl text-gray-600"></i>
+                    <p class="text-xs font-bold text-gray-400">No hay activaciones de TV pendientes en este momento.</p>
+                </div>
+            `;
+        } else {
+            pendingContainer.innerHTML = pendingSubs.map(sub => {
+                const hasQr = !!sub.tvQrImage;
+                const qrImageHTML = hasQr 
+                    ? `
+                        <div class="relative w-full h-40 bg-black rounded-xl overflow-hidden border border-yellow-500/50 shadow-inner group cursor-pointer" onclick="window.openFullscreenQrModal('${sub.id}')">
+                            <img src="${sub.tvQrImage}" alt="QR de TV" class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300">
+                            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1.5 text-cuycito-gold text-xs font-black">
+                                <i class="fa-solid fa-expand text-sm"></i>
+                                <span>Ver QR Grande</span>
+                            </div>
+                            <span class="absolute top-2 left-2 bg-emerald-950/90 text-emerald-300 border border-emerald-500/50 text-[9px] font-black px-2 py-0.5 rounded-md shadow">
+                                📸 QR Recibido
+                            </span>
+                        </div>
+                    `
+                    : `
+                        <div class="w-full h-40 bg-black/60 rounded-xl border border-dashed border-gray-700 flex flex-col items-center justify-center p-4 text-center space-y-1">
+                            <i class="fa-solid fa-hourglass-half text-2xl text-yellow-500 animate-spin"></i>
+                            <span class="text-xs font-bold text-yellow-400">Esperando Foto QR del Cliente</span>
+                            <p class="text-[10px] text-gray-500">El cliente aún no ha subido la captura del código QR de su televisor.</p>
+                        </div>
+                    `;
+
+                const price = parseFloat(sub.price || sub.amount || 0).toFixed(2);
+
+                return `
+                <div class="bg-[#111] border-2 border-yellow-500/60 rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-xl hover:border-yellow-400 transition">
+                    <div class="space-y-2">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <span class="text-[9px] text-cuycito-gold font-bold uppercase tracking-widest block">Activación en TV</span>
+                                <h4 class="text-sm font-black text-white">${sub.service || 'Servicio Streaming'}</h4>
+                            </div>
+                            <span class="bg-yellow-950 text-yellow-300 border border-yellow-500/40 text-[10px] font-bold px-2 py-0.5 rounded-lg">
+                                S/ ${price}
+                            </span>
+                        </div>
+
+                        ${qrImageHTML}
+
+                        <div class="bg-black/60 border border-gray-800 rounded-xl p-2.5 text-xs space-y-1">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500 text-[10px] uppercase font-bold">Cliente:</span>
+                                <strong class="text-white">${sub.person || 'Cliente VIP'}</strong>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500 text-[10px] uppercase font-bold">Fecha Compra:</span>
+                                <span class="text-gray-400 font-mono text-[11px]">${sub.startDate || (sub.createdAt ? sub.createdAt.split('T')[0] : 'Hoy')}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 pt-2 border-t border-gray-800">
+                        ${hasQr ? `
+                            <button onclick="window.openFullscreenQrModal('${sub.id}')" class="bg-gray-800 hover:bg-gray-700 text-yellow-300 font-bold text-xs p-2.5 rounded-xl transition flex items-center justify-center gap-1 shrink-0" title="Ver QR Grande">
+                                <i class="fa-solid fa-expand"></i>
+                            </button>
+                        ` : ''}
+                        
+                        <button onclick="window.activatePendingTvQr('${sub.id}')" class="flex-1 bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-400 hover:from-emerald-500 hover:to-green-300 text-black font-black text-xs py-2.5 px-3 rounded-xl transition shadow-lg flex items-center justify-center gap-1.5 uppercase tracking-wider">
+                            <i class="fa-solid fa-circle-check text-sm"></i>
+                            <span>Activar Servicio</span>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    // 2. RENDERIZAR TABLA GENERAL DE SERVICIOS
+    if(!tbody) return;
     tbody.innerHTML = '';
     const search = document.getElementById('searchActive') ? document.getElementById('searchActive').value.toLowerCase() : '';
     const serviceFilter = document.getElementById('filterActiveService') ? document.getElementById('filterActiveService').value : '';
     const statusFilter = document.getElementById('filterActiveStatus') ? document.getElementById('filterActiveStatus').value : 'VIGENTE';
 
     const filteredSubs = appState.subscriptions.filter(sub => {
-        const isVigente = window.getDaysRemaining(sub.endDate) >= 0;
+        const isPending = sub.status === 'pending_activation' || sub.status === 'pending' || !!sub.tvQrImage;
+        const isVigente = !isPending && window.getDaysRemaining(sub.endDate) >= 0;
         const matchSearch = (sub.person || '').toLowerCase().includes(search) || (sub.service || '').toLowerCase().includes(search);
         const matchService = !serviceFilter || sub.service === serviceFilter;
         let matchStatus = true;
         if (statusFilter === 'VIGENTE') matchStatus = isVigente;
-        if (statusFilter === 'VENCIDO') matchStatus = !isVigente;
+        if (statusFilter === 'VENCIDO') matchStatus = !isPending && !isVigente;
+        if (statusFilter === 'PENDING') matchStatus = isPending;
         return matchSearch && matchService && matchStatus;
     });
 
@@ -2063,9 +2156,14 @@ window.renderActiveTable = () => {
     if(badge) badge.innerText = filteredSubs.length;
 
     filteredSubs.forEach(sub => {
+        const isPending = sub.status === 'pending_activation' || sub.status === 'pending' || !!sub.tvQrImage;
         const days = window.getDaysRemaining(sub.endDate);
-        const badgeColor = days < 0 ? 'bg-cuycito-red/20 text-red-400 border-cuycito-red/50' : (days <= 3 ? 'bg-cuycito-gold/20 text-cuycito-gold border-cuycito-gold/50' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30');
-        const rowStyle = days < 0 ? 'bg-cuycito-red/5 hover:bg-cuycito-red/10 transition' : 'hover:bg-gray-800 transition';
+        const badgeColor = isPending 
+            ? 'bg-yellow-950/80 text-yellow-300 border-yellow-500/50 animate-pulse'
+            : (days < 0 ? 'bg-cuycito-red/20 text-red-400 border-cuycito-red/50' : (days <= 3 ? 'bg-cuycito-gold/20 text-cuycito-gold border-cuycito-gold/50' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'));
+        const rowStyle = isPending 
+            ? 'bg-yellow-950/10 hover:bg-yellow-950/20 border-l-2 border-yellow-500 transition' 
+            : (days < 0 ? 'bg-cuycito-red/5 hover:bg-cuycito-red/10 transition' : 'hover:bg-gray-800 transition');
         const typeBadge = sub.type === 'VENTA' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400';
         const hidePassBadge = sub.hidePassword 
             ? `<span class="bg-red-950/80 text-red-400 border border-cuycito-red/40 px-1.5 py-0.5 rounded text-[9px] font-bold">🔒 Clave Oculta</span>` 
@@ -2073,7 +2171,7 @@ window.renderActiveTable = () => {
 
         tbody.innerHTML += `
             <tr class="${rowStyle}">
-                <td class="p-4"><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${typeBadge}">${sub.type}</span><div class="font-bold text-white mt-1.5">${sub.person}</div></td>
+                <td class="p-4"><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${typeBadge}">${sub.type || 'VENTA'}</span><div class="font-bold text-white mt-1.5">${sub.person}</div></td>
                 <td class="p-4 font-bold text-gray-300">${sub.service}</td>
                 <td class="p-4 font-mono text-[11px] bg-black/20 rounded-lg">
                     <div class="flex items-center justify-between gap-2">
@@ -2083,11 +2181,55 @@ window.renderActiveTable = () => {
                     <div class="text-cuycito-gold mt-1">Pass: ${sub.pass || '-'} | PIN: ${sub.pin || '-'}</div>
                 </td>
                 <td class="p-4 font-mono text-gray-400 text-xs">${sub.endDate}</td>
-                <td class="p-4"><span class="border px-2.5 py-1 rounded text-[11px] font-black ${badgeColor}">${days < 0 ? 'Expiró' : days + ' d'}</span></td>
+                <td class="p-4"><span class="border px-2.5 py-1 rounded text-[11px] font-black ${badgeColor}">${isPending ? '⏳ Pendiente' : (days < 0 ? 'Expiró' : days + ' d')}</span></td>
                 <td class="p-4 text-center"><div class="flex items-center justify-center gap-1 bg-black p-1 rounded-lg border border-gray-800"><input type="number" id="renew_${sub.id}" value="1" min="1" class="w-10 bg-transparent text-center text-cuycito-gold font-bold outline-none"><button onclick="window.renewSubscription('${sub.id}', 'renew_${sub.id}')" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black px-2 py-1 rounded font-black transition"><i class="fa-solid fa-rotate-right"></i></button></div></td>
                 <td class="p-4 text-center"><div class="flex items-center justify-center gap-2"><button onclick="window.triggerWhatsApp('${sub.id}')" class="bg-[#25D366] text-black p-2 rounded transition"><i class="fa-brands fa-whatsapp text-sm"></i></button><button onclick="window.triggerInfo('${sub.id}')" class="bg-[#0ea5e9] text-black p-2 rounded transition"><i class="fa-solid fa-circle-info text-sm"></i></button><button onclick="window.openEditModal('${sub.id}')" class="bg-gray-700 text-white p-2 rounded transition"><i class="fa-solid fa-pen text-sm"></i></button></div></td>
             </tr>`;
     });
+};
+
+window.openFullscreenQrModal = (subId) => {
+    const sub = (appState.subscriptions || []).find(s => s.id === subId);
+    if (!sub || !sub.tvQrImage) return alert('No hay imagen QR disponible para este servicio.');
+
+    const modal = document.getElementById('tvQrFullscreenModal');
+    const img = document.getElementById('fullscreenQrImage');
+    const sName = document.getElementById('fullscreenQrServiceName');
+    const cName = document.getElementById('fullscreenQrClientName');
+    const btnAct = document.getElementById('fullscreenBtnActivate');
+
+    if (sName) sName.innerText = `Código QR de ${sub.service}`;
+    if (cName) cName.innerText = `Cliente: ${sub.person} | ${sub.email || ''}`;
+    if (img) img.src = sub.tvQrImage;
+    if (btnAct) btnAct.onclick = () => window.activatePendingTvQr(subId);
+
+    if (modal) modal.classList.remove('hidden');
+};
+
+window.activatePendingTvQr = async (subId) => {
+    const sub = (appState.subscriptions || []).find(s => s.id === subId);
+    if (!sub) return;
+
+    if (!confirm(`¿Confirmas la activación de ${sub.service} para el cliente "${sub.person}"?`)) return;
+
+    sub.status = 'active';
+    delete sub.tvQrImage;
+
+    try {
+        await setDoc(doc(db, "subscriptions", subId), {
+            status: 'active',
+            tvQrImage: null,
+            activatedAt: new Date().toISOString()
+        }, { merge: true });
+    } catch(e) {}
+
+    saveLocal();
+
+    const modal = document.getElementById('tvQrFullscreenModal');
+    if (modal) modal.classList.add('hidden');
+
+    window.renderActiveTable();
+    alert(`🎉 ¡Servicio Activado!\n\nEl servicio ${sub.service} para ${sub.person} ha quedado marcado como ACTIVO exitosamente.`);
 };
 
 window.renderMasterAccounts = () => {
@@ -3530,16 +3672,409 @@ window.renderAdminNewsList = () => {
         localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
     }
 
-    grid.innerHTML = newsList.map(item => `
-        <div class="bg-[#101010] border border-gray-800 hover:border-orange-500/80 rounded-2xl overflow-hidden p-4 flex flex-col justify-between space-y-3 shadow-2xl transition">
+    // Estado global de arrastre de noticias
+    let draggedNewsIndex = null;
+
+    window.handleNewsDragStart = (e, index) => {
+        draggedNewsIndex = index;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', index);
+        const card = e.currentTarget;
+        setTimeout(() => {
+            card.classList.add('opacity-40', 'scale-95', 'border-cuycito-gold');
+        }, 0);
+    };
+
+    window.handleNewsDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    window.handleNewsDragEnter = (e, index) => {
+        e.preventDefault();
+        const card = e.currentTarget;
+        if (index !== draggedNewsIndex) {
+            card.classList.add('border-cuycito-gold', 'ring-2', 'ring-cuycito-gold/60', 'scale-[1.02]');
+        }
+    };
+
+    window.handleNewsDragLeave = (e) => {
+        const card = e.currentTarget;
+        card.classList.remove('border-cuycito-gold', 'ring-2', 'ring-cuycito-gold/60', 'scale-[1.02]');
+    };
+
+    window.handleNewsDragEnd = (e) => {
+        const card = e.currentTarget;
+        card.classList.remove('opacity-40', 'scale-95', 'border-cuycito-gold');
+        document.querySelectorAll('.admin-news-card').forEach(c => {
+            c.classList.remove('border-cuycito-gold', 'ring-2', 'ring-cuycito-gold/60', 'scale-[1.02]');
+        });
+        draggedNewsIndex = null;
+    };
+
+    window.handleNewsDrop = async (e, dropIndex) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        document.querySelectorAll('.admin-news-card').forEach(c => {
+            c.classList.remove('border-cuycito-gold', 'ring-2', 'ring-cuycito-gold/60', 'scale-[1.02]');
+        });
+
+        if (draggedNewsIndex === null || draggedNewsIndex === dropIndex) return;
+
+        let newsList = [];
+        try {
+            const stored = localStorage.getItem("cuycito_portal_news");
+            if (stored) newsList = JSON.parse(stored);
+        } catch(e) {}
+
+        if (!newsList || newsList.length === 0) return;
+
+        // Mover el elemento arrastrado a la nueva posición
+        const itemToMove = newsList.splice(draggedNewsIndex, 1)[0];
+        newsList.splice(dropIndex, 0, itemToMove);
+
+        // La noticia en la posición 0 siempre es el HERO principal
+        newsList.forEach((n, idx) => {
+            n.isHero = (idx === 0);
+        });
+
+        localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
+
+        // Sincronizar con Firebase si está disponible
+        try {
+            await setDoc(doc(db, "portal_settings", "news_articles"), {
+                articles: newsList,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        } catch(e) {
+            console.warn("Sincronización remota:", e);
+        }
+
+        // Re-renderizar lista
+        window.renderAdminNewsList();
+
+        // Mostrar notificación toast
+        const heroTitle = newsList[0]?.title || "Noticia";
+        console.log(`✅ Orden actualizado: "${heroTitle}" ahora es la Noticia Destacada #1`);
+    };
+
+    // Funciones de gestión de orden y selección de noticias destacadas
+    window.setHeroArticle = async (id) => {
+        let newsList = [];
+        try {
+            const stored = localStorage.getItem("cuycito_portal_news");
+            if (stored) newsList = JSON.parse(stored);
+        } catch(e) {}
+
+        const itemIndex = newsList.findIndex(n => n.id === id);
+        if (itemIndex < 0) return;
+
+        const target = newsList.splice(itemIndex, 1)[0];
+        newsList.unshift(target);
+
+        newsList.forEach((n, idx) => {
+            n.isHero = (idx === 0);
+        });
+
+        localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
+
+        try {
+            await setDoc(doc(db, "portal_settings", "news_articles"), {
+                articles: newsList,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        } catch(e) {}
+
+        window.renderAdminNewsList();
+        alert(`👑 "${target.title}" ahora es la NOTICIA DESTACADA #1 (HERO PRINCIPAL).`);
+    };
+
+    window.toggleFeaturedArticle = async (id, isChecked) => {
+        let newsList = [];
+        try {
+            const stored = localStorage.getItem("cuycito_portal_news");
+            if (stored) newsList = JSON.parse(stored);
+        } catch(e) {}
+
+        const itemIndex = newsList.findIndex(n => n.id === id);
+        if (itemIndex < 0) return;
+
+        const target = newsList.splice(itemIndex, 1)[0];
+
+        if (isChecked) {
+            // Mover a las destacadas (al inicio)
+            newsList.unshift(target);
+        } else {
+            // Mover al final (no destacada)
+            newsList.push(target);
+        }
+
+        newsList.forEach((n, idx) => {
+            n.isHero = (idx === 0);
+        });
+
+        localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
+
+        try {
+            await setDoc(doc(db, "portal_settings", "news_articles"), {
+                articles: newsList,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        } catch(e) {}
+
+        window.renderAdminNewsList();
+        window.renderAdminSubdestacada();
+        window.renderAdminThematicGrid();
+        window.renderAdminTop5();
+    };
+
+    // 2. GESTIÓN DE SUB-DESTACADA TECNOLÓGICA
+    window.renderAdminSubdestacada = () => {
+        try {
+            const stored = localStorage.getItem("cuycito_portal_subdestacada");
+            if (stored) {
+                const item = JSON.parse(stored);
+                if (document.getElementById('subdestacadaTag')) document.getElementById('subdestacadaTag').value = item.tag || '';
+                if (document.getElementById('subdestacadaBadge')) document.getElementById('subdestacadaBadge').value = item.badge || '';
+                if (document.getElementById('subdestacadaTitle')) document.getElementById('subdestacadaTitle').value = item.title || '';
+                if (document.getElementById('subdestacadaExcerpt')) document.getElementById('subdestacadaExcerpt').value = item.excerpt || '';
+                if (document.getElementById('subdestacadaImgUrl')) document.getElementById('subdestacadaImgUrl').value = item.image || '';
+                if (document.getElementById('subdestacadaPreviewImg')) document.getElementById('subdestacadaPreviewImg').src = item.image || 'assets/img/news5.jpg';
+            }
+        } catch(e) {}
+    };
+
+    window.saveAdminSubdestacada = async () => {
+        const item = {
+            id: "subdestacada-" + Date.now(),
+            tag: document.getElementById('subdestacadaTag')?.value.trim() || 'AVANCE TECNOLÓGICO:',
+            badge: document.getElementById('subdestacadaBadge')?.value.trim() || 'TECNOLOGÍA',
+            badgeColor: 'bg-sky-600',
+            title: document.getElementById('subdestacadaTitle')?.value.trim() || 'Nuevo Códec AV1 en Streaming',
+            excerpt: document.getElementById('subdestacadaExcerpt')?.value.trim() || '',
+            image: document.getElementById('subdestacadaImgUrl')?.value.trim() || 'assets/img/news5.jpg',
+            category: 'HARDWARE & REDES',
+            date: 'Actualizado Hoy',
+            content: document.getElementById('subdestacadaExcerpt')?.value.trim() || ''
+        };
+
+        localStorage.setItem("cuycito_portal_subdestacada", JSON.stringify(item));
+        alert("✅ Sub-destacada tecnológica guardada y actualizada en portada.");
+    };
+
+    // 3. GESTIÓN DE GRILLA TEMÁTICA
+    window.renderAdminThematicGrid = () => {
+        const container = document.getElementById('adminThematicGridList');
+        if (!container) return;
+
+        let list = [
+            { id: "espn-disney", category: "DEPORTES", title: "Disney+ y ESPN Centralizan Todos los Torneos de Fútbol en Vivo", image: "assets/img/news6.jpg" },
+            { id: "audio-hifi", category: "AUDIO", title: "Spotify vs Apple Music: ¿Vale la Pena Pagar por Audio Lossless?", image: "assets/img/news3.jpg" },
+            { id: "cine-imax", category: "CINE", title: "Salas IMAX Desarrollan Nuevos Modos de Calibración para Smart TVs", image: "assets/img/news4.jpg" }
+        ];
+
+        try {
+            const stored = localStorage.getItem("cuycito_portal_thematic");
+            if (stored) list = JSON.parse(stored);
+        } catch(e) {}
+
+        container.innerHTML = list.map((item, idx) => `
+            <div class="bg-black/60 border border-gray-800 p-3 rounded-xl flex items-center justify-between gap-3 text-xs">
+                <div class="flex items-center gap-3">
+                    <img src="${item.image}" class="w-12 h-9 object-cover rounded-lg border border-gray-800">
+                    <div>
+                        <span class="text-[10px] font-black text-orange-400 uppercase">${item.category}</span>
+                        <h5 class="font-bold text-white line-clamp-1">${item.title}</h5>
+                    </div>
+                </div>
+                <button onclick="window.editThematicItem(${idx})" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-[11px] font-bold px-2.5 py-1 rounded-lg transition shrink-0">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+            </div>
+        `).join('');
+    };
+
+    window.editThematicItem = (idx) => {
+        let list = [];
+        try {
+            list = JSON.parse(localStorage.getItem("cuycito_portal_thematic") || "[]");
+        } catch(e) {}
+        if (!list[idx]) return;
+
+        const newTitle = prompt("Título para esta tarjeta temática:", list[idx].title);
+        if (newTitle === null) return;
+        const newImg = prompt("URL de Imagen:", list[idx].image);
+        if (newImg === null) return;
+
+        list[idx].title = newTitle.trim() || list[idx].title;
+        list[idx].image = newImg.trim() || list[idx].image;
+        localStorage.setItem("cuycito_portal_thematic", JSON.stringify(list));
+        window.renderAdminThematicGrid();
+        alert("✅ Tarjeta temática actualizada.");
+    };
+
+    // 4. GESTIÓN DE RANKING "LO MÁS LEÍDO" (TOP 1 AL 5)
+    window.renderAdminTop5 = () => {
+        const container = document.getElementById('adminTop5List');
+        if (!container) return;
+
+        let list = [
+            { id: "alzas-tarifas", rank: 1, title: "CRISIS DE TARIFAS EN PERÚ: Netflix actualiza cobros y planes 4K", tag: "Tendencia Nacional" },
+            { id: "espn-disney", rank: 2, title: "Disney+ Premium: Qué incluye el plan con ESPN y 4 dispositivos", tag: "Guía de Suscripción" },
+            { id: "max-platino-dolby", rank: 3, title: "Max Platino: Configuración de audio Dolby Atmos en Smart TVs", tag: "Tutorial Técnico" },
+            { id: "crunchyroll-simulcast", rank: 4, title: "Crunchyroll Simulcast: Horarios de estreno de anime en Perú", tag: "Anime & Manga" },
+            { id: "codec-av1", rank: 5, title: "Ahorro de Megas: El nuevo estándar de video para streaming móvil", tag: "Tecnología" }
+        ];
+
+        try {
+            const stored = localStorage.getItem("cuycito_portal_top5");
+            if (stored) list = JSON.parse(stored);
+        } catch(e) {}
+
+        container.innerHTML = list.map((item, idx) => `
+            <div class="bg-black/60 border border-gray-800 p-2.5 rounded-xl flex items-center justify-between gap-2.5 text-xs">
+                <span class="w-6 h-6 rounded-lg ${idx < 3 ? 'bg-orange-500 text-black' : 'bg-gray-800 text-gray-400'} font-black text-xs flex items-center justify-center shrink-0">
+                    ${idx + 1}
+                </span>
+                <input 
+                    type="text" 
+                    id="top5Title_${idx}" 
+                    value="${item.title}" 
+                    class="flex-1 bg-black border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:border-yellow-400"
+                >
+                <input 
+                    type="text" 
+                    id="top5Tag_${idx}" 
+                    value="${item.tag || 'Tendencia'}" 
+                    placeholder="Tag" 
+                    class="w-24 bg-black border border-gray-700 rounded-lg px-2 py-1 text-[10px] text-gray-400"
+                >
+            </div>
+        `).join('');
+    };
+
+    window.saveAdminTop5 = () => {
+        const updatedList = [];
+        for (let i = 0; i < 5; i++) {
+            const titleInput = document.getElementById(`top5Title_${i}`);
+            const tagInput = document.getElementById(`top5Tag_${i}`);
+            if (titleInput) {
+                updatedList.push({
+                    id: "top5-" + i + "-" + Date.now(),
+                    rank: i + 1,
+                    title: titleInput.value.trim(),
+                    tag: tagInput ? tagInput.value.trim() : 'Tendencia',
+                    content: `<p class='text-sm text-gray-300'>${titleInput.value.trim()}</p>`
+                });
+            }
+        }
+        localStorage.setItem("cuycito_portal_top5", JSON.stringify(updatedList));
+        alert("✅ Ranking 'Lo Más Leído' guardado y actualizado en portada.");
+    };
+
+    window.moveArticleUp = async (index) => {
+        if (index <= 0) return;
+        let newsList = [];
+        try {
+            const stored = localStorage.getItem("cuycito_portal_news");
+            if (stored) newsList = JSON.parse(stored);
+        } catch(e) {}
+
+        const temp = newsList[index];
+        newsList[index] = newsList[index - 1];
+        newsList[index - 1] = temp;
+
+        newsList.forEach((n, idx) => {
+            n.isHero = (idx === 0);
+        });
+
+        localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
+
+        try {
+            await setDoc(doc(db, "portal_settings", "news_articles"), {
+                articles: newsList,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        } catch(e) {}
+
+        window.renderAdminNewsList();
+    };
+
+    window.moveArticleDown = async (index) => {
+        let newsList = [];
+        try {
+            const stored = localStorage.getItem("cuycito_portal_news");
+            if (stored) newsList = JSON.parse(stored);
+        } catch(e) {}
+
+        if (index >= newsList.length - 1) return;
+
+        const temp = newsList[index];
+        newsList[index] = newsList[index + 1];
+        newsList[index + 1] = temp;
+
+        newsList.forEach((n, idx) => {
+            n.isHero = (idx === 0);
+        });
+
+        localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
+
+        try {
+            await setDoc(doc(db, "portal_settings", "news_articles"), {
+                articles: newsList,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        } catch(e) {}
+
+        window.renderAdminNewsList();
+    };
+
+    grid.innerHTML = newsList.map((item, index) => {
+        const isFeatured = index < 3;
+        let rankBadge = `<span class="bg-gray-800 text-gray-400 text-[9px] font-black px-2 py-0.5 rounded border border-gray-700">#${index + 1} Secundaria</span>`;
+        let cardBorderClass = "border-gray-800 hover:border-orange-500/80";
+
+        if (index === 0) {
+            rankBadge = `<span class="bg-gradient-to-r from-amber-500 to-yellow-400 text-black text-[10px] font-black px-2.5 py-0.5 rounded uppercase shadow-lg glow-gold animate-pulse flex items-center gap-1"><i class="fa-solid fa-crown"></i> #1 HERO PRINCIPAL</span>`;
+            cardBorderClass = "border-2 border-cuycito-gold shadow-[0_0_15px_rgba(255,183,3,0.3)]";
+        } else if (index === 1) {
+            rankBadge = `<span class="bg-orange-950 text-orange-300 border border-orange-500/50 text-[9px] font-black px-2 py-0.5 rounded flex items-center gap-1">🥈 #2 Slide Portada</span>`;
+            cardBorderClass = "border border-orange-500/50";
+        } else if (index === 2) {
+            rankBadge = `<span class="bg-blue-950 text-blue-300 border border-blue-500/50 text-[9px] font-black px-2 py-0.5 rounded flex items-center gap-1">🥉 #3 Slide Portada</span>`;
+            cardBorderClass = "border border-blue-500/50";
+        }
+
+        return `
+        <div 
+            class="admin-news-card bg-[#101010] ${cardBorderClass} rounded-2xl overflow-hidden p-4 flex flex-col justify-between space-y-3 shadow-2xl transition duration-200 cursor-grab active:cursor-grabbing select-none relative"
+            draggable="true"
+            ondragstart="window.handleNewsDragStart(event, ${index})"
+            ondragover="window.handleNewsDragOver(event)"
+            ondragenter="window.handleNewsDragEnter(event, ${index})"
+            ondragleave="window.handleNewsDragLeave(event)"
+            ondrop="window.handleNewsDrop(event, ${index})"
+            ondragend="window.handleNewsDragEnd(event)"
+        >
             <div class="space-y-2.5">
-                <div class="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-black border border-gray-800">
-                    <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover object-center">
+                <div class="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-black border border-gray-800 group">
+                    <img src="${item.image}" alt="${item.title}" style="object-position: ${item.imagePosition || 'center center'};" class="w-full h-full object-cover group-hover:scale-105 transition duration-300 pointer-events-none">
+                    
                     <span class="absolute top-2 left-2 ${item.categoryColor || 'bg-red-600'} text-white text-[9px] font-black px-2.5 py-0.5 rounded uppercase shadow">
                         ${item.category}
                     </span>
-                    ${item.isHero ? `<span class="absolute top-2 right-2 bg-amber-500 text-black text-[9px] font-black px-2 py-0.5 rounded uppercase shadow">🌟 HERO PRINCIPAL</span>` : ''}
+
+                    <div class="absolute top-2 right-2 flex items-center gap-1">
+                        ${rankBadge}
+                    </div>
+
+                    <!-- Indicador de Arrastre visual -->
+                    <div class="absolute bottom-2 right-2 bg-black/80 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] text-gray-300 border border-gray-700 flex items-center gap-1 shadow">
+                        <i class="fa-solid fa-grip-vertical text-cuycito-gold"></i> Arrastrar
+                    </div>
                 </div>
+
                 <div class="space-y-1">
                     <div class="flex items-center justify-between text-[10px] text-gray-400 font-semibold">
                         <span><i class="fa-regular fa-clock text-cuycito-gold mr-1"></i> ${item.readTime}</span>
@@ -3550,22 +4085,64 @@ window.renderAdminNewsList = () => {
                 </div>
             </div>
 
-            <div class="space-y-2 pt-2 border-t border-gray-800">
-                <div class="flex items-center justify-between text-[10px]">
-                    <span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Proporción 16:9 OK</span>
-                    <span class="text-gray-500 font-mono">ID: ${item.id}</span>
+            <!-- CONTROLES DE SELECCIÓN Y DESTACADO -->
+            <div class="space-y-2.5 pt-2.5 border-t border-gray-800">
+                <!-- Casilla seleccionable de Destacado -->
+                <div class="flex items-center justify-between bg-black/60 p-2 rounded-xl border border-gray-800">
+                    <label class="flex items-center gap-2 text-[11px] font-bold text-gray-200 cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            ${isFeatured ? 'checked' : ''} 
+                            onchange="window.toggleFeaturedArticle('${item.id}', this.checked)"
+                            class="accent-cuycito-gold w-4 h-4 cursor-pointer rounded"
+                        >
+                        <span class="${isFeatured ? 'text-cuycito-gold font-black' : 'text-gray-400'}">
+                            ${isFeatured ? '🌟 Noticia Destacada (Portada)' : 'Desmarcada (Secundaria)'}
+                        </span>
+                    </label>
+
+                    <!-- Botón Estrella para Fijar como HERO #1 Directamente -->
+                    <button 
+                        onclick="window.setHeroArticle('${item.id}')" 
+                        class="text-[10px] font-black px-2 py-1 rounded-lg transition ${index === 0 ? 'bg-amber-500 text-black shadow glow-gold cursor-default' : 'bg-gray-900 hover:bg-amber-500/20 text-yellow-300 border border-yellow-500/40'}"
+                        title="Fijar como Noticia Principal #1 de Portada"
+                    >
+                        <i class="fa-solid fa-crown"></i> ${index === 0 ? 'HERO #1' : 'Hacer #1'}
+                    </button>
                 </div>
-                <div class="flex items-center gap-2">
+
+                <!-- Botones de Reordenamiento Rápido ⬆️ ⬇️ y Editar -->
+                <div class="flex items-center gap-1.5">
+                    <button 
+                        onclick="window.moveArticleUp(${index})" 
+                        ${index === 0 ? 'disabled' : ''} 
+                        class="bg-gray-900 hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-gray-900 text-gray-300 border border-gray-800 text-xs px-2.5 py-2 rounded-xl transition" 
+                        title="Subir posición"
+                    >
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+
+                    <button 
+                        onclick="window.moveArticleDown(${index})" 
+                        ${index === newsList.length - 1 ? 'disabled' : ''} 
+                        class="bg-gray-900 hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-gray-900 text-gray-300 border border-gray-800 text-xs px-2.5 py-2 rounded-xl transition" 
+                        title="Bajar posición"
+                    >
+                        <i class="fa-solid fa-arrow-down"></i>
+                    </button>
+
                     <button onclick="window.openEditArticleModal('${item.id}')" class="flex-1 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white font-black text-xs py-2 rounded-xl transition shadow flex items-center justify-center gap-1.5 glow-gold">
                         <i class="fa-solid fa-pen-to-square"></i> Editar Noticia
                     </button>
+                    
                     <button onclick="window.quickDeleteAdminNewsArticle('${item.id}')" class="bg-red-950/60 hover:bg-red-800 text-red-300 hover:text-white border border-red-800/60 text-xs p-2 rounded-xl transition" title="Eliminar">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 };
 
 window.quickDeleteAdminNewsArticle = async (id) => {
@@ -3689,10 +4266,29 @@ window.saveAdminNewsArticle = async () => {
     if (idx >= 0) {
         newsList[idx] = newObj;
     } else {
-        newsList.push(newObj);
+        newsList.unshift(newObj);
     }
 
     localStorage.setItem("cuycito_portal_news", JSON.stringify(newsList));
+
+    // Enviar automáticamente la nueva noticia a "Lo Más Leído"
+    try {
+        let top5 = [];
+        const storedTop = localStorage.getItem("cuycito_portal_top5");
+        if (storedTop) top5 = JSON.parse(storedTop);
+
+        top5 = top5.filter(t => t.id !== id && t.title !== title);
+        top5.unshift({
+            id,
+            rank: 1,
+            title,
+            tag: category || "Tendencia",
+            content: content || excerpt
+        });
+        if (top5.length > 5) top5 = top5.slice(0, 5);
+        top5.forEach((t, i) => t.rank = i + 1);
+        localStorage.setItem("cuycito_portal_top5", JSON.stringify(top5));
+    } catch(e) {}
 
     // Guardar también en Firebase si está disponible
     try {
@@ -3766,7 +4362,7 @@ window.renderAdminCarteleraList = () => {
         <div class="bg-[#101010] border border-gray-800 hover:border-cuycito-gold/80 rounded-2xl overflow-hidden p-3.5 flex flex-col justify-between space-y-3 shadow-2xl transition">
             <div class="space-y-2">
                 <div class="relative aspect-[2/3] w-full rounded-xl overflow-hidden bg-black border border-gray-800">
-                    <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover object-center">
+                    <img src="${item.image}" alt="${item.title}" style="object-position: ${item.imagePosition || 'center center'};" class="w-full h-full object-cover">
                     <span class="absolute top-2 left-2 ${item.tagColor || 'bg-blue-600'} text-white text-[9px] font-black px-2 py-0.5 rounded uppercase shadow">
                         ${item.platform}
                     </span>

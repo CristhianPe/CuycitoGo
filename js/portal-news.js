@@ -408,7 +408,7 @@ window.renderCarteleraPage = (filterPlatform = 'ALL', searchTerm = '') => {
     grid.innerHTML = list.map(item => `
         <div class="bg-[#121212] border border-gray-800 hover:border-cuycito-gold/60 rounded-3xl overflow-hidden shadow-2xl transition duration-300 flex flex-col justify-between group">
             <div class="relative aspect-[2/3] w-full overflow-hidden bg-black cursor-pointer" onclick="window.openCarteleraModal('${item.id}')">
-                <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-500">
+                <img src="${item.image}" alt="${item.title}" style="object-position: ${item.imagePosition || 'center center'};" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
                 <div class="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-black/30"></div>
                 
                 <span class="absolute top-3 left-3 ${item.tagColor || 'bg-red-600'} text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-lg">
@@ -487,7 +487,7 @@ window.renderEstrenosPage = (filterPlatform = 'ALL', searchTerm = '') => {
     grid.innerHTML = list.map(item => `
         <div class="bg-[#121212] border border-gray-800 hover:border-cuycito-red/60 rounded-3xl overflow-hidden shadow-2xl transition duration-300 flex flex-col justify-between group">
             <div class="relative aspect-[2/3] w-full overflow-hidden bg-black cursor-pointer" onclick="window.openCarteleraModal('${item.id}')">
-                <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-500">
+                <img src="${item.image}" alt="${item.title}" style="object-position: ${item.imagePosition || 'center center'};" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
                 <div class="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-black/30"></div>
                 
                 <span class="absolute top-3 left-3 ${item.tagColor || 'bg-red-600'} text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-lg">
@@ -543,7 +543,7 @@ window.renderIndexCarteleraAndEstrenos = () => {
         carteleraGrid.innerHTML = top4.map(item => `
             <div class="bg-[#121212] border border-gray-800 hover:border-cuycito-gold/50 rounded-2xl overflow-hidden shadow-xl transition flex flex-col justify-between group cursor-pointer" onclick="window.openCarteleraModal('${item.id}')">
                 <div class="relative aspect-[2/3] w-full overflow-hidden bg-black">
-                    <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-300">
+                    <img src="${item.image}" alt="${item.title}" style="object-position: ${item.imagePosition || 'center center'};" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                     <span class="absolute top-2 left-2 ${item.tagColor || 'bg-red-600'} text-white text-[9px] font-black px-2 py-0.5 rounded uppercase shadow">
                         ${item.platform}
                     </span>
@@ -564,7 +564,7 @@ window.renderIndexCarteleraAndEstrenos = () => {
         estrenosGrid.innerHTML = upcoming4.map(item => `
             <div class="bg-[#121212] border border-gray-800 hover:border-cuycito-red/50 rounded-2xl overflow-hidden shadow-xl transition flex flex-col justify-between group cursor-pointer" onclick="window.openCarteleraModal('${item.id}')">
                 <div class="relative aspect-[2/3] w-full overflow-hidden bg-black">
-                    <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-300">
+                    <img src="${item.image}" alt="${item.title}" style="object-position: ${item.imagePosition || 'center center'};" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                     <span class="absolute top-2 left-2 ${item.tagColor || 'bg-blue-600'} text-white text-[9px] font-black px-2 py-0.5 rounded uppercase shadow">
                         ${item.platform}
                     </span>
@@ -631,7 +631,7 @@ window.openCarteleraModal = (itemId) => {
         <div class="grid grid-cols-1 sm:grid-cols-12 gap-6">
             <div class="sm:col-span-5">
                 <div class="relative aspect-[2/3] rounded-2xl overflow-hidden bg-black border border-gray-800 shadow-2xl">
-                    <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover object-center">
+                    <img src="${item.image}" alt="${item.title}" style="object-position: ${item.imagePosition || 'center center'};" class="w-full h-full object-cover">
                     <span class="absolute top-3 left-3 ${item.tagColor || 'bg-red-600'} text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow">
                         ${item.platform}
                     </span>
@@ -666,12 +666,94 @@ window.openCarteleraModal = (itemId) => {
     document.body.style.overflow = 'hidden';
 };
 
+function getPortalNewsList() {
+    try {
+        const stored = localStorage.getItem("cuycito_portal_news");
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+    } catch(e) {}
+
+    const defaultList = [
+        {
+            id: "reporte-agosto-2026",
+            category: "ANÁLISIS DE MERCADO",
+            categoryColor: "bg-red-600",
+            readTime: "7 min de lectura",
+            date: "Agosto 2026",
+            title: "📺 Reporte de Streaming: Novedades, Subida de Precios en Crunchyroll, Disney+, Apple y Cambios de Suscripciones",
+            image: "assets/img/news1.jpg",
+            excerpt: "Crunchyroll sube a $11.99/$14.99, Disney+ consolida su plan en 15,99 € y Netflix refuerza el bloqueo de cuentas compartidas.",
+            isHero: true
+        },
+        {
+            id: "jojo-steel-ball-run",
+            category: "ANIME BOMBAZO",
+            categoryColor: "bg-purple-600",
+            readTime: "5 min de lectura",
+            date: "Agosto 2026",
+            title: "⚔️ STEEL BALL RUN: JoJo's Bizarre Adventure - ¡Netflix Anuncia Nuevos Episodios para Septiembre!",
+            image: "assets/img/poster_jojo.jpg",
+            excerpt: "La icónica carrera por Norteamérica de Johnny Joestar y Gyro Zeppeli llega a su 2nd STAGE en streaming mundial con popularidad extrema.",
+            isHero: false
+        },
+        {
+            id: "cien-anos-soledad-noticia",
+            category: "CINE & SERIES",
+            categoryColor: "bg-amber-600",
+            readTime: "6 min de lectura",
+            date: "Agosto 2026",
+            title: "🍿 Cien Años de Soledad (Parte 2): La Superproducción de Netflix Basada en Gabriel García Márquez",
+            image: "assets/img/poster_ciensoledad.jpg",
+            excerpt: "Los siete nuevos episodios llegan este 5 de agosto retomando la historia de los Buendía con el gran final pautado para el 26 de agosto.",
+            isHero: false
+        }
+    ];
+    localStorage.setItem("cuycito_portal_news", JSON.stringify(defaultList));
+    return defaultList;
+}
+
 // 8. CARRUSEL DE NOTICIA DESTACADA DESPLAZABLE (HERO SLIDER)
 let currentHeroSlide = 0;
-const totalHeroSlides = 3;
+let totalHeroSlides = 3;
 let heroSlideInterval = null;
 
 window.initHeroSlider = () => {
+    const track = document.getElementById('heroSliderTrack');
+    const dotsBox = document.getElementById('heroDotsContainer');
+    const newsList = getPortalNewsList();
+    const heroItems = newsList.slice(0, 3);
+    totalHeroSlides = Math.max(1, heroItems.length);
+
+    if (track) {
+        track.innerHTML = heroItems.map((item, idx) => `
+            <div class="w-full shrink-0 relative aspect-[16/10] sm:aspect-[16/9] cursor-pointer group" onclick="window.openArticleModal('${item.id}')">
+                <img src="${item.image}" alt="${item.title}" style="object-position: ${item.imagePosition || 'center center'};" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+                <div class="absolute bottom-0 left-0 right-0 p-6 sm:p-8 space-y-2">
+                    <h2 class="text-xl sm:text-3xl font-black text-white leading-tight drop-shadow-md group-hover:text-cuycito-gold transition line-clamp-2">
+                        ${item.title}
+                    </h2>
+                    <p class="text-xs sm:text-sm text-gray-300 line-clamp-2 leading-relaxed font-normal">
+                        ${item.excerpt || ''}
+                    </p>
+                    <div class="flex items-center gap-2 text-[11px] text-gray-400 font-bold uppercase tracking-wider pt-1">
+                        <span class="${item.categoryColor || 'text-orange-400'} font-black">${item.category || 'DESTACADA'}</span>
+                        <span>|</span>
+                        <span class="text-yellow-400 font-black"><i class="fa-solid fa-fire mr-1"></i> ${idx === 0 ? 'HERO PRINCIPAL' : 'NOTICIA DESTACADA'}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    if (dotsBox) {
+        dotsBox.innerHTML = heroItems.map((_, idx) => `
+            <button onclick="window.showHeroSlide(${idx})" class="hero-slider-dot ${idx === 0 ? 'w-6 bg-cuycito-gold shadow glow-gold' : 'w-2 bg-gray-600'} h-2 rounded-full transition-all duration-300"></button>
+        `).join('');
+    }
+
     window.showHeroSlide(0);
     startHeroAutoplay();
 
@@ -683,6 +765,7 @@ window.initHeroSlider = () => {
 };
 
 window.showHeroSlide = (index) => {
+    if (totalHeroSlides <= 0) return;
     currentHeroSlide = (index + totalHeroSlides) % totalHeroSlides;
     const track = document.getElementById('heroSliderTrack');
     const dots = document.querySelectorAll('.hero-slider-dot');
@@ -710,9 +793,11 @@ window.prevHeroSlide = () => {
 
 function startHeroAutoplay() {
     stopHeroAutoplay();
-    heroSlideInterval = setInterval(() => {
-        window.nextHeroSlide();
-    }, 6000);
+    if (totalHeroSlides > 1) {
+        heroSlideInterval = setInterval(() => {
+            window.nextHeroSlide();
+        }, 6000);
+    }
 }
 
 function stopHeroAutoplay() {
@@ -730,7 +815,6 @@ window.handleLeadMagnetDownload = (e) => {
 
     const email = emailInput.value.trim();
 
-    // Guardar lead localmente
     try {
         let leads = JSON.parse(localStorage.getItem("cuycito_leads") || "[]");
         leads.push({ email, source: "lead_magnet_calculadora", date: new Date().toISOString() });
@@ -742,7 +826,6 @@ window.handleLeadMagnetDownload = (e) => {
 };
 
 window.downloadCalculatorDemo = () => {
-    // Generar un CSV interactivo de simulación de ahorro de streaming
     const csvContent = "data:text/csv;charset=utf-8," + 
         "Plataforma,Precio Oficial Mensual (PEN),Precio CuycitoGO VIP (PEN),Ahorro Mensual (PEN),Ahorro Anual (PEN)\n" +
         "Netflix 4K UHD,58.90,13.00,45.90,550.80\n" +
@@ -761,31 +844,45 @@ window.downloadCalculatorDemo = () => {
     document.body.removeChild(link);
 };
 
-// 10. MODAL LECTOR DE ARTÍCULOS EDITORIALES CON BLOQUE DINÁMICO IN-ARTICLE
+// 10. MODAL LECTOR DE ARTÍCULOS EDITORIALES CON SOPORTE DINÁMICO
 window.openArticleModal = (articleId) => {
-    const article = defaultPortalArticles[articleId];
+    let article = null;
+    try {
+        const stored = localStorage.getItem("cuycito_portal_news");
+        if (stored) {
+            const list = JSON.parse(stored);
+            article = list.find(a => a.id === articleId);
+        }
+    } catch(e) {}
+
+    if (!article && defaultPortalArticles[articleId]) {
+        article = defaultPortalArticles[articleId];
+    }
+
     if (!article) return;
 
     const modal = document.getElementById('articleReaderModal');
     const container = document.getElementById('articleReaderContent');
     if (!modal || !container) return;
 
+    const articleContent = article.content || (article.excerpt ? `<p class="text-sm text-gray-300 leading-relaxed font-normal">${article.excerpt}</p>` : '<p class="text-sm text-gray-400">Contenido completo en actualización.</p>');
+
     container.innerHTML = `
         <div class="relative aspect-[16/9] rounded-2xl overflow-hidden mb-6 border border-gray-800 bg-black">
-            <img src="${article.image}" alt="${article.title}" class="w-full h-full object-cover object-center">
+            <img src="${article.image}" alt="${article.title}" style="object-position: ${article.imagePosition || 'center center'};" class="w-full h-full object-cover">
             <div class="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-black/40"></div>
-            <span class="absolute top-4 left-4 ${article.categoryColor} text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
+            <span class="absolute top-4 left-4 ${article.categoryColor || 'bg-red-600'} text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
                 ${article.category}
             </span>
         </div>
 
         <div class="space-y-4">
             <div class="flex items-center gap-3 text-xs text-gray-400 font-medium">
-                <span><i class="fa-regular fa-clock text-cuycito-gold mr-1"></i> ${article.readTime}</span>
+                <span><i class="fa-regular fa-clock text-cuycito-gold mr-1"></i> ${article.readTime || '4 min de lectura'}</span>
                 <span>•</span>
-                <span><i class="fa-regular fa-calendar mr-1"></i> ${article.date}</span>
+                <span><i class="fa-regular fa-calendar mr-1"></i> ${article.date || 'Actualizado'}</span>
                 <span>•</span>
-                <span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Formato Informativo</span>
+                <span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Noticia Verificada</span>
             </div>
 
             <h2 class="text-2xl sm:text-3xl font-black text-white leading-tight">
@@ -793,7 +890,7 @@ window.openArticleModal = (articleId) => {
             </h2>
 
             <div class="border-t border-gray-800 pt-5 text-gray-200">
-                ${article.content}
+                ${articleContent}
             </div>
 
             <!-- ========================================================= -->
@@ -874,10 +971,228 @@ window.closeArticleModal = () => {
     document.body.style.overflow = 'auto';
 };
 
-// 11. INICIALIZACIÓN GLOBAL
+// ==========================================================================
+// 11. SUB-DESTACADA, GRILLA TEMÁTICA Y RANKING LO MÁS LEÍDO (DINÁMICOS)
+// ==========================================================================
+function getPortalSubdestacada() {
+    try {
+        const stored = localStorage.getItem("cuycito_portal_subdestacada");
+        if (stored) return JSON.parse(stored);
+    } catch(e) {}
+
+    return {
+        id: "codec-av1",
+        badge: "TECNOLOGÍA",
+        badgeColor: "bg-sky-600",
+        tag: "AVANCE TECNOLÓGICO:",
+        title: "Nuevo Códec AV1: Plataformas Logran Reducir 30% el Consumo de Datos en Streaming 4K",
+        excerpt: "Las aplicaciones optimizan el ancho de banda para conexiones en el hogar, permitiendo reproducir en Ultra HD sin saturar la red Wi-Fi familiar.",
+        category: "HARDWARE & REDES",
+        date: "Hace 2 horas",
+        image: "assets/img/news5.jpg",
+        imagePosition: "center center",
+        content: "<p class='text-sm text-gray-300 leading-relaxed font-normal'>Configuración de compresión de video avanzada y reducción de consumo de ancho de banda en televisores 4K.</p>"
+    };
+}
+
+window.renderPortalSubdestacada = () => {
+    const container = document.getElementById('portalSubdestacadaContainer');
+    if (!container) return;
+
+    const item = getPortalSubdestacada();
+    container.innerHTML = `
+        <div class="bg-[#121212] border border-gray-800 hover:border-orange-500/50 rounded-3xl overflow-hidden p-4 sm:p-6 transition duration-300 shadow-xl group cursor-pointer" onclick="window.openArticleModal('${item.id}')">
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center">
+                <div class="sm:col-span-5 relative aspect-[16/10] rounded-2xl overflow-hidden bg-black border border-gray-800">
+                    <img src="${item.image}" alt="${item.title}" style="object-position: ${item.imagePosition || 'center center'};" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                    <span class="absolute top-2 left-2 ${item.badgeColor || 'bg-sky-600'} text-white text-[9px] font-black px-2 py-0.5 rounded uppercase shadow">
+                        ${item.badge || 'TECNOLOGÍA'}
+                    </span>
+                </div>
+                <div class="sm:col-span-7 space-y-2">
+                    <span class="text-[11px] font-black text-orange-400 uppercase tracking-wider block">
+                        ${item.tag || 'AVANCE TECNOLÓGICO:'}
+                    </span>
+                    <h3 class="text-base sm:text-lg font-black text-white group-hover:text-cuycito-gold transition leading-snug">
+                        ${item.title}
+                    </h3>
+                    <p class="text-xs text-gray-400 leading-relaxed line-clamp-2">
+                        ${item.excerpt || ''}
+                    </p>
+                    <div class="flex items-center gap-2 text-[11px] text-gray-500 font-bold uppercase tracking-wider pt-1">
+                        <span class="text-sky-400">${item.category || 'HARDWARE & REDES'}</span>
+                        <span>|</span>
+                        <span>${item.date || 'Actualizado'}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+function getPortalThematicGrid() {
+    try {
+        const stored = localStorage.getItem("cuycito_portal_thematic");
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+    } catch(e) {}
+
+    return [
+        {
+            id: "espn-disney",
+            category: "DEPORTES",
+            categoryColor: "text-blue-400",
+            title: "Disney+ y ESPN Centralizan Todos los Torneos de Fútbol en Vivo",
+            excerpt: "Champions League, Premier League y torneos continentales integrados en una sola suscripción.",
+            date: "Hace 3 horas",
+            image: "assets/img/news6.jpg",
+            imagePosition: "center center",
+            content: "<p class='text-sm text-gray-300'>Disney+ y ESPN consolidan todas las transmisiones deportivas en vivo.</p>"
+        },
+        {
+            id: "audio-hifi",
+            category: "AUDIO",
+            categoryColor: "text-emerald-400",
+            title: "Spotify vs Apple Music: ¿Vale la Pena Pagar por Audio Lossless?",
+            excerpt: "Comparativa técnica sobre compresión acústica, códecs FLAC y sonido envolvente.",
+            date: "Hace 4 horas",
+            image: "assets/img/news3.jpg",
+            imagePosition: "center center",
+            content: "<p class='text-sm text-gray-300'>Análisis acústico y diferencias de compresión de audio Hi-Fi.</p>"
+        },
+        {
+            id: "cine-imax",
+            category: "CINE",
+            categoryColor: "text-purple-400",
+            title: "Salas IMAX Desarrollan Nuevos Modos de Calibración para Smart TVs",
+            excerpt: "Cómo habilitar la relación de aspecto 1.90:1 y colores de cine en televisores 4K modernos.",
+            date: "Hace 5 horas",
+            image: "assets/img/news4.jpg",
+            imagePosition: "center center",
+            content: "<p class='text-sm text-gray-300'>Guía de calibración de imagen cinematográfica en Smart TVs 4K.</p>"
+        }
+    ];
+}
+
+window.renderPortalThematicGrid = () => {
+    const grid = document.getElementById('portalThematicGrid');
+    if (!grid) return;
+
+    const list = getPortalThematicGrid();
+    grid.innerHTML = list.map(item => `
+        <article class="bg-[#121212] border border-gray-800 hover:border-cuycito-gold/50 rounded-2xl overflow-hidden p-4 flex flex-col justify-between space-y-3 transition duration-300 shadow-xl group cursor-pointer" onclick="window.openArticleModal('${item.id}')">
+            <div class="space-y-2.5">
+                <div class="relative aspect-[16/10] w-full rounded-xl overflow-hidden bg-black border border-gray-800">
+                    <img src="${item.image}" alt="${item.title}" style="object-position: ${item.imagePosition || 'center center'};" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                </div>
+                <h4 class="text-xs sm:text-sm font-black text-white group-hover:text-cuycito-gold transition leading-snug">
+                    ${item.title}
+                </h4>
+                <p class="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">
+                    ${item.excerpt || ''}
+                </p>
+            </div>
+            <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider border-t border-gray-800 pt-2 flex items-center justify-between">
+                <span class="${item.categoryColor || 'text-orange-400'} font-bold">${item.category || 'NOTICIA'}</span>
+                <span>${item.date || 'Actualizado'}</span>
+            </div>
+        </article>
+    `).join('');
+};
+
+function getPortalTop5() {
+    let list = [];
+    try {
+        const stored = localStorage.getItem("cuycito_portal_top5");
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) list = parsed;
+        }
+    } catch(e) {}
+
+    // Si hay noticias en cuycito_portal_news, combinarlas al inicio para que las nuevas noticias siempre aparezcan en Lo Más Leído
+    try {
+        const newsStored = localStorage.getItem("cuycito_portal_news");
+        if (newsStored) {
+            const newsList = JSON.parse(newsStored);
+            if (Array.isArray(newsList) && newsList.length > 0) {
+                // Convertir las noticias recientes a formato de ranking
+                const newsAsTop = newsList.map((n, idx) => ({
+                    id: n.id,
+                    rank: idx + 1,
+                    title: n.title,
+                    tag: n.category || "Tendencia",
+                    content: n.content || n.excerpt
+                }));
+
+                // Combinar sin duplicados
+                const combined = [];
+                const seenIds = new Set();
+
+                // 1. Priorizar las noticias recién publicadas
+                newsAsTop.forEach(item => {
+                    if (!seenIds.has(item.id) && !seenIds.has(item.title)) {
+                        seenIds.add(item.id);
+                        seenIds.add(item.title);
+                        combined.push(item);
+                    }
+                });
+
+                // 2. Rellenar con los ítems existentes si faltan para completar 5
+                list.forEach(item => {
+                    if (!seenIds.has(item.id) && !seenIds.has(item.title)) {
+                        seenIds.add(item.id);
+                        seenIds.add(item.title);
+                        combined.push(item);
+                    }
+                });
+
+                list = combined.slice(0, 5);
+                list.forEach((it, idx) => it.rank = idx + 1);
+                localStorage.setItem("cuycito_portal_top5", JSON.stringify(list));
+                return list;
+            }
+        }
+    } catch(e) {}
+
+    if (list.length > 0) return list;
+
+    return [
+        { id: "alzas-tarifas", rank: 1, title: "CRISIS DE TARIFAS EN PERÚ: Netflix actualiza cobros y planes 4K", tag: "Tendencia Nacional", content: "<p class='text-sm text-gray-300'>Alza de tarifas en plataformas de streaming en Perú.</p>" },
+        { id: "espn-disney", rank: 2, title: "Disney+ Premium: Qué incluye el plan con ESPN y 4 dispositivos", tag: "Guía de Suscripción", content: "<p class='text-sm text-gray-300'>Detalles del plan Disney+ Premium.</p>" },
+        { id: "max-platino-dolby", rank: 3, title: "Max Platino: Configuración de audio Dolby Atmos en Smart TVs", tag: "Tutorial Técnico", content: "<p class='text-sm text-gray-300'>Configuración de sonido envolvente en Max HBO.</p>" },
+        { id: "crunchyroll-simulcast", rank: 4, title: "Crunchyroll Simulcast: Horarios de estreno de anime en Perú", tag: "Anime & Manga", content: "<p class='text-sm text-gray-300'>Horarios de estreno simultáneo de anime.</p>" },
+        { id: "codec-av1", rank: 5, title: "Ahorro de Megas: El nuevo estándar de video para streaming móvil", tag: "Tecnología", content: "<p class='text-sm text-gray-300'>Ahorro de datos móviles en streaming.</p>" }
+    ];
+}
+
+window.renderPortalTop5 = () => {
+    const container = document.getElementById('portalTop5Container');
+    if (!container) return;
+
+    const list = getPortalTop5();
+    container.innerHTML = list.map((item, idx) => `
+        <div class="flex items-start gap-3 group cursor-pointer ${idx > 0 ? 'border-t border-gray-800/60 pt-3' : ''}" onclick="window.openArticleModal('${item.id}')">
+            <span class="text-2xl font-black ${idx < 3 ? 'text-orange-500' : 'text-gray-500'} font-mono leading-none">${idx + 1}</span>
+            <div>
+                <h4 class="font-bold text-white group-hover:text-cuycito-gold transition leading-snug">
+                    ${item.title}
+                </h4>
+                <span class="text-[10px] text-gray-500">${item.tag || 'Tendencia'}</span>
+            </div>
+        </div>
+    `).join('');
+};
+
+// 12. INICIALIZACIÓN GLOBAL
 document.addEventListener('DOMContentLoaded', () => {
     initPortalAuth();
     window.initHeroSlider();
+    window.renderPortalSubdestacada();
+    window.renderPortalThematicGrid();
+    window.renderPortalTop5();
     window.renderIndexCarteleraAndEstrenos();
     window.renderCarteleraPage();
     window.renderEstrenosPage();

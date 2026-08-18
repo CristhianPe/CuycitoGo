@@ -27,6 +27,40 @@
 
         <!-- Controles para PC (Escritorio >= 1280px) -->
         <div class="hidden xl:flex items-center gap-3">
+            <!-- Botón de Estado de Notificaciones Chrome -->
+            <button 
+                id="btnChromeNotifStatus" 
+                onclick="window.requestChromeNotificationPermission()" 
+                class="bg-yellow-950/80 hover:bg-yellow-900/80 border border-yellow-500/50 text-xs px-3 py-1.5 rounded-xl transition flex items-center gap-2 shadow glow-gold cursor-pointer"
+                title="Haz clic para activar o verificar notificaciones de Google Chrome"
+            >
+                <i class="fa-solid fa-bell text-yellow-400 text-sm animate-pulse"></i>
+                <span class="text-yellow-300 font-bold hidden sm:inline">Activar Alertas Chrome</span>
+            </button>
+
+            <!-- Menú Rápido de Pruebas de Notificación -->
+            <div class="relative group">
+                <button class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 text-xs px-2.5 py-1.5 rounded-xl transition font-bold flex items-center gap-1" title="Probar Alertas">
+                    <i class="fa-solid fa-vial text-cyan-400"></i>
+                    <span class="hidden md:inline">Test</span>
+                </button>
+                <div class="absolute right-0 top-full mt-2 w-48 bg-[#161616] border border-gray-800 rounded-xl p-2 shadow-2xl space-y-1 hidden group-hover:block z-50 animate-fade-in">
+                    <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider px-2 py-1">Probar Alertas:</div>
+                    <button onclick="window.testChromeNotification('recharge')" class="w-full text-left bg-black hover:bg-yellow-950/60 border border-gray-800 hover:border-yellow-500/40 text-yellow-300 text-xs px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5">
+                        ⚡ Test Recarga Saldo
+                    </button>
+                    <button onclick="window.testChromeNotification('client')" class="w-full text-left bg-black hover:bg-blue-950/60 border border-gray-800 hover:border-blue-500/40 text-blue-300 text-xs px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5">
+                        👤 Test Nuevo Cliente
+                    </button>
+                    <button onclick="window.testChromeNotification('purchase')" class="w-full text-left bg-black hover:bg-emerald-950/60 border border-gray-800 hover:border-emerald-500/40 text-emerald-300 text-xs px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5">
+                        🛒 Test Nueva Compra
+                    </button>
+                    <button onclick="window.testChromeNotification('lemon_down')" class="w-full text-left bg-black hover:bg-red-950/60 border border-gray-800 hover:border-red-500/40 text-red-300 text-xs px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5">
+                        ⚠️ Test Lemon Inactivo
+                    </button>
+                </div>
+            </div>
+
             <!-- Indicador único de Auto-Guardado en Nube (Interactivo) -->
             <div id="dbStatus" onclick="window.triggerManualSync()" class="cursor-pointer hover:border-emerald-400 transition text-[11px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl bg-black/90 border border-emerald-500/50 text-emerald-400 flex items-center gap-2 shadow glow-gold" title="Auto-guardado activo. Haz click para forzar sincronización inmediata.">
                 <i class="fa-solid fa-cloud-check text-emerald-400 text-sm animate-pulse"></i>
@@ -166,23 +200,65 @@
                 <button id="tab-btn-cartelera" onclick="window.switchTab('cartelera')" class="text-cuycito-gold hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-xs sm:text-sm transition flex items-center gap-1.5 shrink-0 whitespace-nowrap">
                     <i class="fa-solid fa-film text-cuycito-gold"></i> Cartelera y Estreno
                 </button>
+                <button id="tab-btn-ai-agent" onclick="window.switchTab('ai-agent')" class="text-cyan-400 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-xs sm:text-sm transition flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                    <i class="fa-solid fa-wand-magic-sparkles text-cyan-400"></i> 🤖 Agente IA Creador
+                </button>
             </div>
 
-            <!-- TAB 1: SERVICIOS ACTIVOS -->
-            <section id="view-subs" class="bg-cuycito-dark rounded-xl border border-gray-800 overflow-hidden shadow-xl block">
-                <div class="p-4 border-b border-gray-800 bg-black/50 flex flex-wrap justify-end gap-3 text-xs">
-                    <input type="text" id="searchActive" oninput="window.renderActiveTable()" placeholder="Buscar cliente o servicio..." class="bg-black border border-gray-700 rounded px-3 py-2 text-white outline-none focus:border-cuycito-gold">
-                    <select id="filterActiveService" onchange="window.renderActiveTable()" class="bg-black border border-gray-700 rounded px-2 py-2 text-white outline-none focus:border-cuycito-gold"><option value="">Todos los Servicios</option></select>
-                    <select id="filterActiveStatus" onchange="window.renderActiveTable()" class="bg-black border border-cuycito-gold rounded px-2 py-2 text-cuycito-gold font-bold outline-none"><option value="ALL">Todas las cuentas</option><option value="VIGENTE" selected>🟢 Vigentes</option><option value="VENCIDO">🔴 Vencidas</option></select>
-                    <span id="activeCountBadge" class="bg-cuycito-red text-white border border-red-500/50 px-3 py-2 rounded font-black shadow-[0_0_8px_rgba(133,0,0,0.8)]">0</span>
+            <!-- TAB 1: SERVICIOS ACTIVOS & PENDIENTES DE ACTIVACIÓN -->
+            <section id="view-subs" class="space-y-6 block">
+
+                <!-- 1. APARTADO DESTACADO: PENDIENTES DE ACTIVACIÓN (FOTOS QR DE TV) -->
+                <div id="pendingTvQrSection" class="bg-cuycito-dark rounded-2xl border-2 border-yellow-500/60 overflow-hidden shadow-2xl space-y-3">
+                    <div class="p-4 border-b border-gray-800 bg-gradient-to-r from-amber-950/70 via-black to-black flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-yellow-500/20 text-yellow-400 border border-yellow-500/40 flex items-center justify-center text-lg shadow animate-bounce">
+                                📺
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                    Solicitudes de Activación de TV (Fotos QR)
+                                    <span id="pendingTvQrBadge" class="bg-cuycito-gold text-black text-xs px-2.5 py-0.5 rounded-full font-black shadow glow-gold">0</span>
+                                </h3>
+                                <p class="text-[11px] text-gray-300">Escanea la captura del código QR enviada por el cliente desde tu app de streaming para activar su televisor.</p>
+                            </div>
+                        </div>
+
+                        <button onclick="window.renderActiveTable()" class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-arrows-rotate"></i> Actualizar
+                        </button>
+                    </div>
+
+                    <!-- Grid de Tarjetas de Activación con Foto QR -->
+                    <div id="pendingTvQrContainer" class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="col-span-full py-8 text-center text-gray-500">
+                            <i class="fa-solid fa-tv text-2xl text-gray-600 mb-1"></i>
+                            <p class="text-xs font-bold text-gray-400">No hay activaciones de TV pendientes.</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="overflow-x-auto min-h-[300px]">
-                    <table class="w-full text-left text-xs text-gray-300 min-w-[700px]">
-                        <thead class="bg-black text-cuycito-gold uppercase tracking-widest font-bold border-b border-cuycito-red/50">
-                            <tr><th class="p-4">Cliente</th><th class="p-4">Servicio</th><th class="p-4">Accesos & Visibilidad</th><th class="p-4">Caduca</th><th class="p-4 text-center">Estado</th><th class="p-4 text-center">Renovar</th><th class="p-4 text-center">Acciones</th></tr>
-                        </thead>
-                        <tbody id="activeTableBody" class="divide-y divide-gray-800"></tbody>
-                    </table>
+
+                <!-- 2. TABLA GENERAL DE SERVICIOS ACTIVOS -->
+                <div class="bg-cuycito-dark rounded-xl border border-gray-800 overflow-hidden shadow-xl">
+                    <div class="p-4 border-b border-gray-800 bg-black/50 flex flex-wrap justify-between items-center gap-3 text-xs">
+                        <h4 class="font-black text-white uppercase tracking-wider text-xs">
+                            <i class="fa-solid fa-list-check text-cuycito-gold mr-1.5"></i> Todas las Cuentas & Servicios
+                        </h4>
+                        <div class="flex flex-wrap gap-2">
+                            <input type="text" id="searchActive" oninput="window.renderActiveTable()" placeholder="Buscar cliente o servicio..." class="bg-black border border-gray-700 rounded px-3 py-2 text-white outline-none focus:border-cuycito-gold">
+                            <select id="filterActiveService" onchange="window.renderActiveTable()" class="bg-black border border-gray-700 rounded px-2 py-2 text-white outline-none focus:border-cuycito-gold"><option value="">Todos los Servicios</option></select>
+                            <select id="filterActiveStatus" onchange="window.renderActiveTable()" class="bg-black border border-cuycito-gold rounded px-2 py-2 text-cuycito-gold font-bold outline-none"><option value="ALL">Todas las cuentas</option><option value="PENDING">⏳ Pendientes</option><option value="VIGENTE" selected>🟢 Vigentes</option><option value="VENCIDO">🔴 Vencidas</option></select>
+                            <span id="activeCountBadge" class="bg-cuycito-red text-white border border-red-500/50 px-3 py-2 rounded font-black shadow-[0_0_8px_rgba(133,0,0,0.8)]">0</span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto min-h-[300px]">
+                        <table class="w-full text-left text-xs text-gray-300 min-w-[700px]">
+                            <thead class="bg-black text-cuycito-gold uppercase tracking-widest font-bold border-b border-cuycito-red/50">
+                                <tr><th class="p-4">Cliente</th><th class="p-4">Servicio</th><th class="p-4">Accesos & Visibilidad</th><th class="p-4">Caduca</th><th class="p-4 text-center">Estado</th><th class="p-4 text-center">Renovar</th><th class="p-4 text-center">Acciones</th></tr>
+                            </thead>
+                            <tbody id="activeTableBody" class="divide-y divide-gray-800"></tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 
@@ -670,16 +746,102 @@
                         </button>
                     </div>
 
-                    <div class="flex items-center justify-between text-xs text-gray-400">
-                        <span><i class="fa-solid fa-list-check text-orange-400 mr-1"></i> Reportajes Publicados en Portada (3 Máx en carrusel)</span>
-                        <span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Proporción 16:9 Estándar</span>
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
+                        <span><i class="fa-solid fa-list-check text-orange-400 mr-1"></i> Reportajes Publicados en Portada (Los 3 primeros forman el carrusel HERO)</span>
+                        <span class="text-amber-400 font-bold flex items-center gap-1.5 bg-amber-950/60 border border-amber-500/40 px-2.5 py-1 rounded-lg">
+                            <i class="fa-solid fa-arrows-up-down-left-right text-cuycito-gold"></i> Arrastra las tarjetas o usa la casilla para fijar
+                        </span>
                     </div>
                 </div>
 
-                <div class="bg-cuycito-dark rounded-2xl border border-gray-800 p-5 shadow-2xl">
+                <!-- 1. GESTOR DE CARRUSEL HERO PRINCIPAL -->
+                <div class="bg-cuycito-dark rounded-2xl border border-gray-800 p-5 shadow-2xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                        <h4 class="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-lg bg-amber-500 text-black flex items-center justify-center text-xs font-black">👑</span> 1. Carrusel HERO Principal (Top 3)
+                        </h4>
+                        <span class="text-[10px] text-gray-400">El #1 abre la web con marco dorado</span>
+                    </div>
                     <div id="adminNewsListGrid" class="grid grid-cols-1 md:grid-cols-3 gap-5">
                         <!-- Inyectado dinámicamente -->
                     </div>
+                </div>
+
+                <!-- 2. GESTOR DE SUB-DESTACADA TECNOLÓGICA -->
+                <div class="bg-cuycito-dark rounded-2xl border border-sky-500/30 p-5 shadow-2xl space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 pb-3">
+                        <div>
+                            <h4 class="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-lg bg-sky-500 text-white flex items-center justify-center text-xs font-black">⚡</span> 2. Noticia Sub-Destacada (Hardware & Tecnología)
+                            </h4>
+                            <p class="text-[11px] text-gray-400">Banner horizontal de ancho completo debajo del Hero Slider.</p>
+                        </div>
+                        <button onclick="window.saveAdminSubdestacada()" class="bg-sky-600 hover:bg-sky-500 text-white font-black text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar Sub-Destacada
+                        </button>
+                    </div>
+
+                    <div id="adminSubdestacadaCard" class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center bg-black/60 p-4 rounded-xl border border-gray-800">
+                        <div class="sm:col-span-4 relative aspect-[16/10] rounded-xl overflow-hidden bg-black border border-gray-800">
+                            <img id="subdestacadaPreviewImg" src="assets/img/news5.jpg" class="w-full h-full object-cover">
+                        </div>
+                        <div class="sm:col-span-8 space-y-2.5 text-xs">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[10px] text-gray-400 font-bold block mb-1">Tag Superior:</label>
+                                    <input type="text" id="subdestacadaTag" value="AVANCE TECNOLÓGICO:" class="w-full bg-black border border-gray-700 rounded-lg px-2.5 py-1.5 text-orange-400 font-bold text-xs">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-gray-400 font-bold block mb-1">Badge Categoría:</label>
+                                    <input type="text" id="subdestacadaBadge" value="TECNOLOGÍA" class="w-full bg-black border border-gray-700 rounded-lg px-2.5 py-1.5 text-sky-400 font-bold text-xs">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 font-bold block mb-1">Título:</label>
+                                <input type="text" id="subdestacadaTitle" value="Nuevo Códec AV1: Plataformas Logran Reducir 30% el Consumo de Datos en Streaming 4K" class="w-full bg-black border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold text-xs">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 font-bold block mb-1">Resumen:</label>
+                                <textarea id="subdestacadaExcerpt" rows="2" class="w-full bg-black border border-gray-700 rounded-lg p-2 text-gray-300 text-xs">Las aplicaciones optimizan el ancho de banda para conexiones en el hogar, permitiendo reproducir en Ultra HD sin saturar la red Wi-Fi familiar.</textarea>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 font-bold block mb-1">URL de Imagen (16:9):</label>
+                                <input type="text" id="subdestacadaImgUrl" value="assets/img/news5.jpg" oninput="document.getElementById('subdestacadaPreviewImg').src=this.value" class="w-full bg-black border border-gray-700 rounded-lg px-2.5 py-1.5 text-gray-400 text-xs">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. GESTOR DE GRILLA TEMÁTICA Y RANKING LO MÁS LEÍDO -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- 3A. GRILLA TEMÁTICA (3 TARJETAS) -->
+                    <div class="lg:col-span-7 bg-cuycito-dark rounded-2xl border border-gray-800 p-5 shadow-2xl space-y-4">
+                        <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                            <h4 class="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-lg bg-orange-500 text-black flex items-center justify-center text-xs font-black">🎨</span> 3. Grilla Temática (Deportes, Audio, Cine)
+                            </h4>
+                        </div>
+                        <div id="adminThematicGridList" class="space-y-3">
+                            <!-- Inyectado dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- 3B. RANKING LATERAL "LO MÁS LEÍDO" (TOP 1 AL 5) -->
+                    <div class="lg:col-span-5 bg-cuycito-dark rounded-2xl border border-yellow-500/30 p-5 shadow-2xl space-y-4">
+                        <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                            <h4 class="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-lg bg-yellow-500 text-black flex items-center justify-center text-xs font-black">🔥</span> 4. Ranking "Lo Más Leído" (Top 5)
+                            </h4>
+                            <button onclick="window.saveAdminTop5()" class="bg-yellow-600 hover:bg-yellow-500 text-black font-black text-[11px] px-3 py-1.5 rounded-lg transition">
+                                Guardar Top 5
+                            </button>
+                        </div>
+                        <div id="adminTop5List" class="space-y-2.5">
+                            <!-- Inyectado dinámicamente -->
+                        </div>
+                    </div>
+
                 </div>
             </section>
 
@@ -716,6 +878,85 @@
                     <div id="adminCarteleraListGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                         <!-- Inyectado dinámicamente -->
                     </div>
+                </div>
+            </section>
+
+            <!-- TAB 10: AGENTE IA DE MARKETING & CREADOR DE CONTENIDO -->
+            <section id="view-ai-agent" class="hidden space-y-6 pb-12">
+                <!-- Encabezado del Agente IA -->
+                <div class="bg-gradient-to-r from-cyan-950/60 via-[#101520] to-[#0a0a0a] rounded-3xl border-2 border-cyan-500/50 p-6 shadow-2xl space-y-4 relative overflow-hidden">
+                    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-800/80 pb-4">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 text-white flex items-center justify-center text-2xl shadow-lg glow-cyan">
+                                🤖
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                    Agente IA de Marketing & Redacción <span class="bg-cyan-900/60 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Gemini Pro Grounding</span>
+                                </h3>
+                                <p class="text-xs text-gray-300">Genera noticias, reportajes y fichas de cartelera persuasivas con <strong>búsqueda de imágenes 100% reales en internet</strong>.</p>
+                            </div>
+                        </div>
+
+                        <!-- Configuración de API Key -->
+                        <button onclick="const k = prompt('Ingresa tu API Key de Gemini (o déjala vacía para usar la predeterminada):'); if (k !== null) window.saveCustomApiKey(k);" class="bg-black/60 hover:bg-gray-900 border border-gray-700 text-gray-300 hover:text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow">
+                            <i class="fa-solid fa-key text-yellow-400"></i> Configurar API Key
+                        </button>
+                    </div>
+
+                    <!-- Caja de Entrada / Chat del Agente -->
+                    <div class="space-y-3 pt-1">
+                        <label class="text-xs font-bold text-gray-300 flex items-center justify-between">
+                            <span><i class="fa-solid fa-message text-cyan-400 mr-1.5"></i> ¿Qué contenido o estreno deseas crear hoy?</span>
+                            <span class="text-[10px] text-gray-400">Escribe el título, serie o idea libremente</span>
+                        </label>
+
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <input 
+                                type="text" 
+                                id="aiAgentPrompt" 
+                                placeholder="Ej: 'Estreno de Deadpool & Wolverine en Disney+', 'Temporada 5 de Stranger Things', 'Anime de moda en Crunchyroll'..." 
+                                class="flex-1 bg-black/90 border border-cyan-500/40 focus:border-cyan-400 rounded-2xl px-4 py-3.5 text-sm text-white placeholder-gray-500 outline-none transition shadow-inner"
+                                onkeydown="if(event.key==='Enter') window.generateMarketingContent();"
+                            >
+                            <button 
+                                id="btnAiGenerate" 
+                                onclick="window.generateMarketingContent()" 
+                                class="bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs px-6 py-3.5 rounded-2xl transition shadow-lg glow-cyan flex items-center justify-center gap-2 uppercase tracking-wider shrink-0 transform hover:scale-105 duration-200"
+                            >
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                <span>Generar con IA & Buscar Imágenes</span>
+                            </button>
+                        </div>
+
+                        <!-- Chips de Sugerencias Rápidas -->
+                        <div class="flex flex-wrap items-center gap-2 pt-1">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-1"><i class="fa-solid fa-lightbulb text-yellow-400 mr-1"></i> Ideas Rápidas:</span>
+                            <button onclick="window.setAiPromptSuggestion('Estreno de Deadpool & Wolverine en Disney+ en calidad 4K UHD')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
+                                🎬 Deadpool & Wolverine
+                            </button>
+                            <button onclick="window.setAiPromptSuggestion('Temporada Final de Stranger Things 5 en Netflix')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
+                                📺 Stranger Things 5
+                            </button>
+                            <button onclick="window.setAiPromptSuggestion('Cien Años de Soledad Parte 2 en Netflix fecha de estreno y sinopsis')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
+                                🍿 Cien Años de Soledad
+                            </button>
+                            <button onclick="window.setAiPromptSuggestion('Nuevo anime Demon Slayer El Castillo Infinito en Crunchyroll')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
+                                ⚔️ Demon Slayer Cine
+                            </button>
+                            <button onclick="window.setAiPromptSuggestion('Subida de tarifas en Netflix y cómo ahorrar con cuentas compartidas en CuzcitoGo')" class="bg-black/60 hover:bg-gray-800 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 text-[11px] font-medium px-3 py-1 rounded-lg transition">
+                                💰 Reporte de Precios Streaming
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Estado de Carga / Spinner -->
+                    <div id="aiAgentStatus" class="hidden bg-black/70 border border-cyan-500/40 rounded-2xl p-4 transition"></div>
+                </div>
+
+                <!-- Contenedor del Resultado / Vista Previa Editable -->
+                <div id="aiAgentResult" class="hidden space-y-4">
+                    <div id="aiAgentPreviewContainer"></div>
                 </div>
             </section>
         </main>
@@ -1585,6 +1826,36 @@
         </div>
     </div>
 
+    <!-- MODAL DE VISUALIZACIÓN EN PANTALLA COMPLETA DEL QR DE TV -->
+    <div id="tvQrFullscreenModal" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-[#121212] border-2 border-yellow-500/80 rounded-3xl max-w-lg w-full p-6 text-center space-y-4 shadow-2xl relative">
+            <button onclick="document.getElementById('tvQrFullscreenModal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="space-y-1">
+                <h3 id="fullscreenQrServiceName" class="text-lg font-black text-white glow-gold">Código QR del Televisor</h3>
+                <p id="fullscreenQrClientName" class="text-xs text-yellow-400 font-bold">Cliente: Juan Pérez</p>
+                <p class="text-[11px] text-gray-400">Apunta la cámara de tu celular con la app oficial de streaming para escanear y vincular.</p>
+            </div>
+
+            <div class="w-full h-80 bg-black rounded-2xl overflow-hidden border border-gray-800 p-2 flex items-center justify-center shadow-inner">
+                <img id="fullscreenQrImage" src="" alt="QR Pantalla Completa" class="max-w-full max-h-full object-contain">
+            </div>
+
+            <div class="flex gap-2">
+                <button id="fullscreenBtnActivate" class="flex-1 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-black font-black text-xs py-3 rounded-xl shadow-lg transition">
+                    <i class="fa-solid fa-circle-check mr-1"></i> Marcar como Activado
+                </button>
+                <button onclick="document.getElementById('tvQrFullscreenModal').classList.add('hidden')" class="bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs px-5 py-3 rounded-xl transition">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/ai-marketing-agent.js"></script>
+    <script src="js/admin-notifications.js"></script>
     <script type="module" src="js/app.js"></script>
 </body>
 </html>

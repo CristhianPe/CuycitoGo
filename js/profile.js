@@ -235,35 +235,72 @@ async function loadClientSubscriptions() {
     }
 }
 
-// Actualizar métricas del dashboard cliente
-function updateMetrics(subs) {
+// Actualizar métricas del dashboard cliente (5 Estados)
+function calculateMetrics(subs) {
     const totalEl = document.getElementById('metricTotal');
     const activeEl = document.getElementById('metricActive');
+    const pendingEl = document.getElementById('metricPending');
     const expiringEl = document.getElementById('metricExpiring');
     const expiredEl = document.getElementById('metricExpired');
 
-    const total = subs.length;
+    const total = (subs || []).length;
     let active = 0;
+    let pending = 0;
     let expiring = 0;
     let expired = 0;
 
-    subs.forEach(s => {
-        const days = getDaysRemaining(s.endDate);
-        if (days < 0) {
-            expired++;
-        } else if (days <= 3) {
-            expiring++;
-            active++;
+    (subs || []).forEach(s => {
+        if (s.status === 'pending_activation' || s.status === 'pending') {
+            pending++;
         } else {
-            active++;
+            const days = getDaysRemaining(s.endDate);
+            if (days < 0) {
+                expired++;
+            } else if (days <= 3) {
+                expiring++;
+                active++;
+            } else {
+                active++;
+            }
         }
     });
 
     if (totalEl) totalEl.innerText = total;
     if (activeEl) activeEl.innerText = active;
+    if (pendingEl) pendingEl.innerText = pending;
     if (expiringEl) expiringEl.innerText = expiring;
     if (expiredEl) expiredEl.innerText = expired;
 }
+
+const updateMetrics = calculateMetrics;
+
+window.filterServicesList = () => {
+    const searchInput = document.getElementById('searchServiceInput');
+    const statusFilter = document.getElementById('statusServiceFilter')?.value || 'ALL';
+    const query = (searchInput?.value || '').toLowerCase().trim();
+
+    const filtered = clientSubscriptions.filter(sub => {
+        const matchesQuery = !query || 
+            (sub.service && sub.service.toLowerCase().includes(query)) ||
+            (sub.email && sub.email.toLowerCase().includes(query));
+
+        const days = getDaysRemaining(sub.endDate);
+        const isPending = sub.status === 'pending_activation' || sub.status === 'pending';
+        const isExpired = !isPending && days < 0;
+        const isExpiring = !isPending && days >= 0 && days <= 3;
+        const isActive = !isPending && days >= 0;
+
+        let matchesStatus = true;
+        if (statusFilter === 'ACTIVE') matchesStatus = isActive;
+        else if (statusFilter === 'PENDING') matchesStatus = isPending;
+        else if (statusFilter === 'EXPIRING') matchesStatus = isExpiring;
+        else if (statusFilter === 'EXPIRED') matchesStatus = isExpired;
+
+        return matchesQuery && matchesStatus;
+    });
+
+    renderClientSubscriptions(filtered);
+};
 
 // Renderizado de las tarjetas de servicios comprados
 function renderClientSubscriptions(subs) {
@@ -274,11 +311,11 @@ function renderClientSubscriptions(subs) {
         container.innerHTML = `
             <div class="col-span-full py-16 text-center text-gray-500 space-y-3 bg-[#121212] rounded-3xl border border-gray-800 p-8">
                 <i class="fa-solid fa-tv text-4xl text-gray-600"></i>
-                <p class="text-sm font-semibold text-gray-400">Aún no tienes servicios activos vinculados a este usuario.</p>
+                <p class="text-sm font-semibold text-gray-400">Aún no tienes servicios en esta categoría.</p>
                 <p class="text-xs text-gray-500 max-w-sm mx-auto">Explora nuestro catálogo en la tienda y adquiere tus pantallas privadas con activación inmediata.</p>
-                <a href="index.html" class="inline-block bg-cuycito-gold text-black font-extrabold text-xs px-5 py-2.5 rounded-xl transition shadow glow-gold mt-2">
-                    <i class="fa-solid fa-store mr-1.5"></i> Explorar Tienda de Cuentas
-                </a>
+                <button onclick="window.switchProfileTab('catalog')" class="inline-block bg-cuycito-gold text-black font-extrabold text-xs px-5 py-2.5 rounded-xl transition shadow glow-gold mt-2">
+                    <i class="fa-solid fa-store mr-1.5"></i> Explorar Tienda VIP
+                </button>
             </div>
         `;
         return;
@@ -287,13 +324,17 @@ function renderClientSubscriptions(subs) {
     let html = '';
     subs.forEach(sub => {
         const days = getDaysRemaining(sub.endDate);
-        const isExpired = days < 0;
-        const isExpiring = days <= 3 && !isExpired;
+        const isPending = sub.status === 'pending_activation' || sub.status === 'pending';
+        const isExpired = !isPending && days < 0;
+        const isExpiring = !isPending && days <= 3 && !isExpired;
 
         let statusBadge = '';
         let borderClass = 'border-gray-800';
 
-        if (isExpired) {
+        if (isPending) {
+            statusBadge = `<span class="bg-yellow-950/80 text-yellow-300 border border-yellow-500/50 text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 animate-pulse"><i class="fa-solid fa-hourglass-half"></i> Pendiente de Activación</span>`;
+            borderClass = 'border-yellow-500/60 shadow-[0_0_20px_rgba(234,179,8,0.15)]';
+        } else if (isExpired) {
             statusBadge = `<span class="bg-red-950/80 text-red-400 border border-cuycito-red/50 text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1"><i class="fa-solid fa-circle-xmark"></i> Vencido</span>`;
             borderClass = 'border-red-950/60';
         } else if (isExpiring) {
@@ -304,28 +345,34 @@ function renderClientSubscriptions(subs) {
             borderClass = 'border-gray-800 hover:border-emerald-500/40';
         }
 
-        // ==========================================
-        // POLÍTICA DE VISIBILIDAD DE CREDENCIALES
-        // ==========================================
-        let shouldShowCreds = true;
-
-        if (sub.hidePassword === true) {
-            shouldShowCreds = false;
-        }
-
-        const linkedMaster = allMasterAccounts.find(m => 
-            (m.service || '').toLowerCase() === (sub.service || '').toLowerCase() &&
-            m.profiles && m.profiles.includes(sub.id)
-        );
-
-        if (linkedMaster) {
-            if (linkedMaster.showCredentialsToClient === false || linkedMaster.hidePasswordFromClient === true) {
-                shouldShowCreds = false;
-            }
-        }
-
+        // POLÍTICA DE VISIBILIDAD DE CREDENCIALES & QR DE TV
         let credentialsBlockHTML = '';
-        if (shouldShowCreds && (sub.email || sub.pass)) {
+        if (isPending) {
+            if (sub.tvQrImage) {
+                credentialsBlockHTML = `
+                    <div class="bg-gradient-to-r from-emerald-950/40 via-black to-emerald-950/20 border border-emerald-500/50 rounded-2xl p-3 text-center space-y-2">
+                        <div class="flex items-center justify-center gap-2 text-emerald-400 font-bold text-xs">
+                            <i class="fa-solid fa-circle-check text-sm"></i>
+                            <span>Foto QR de TV Enviada</span>
+                        </div>
+                        <div class="w-24 h-24 mx-auto rounded-xl overflow-hidden border border-emerald-500/40 shadow-inner bg-black">
+                            <img src="${sub.tvQrImage}" alt="QR TV" class="w-full h-full object-contain">
+                        </div>
+                        <p class="text-[10px] text-gray-300">Tu asesor está escaneando el QR para activar tu TV. Recibirás tu confirmación en breve.</p>
+                    </div>
+                `;
+            } else {
+                credentialsBlockHTML = `
+                    <div class="bg-gradient-to-r from-amber-950/40 via-black to-amber-950/20 border border-yellow-500/40 rounded-2xl p-3.5 text-center space-y-2">
+                        <div class="flex items-center justify-center gap-2 text-yellow-400 font-bold text-xs">
+                            <i class="fa-solid fa-tv text-sm"></i>
+                            <span>Activación en Televisor Requerida (1 TV)</span>
+                        </div>
+                        <p class="text-[11px] text-gray-300 leading-snug">Se necesita captura del código QR de activación de tu televisor. Abre la app en tu TV y toma la foto para vincular tu pantalla.</p>
+                    </div>
+                `;
+            }
+        } else if (sub.email || sub.pass) {
             credentialsBlockHTML = `
                 <div class="bg-black/60 border border-gray-800/90 rounded-2xl p-3.5 space-y-2 font-mono text-xs">
                     <div class="flex items-center justify-between">
@@ -363,6 +410,25 @@ function renderClientSubscriptions(subs) {
             `;
         }
 
+        let actionBtnHTML = '';
+        if (isPending) {
+            const btnText = sub.tvQrImage ? 'Cambiar Foto QR de mi TV' : 'Tomar Foto QR de mi TV (1 TV)';
+            const btnIcon = sub.tvQrImage ? 'fa-solid fa-rotate' : 'fa-solid fa-camera';
+            actionBtnHTML = `
+                <button onclick="window.openTvQrModal('${sub.id}', '${sub.service}')" class="w-full bg-gradient-to-r from-amber-500 via-cuycito-gold to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs py-3 px-3 rounded-xl transition shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider">
+                    <i class="${btnIcon} text-sm"></i>
+                    <span>${btnText}</span>
+                </button>
+            `;
+        } else {
+            actionBtnHTML = `
+                <button onclick="window.requestRenewalWhatsApp('${sub.service}', '${sub.endDate}')" class="w-full bg-gradient-to-r from-cuycito-red to-cuycito-redHover hover:from-cuycito-redHover hover:to-cuycito-gold text-white font-extrabold text-xs py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-2 shadow glow-red">
+                    <i class="fa-solid fa-rotate-right text-sm"></i>
+                    <span>Renovar Servicio</span>
+                </button>
+            `;
+        }
+
         html += `
         <div class="bg-[#121212] border ${borderClass} rounded-3xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between shadow-xl relative group">
             
@@ -384,16 +450,132 @@ function renderClientSubscriptions(subs) {
             </div>
 
             <div class="pt-4 mt-4 border-t border-gray-800 flex items-center justify-between gap-2">
-                <button onclick="window.requestRenewalWhatsApp('${sub.service}', '${sub.endDate}')" class="w-full bg-gradient-to-r from-cuycito-red to-cuycito-redHover hover:from-cuycito-redHover hover:to-cuycito-gold text-white font-extrabold text-xs py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-2 shadow glow-red">
-                    <i class="fa-brands fa-whatsapp text-sm"></i>
-                    <span>Renovar Servicio</span>
-                </button>
+                ${actionBtnHTML}
             </div>
         </div>`;
     });
 
     container.innerHTML = html;
 }
+
+// ==========================================
+// CONTROLADOR DE CAPTURA DE FOTO QR DE LA TV
+// ==========================================
+let activeActivationSubId = null;
+let activeActivationServiceName = '';
+let currentTvQrBase64 = null;
+
+window.openTvQrModal = (subId, serviceName) => {
+    activeActivationSubId = subId;
+    activeActivationServiceName = serviceName;
+    currentTvQrBase64 = null;
+
+    const modal = document.getElementById('tvQrUploadModal');
+    const nameDisplay = document.getElementById('tvQrServiceNameDisplay');
+    const previewImg = document.getElementById('tvQrPreviewImage');
+    const placeholder = document.getElementById('tvQrPlaceholder');
+    const btnSubmit = document.getElementById('btnSubmitTvQr');
+    const fileInput = document.getElementById('tvQrFileInput');
+
+    if (nameDisplay) nameDisplay.innerText = serviceName || 'Servicio TV';
+    if (previewImg) {
+        previewImg.src = '';
+        previewImg.classList.add('hidden');
+    }
+    if (placeholder) placeholder.classList.remove('hidden');
+    if (btnSubmit) btnSubmit.disabled = true;
+    if (fileInput) fileInput.value = '';
+
+    // Si ya tenía imagen previa, mostrarla
+    const currentSub = clientSubscriptions.find(s => s.id === subId);
+    if (currentSub && currentSub.tvQrImage) {
+        currentTvQrBase64 = currentSub.tvQrImage;
+        if (previewImg) {
+            previewImg.src = currentSub.tvQrImage;
+            previewImg.classList.remove('hidden');
+        }
+        if (placeholder) placeholder.classList.add('hidden');
+        if (btnSubmit) btnSubmit.disabled = false;
+    }
+
+    if (modal) modal.classList.remove('hidden');
+};
+
+window.closeTvQrUploadModal = () => {
+    const modal = document.getElementById('tvQrUploadModal');
+    if (modal) modal.classList.add('hidden');
+};
+
+window.handleTvQrFileSelect = (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    // Validación estricta: Solo 1 imagen, no videos
+    if (!file.type.startsWith('image/')) {
+        alert('⚠️ Solo se permite subir archivos de imagen (JPG, PNG o WEBP). No se permiten videos.');
+        event.target.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const base64Data = e.target.result;
+        currentTvQrBase64 = base64Data;
+
+        const previewImg = document.getElementById('tvQrPreviewImage');
+        const placeholder = document.getElementById('tvQrPlaceholder');
+        const btnSubmit = document.getElementById('btnSubmitTvQr');
+
+        if (previewImg) {
+            previewImg.src = base64Data;
+            previewImg.classList.remove('hidden');
+        }
+        if (placeholder) placeholder.classList.add('hidden');
+        if (btnSubmit) btnSubmit.disabled = false;
+    };
+    reader.readAsDataURL(file);
+};
+
+window.submitTvQrForActivation = async () => {
+    if (!activeActivationSubId || !currentTvQrBase64) {
+        alert('Por favor toma una foto o selecciona la imagen del QR de tu TV antes de enviar.');
+        return;
+    }
+
+    const sub = clientSubscriptions.find(s => s.id === activeActivationSubId);
+    if (sub) {
+        sub.tvQrImage = currentTvQrBase64;
+        sub.tvQrSubmittedAt = new Date().toISOString();
+        sub.status = 'pending_activation';
+    }
+
+    try {
+        await setDoc(doc(db, "subscriptions", activeActivationSubId), {
+            tvQrImage: currentTvQrBase64,
+            tvQrSubmittedAt: new Date().toISOString(),
+            status: 'pending_activation'
+        }, { merge: true });
+    } catch(e) {}
+
+    // Emitir alerta en tiempo real al Dashboard con la foto QR
+    try {
+        localStorage.setItem("cuycito_tv_qr_alert_trigger", JSON.stringify({
+            subId: activeActivationSubId,
+            serviceName: activeActivationServiceName,
+            userName: currentClientUser ? currentClientUser.name : "Cliente VIP",
+            userNickname: currentClientUser ? (currentClientUser.nickname || currentClientUser.name) : "Cliente VIP",
+            userEmail: currentClientUser ? (currentClientUser.email || currentClientUser.phone || '') : '',
+            tvQrImage: currentTvQrBase64,
+            timestamp: Date.now()
+        }));
+    } catch(e) {}
+
+    window.closeTvQrUploadModal();
+    renderClientSubscriptions(clientSubscriptions);
+    calculateMetrics(clientSubscriptions);
+
+    alert(`📺 ¡Foto QR de tu TV enviada con éxito!\n\nTu asesor ha recibido la captura del código QR de tu televisor (${activeActivationServiceName}) y procederá a activarlo de inmediato.`);
+};
 
 // ==========================================
 // 3. RECARGA DUAL: LEMON CASH & MANUAL QR
@@ -508,7 +690,7 @@ window.setRechargeUIMode = (mode) => {
     }
 };
 
-window.sendManualRechargeWhatsApp = async () => {
+window.submitManualRechargeRequest = async () => {
     if (!currentClientUser) return alert("Sesión inválida.");
     const input = document.getElementById('manualRechargeAmountInput');
     const amount = parseFloat(input?.value) || 0;
@@ -516,36 +698,65 @@ window.sendManualRechargeWhatsApp = async () => {
 
     const orderId = `rec_man_${Date.now()}`;
     const nick = currentClientUser.nickname || currentClientUser.name;
+    const currentBal = parseFloat(currentClientUser.balance || 0);
 
     try {
         const orderData = {
             id: orderId,
             userId: currentClientUser.id,
             userName: currentClientUser.name,
-            userPhone: currentClientUser.phone,
+            userPhone: currentClientUser.phone || '',
             userNickname: nick,
+            userEmail: currentClientUser.email || '',
             baseAmount: amount,
             cents: 0,
             exactAmount: amount,
+            currentBalance: currentBal,
+            projectedBalance: currentBal + amount,
             currency: 'PEN',
             status: 'pending_manual',
-            paymentMethod: 'Manual (WhatsApp)',
+            paymentMethod: 'Manual (Yape/Plin/QR)',
             createdAt: new Date().toISOString()
         };
 
-        await setDoc(doc(db, "recharge_orders", orderId), orderData);
+        // Guardar en Firestore y LocalStorage
+        try {
+            await setDoc(doc(db, "recharge_orders", orderId), orderData);
+        } catch(e) {
+            console.warn("Error guardando orden en Firestore, guardando local:", e);
+        }
 
-        const msg = `¡Hola CuycitoGO! 🐹👋\nSoy *${nick}* (${currentClientUser.name} - Tel: ${currentClientUser.phone}).\nAcabo de realizar una recarga manual de *S/ ${amount.toFixed(2)}* para mi saldo VIP.\nAdjunto mi comprobante para que lo validen y aprueben en el sistema. ¡Muchas gracias! 🙌`;
-        
-        window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
+        let orders = [];
+        try {
+            orders = JSON.parse(localStorage.getItem("cuycito_recharges") || "[]");
+        } catch(e) {}
+        orders.unshift(orderData);
+        localStorage.setItem("cuycito_recharges", JSON.stringify(orders));
+
+        // Disparar evento instantáneo de alerta personalizada para el Dashboard
+        try {
+            localStorage.setItem("cuycito_recharge_alert_trigger", JSON.stringify({
+                id: orderId,
+                amount: amount,
+                userName: currentClientUser.name,
+                userNickname: nick,
+                currentBalance: currentBal,
+                projectedBalance: currentBal + amount,
+                method: 'Manual (Yape/Plin/QR)',
+                timestamp: Date.now()
+            }));
+        } catch(e) {}
+
         window.closeRechargeModal();
-        alert("✨ ¡Solicitud de recarga enviada! En cuanto envíes tu comprobante por WhatsApp, el administrador la aprobará en el sistema.");
+        alert(`✨ ¡Solicitud de Recarga Registrada!\n\nSe ha enviado la alerta de tu recarga de S/ ${amount.toFixed(2)} al administrador.\nSaldo actual: S/ ${currentBal.toFixed(2)} ➔ Nuevo saldo: S/ ${(currentBal + amount).toFixed(2)}.`);
 
     } catch (e) {
         console.error(e);
         alert("Error al registrar la solicitud manual.");
     }
 };
+
+window.sendManualRechargeWhatsApp = window.submitManualRechargeRequest;
 
 window.closeRechargeModal = () => {
     const modal = document.getElementById('rechargeModal');
@@ -627,6 +838,21 @@ window.generateRechargeOrder = async () => {
 
         if (step1) step1.classList.add('hidden');
         if (step2) step2.classList.remove('hidden');
+
+        // Notificar al Dashboard de la nueva orden generada
+        try {
+            const currentBal = parseFloat(currentClientUser.balance || 0);
+            localStorage.setItem("cuycito_recharge_alert_trigger", JSON.stringify({
+                id: order.id,
+                amount: order.exactAmount,
+                userName: currentClientUser.name,
+                userNickname: currentClientUser.nickname || currentClientUser.name,
+                currentBalance: currentBal,
+                projectedBalance: currentBal + order.exactAmount,
+                method: 'Lemon Cash (Auto)',
+                timestamp: Date.now()
+            }));
+        } catch(e) {}
 
         // 3. Iniciar temporizador de cuenta regresiva (30 minutos)
         startCountdownTimer(new Date(order.expiresAt));
@@ -1639,16 +1865,28 @@ window.addToProfileCart = (id, titleEncoded, price) => {
 
     // Abrir automáticamente el modal del carrito para que el cliente lo vea de inmediato
     const modal = document.getElementById('profileCartModal');
-    if (modal && modal.classList.contains('hidden')) {
-        window.toggleProfileCartModal();
+    if (modal) {
+        modal.classList.remove('hidden');
     }
 
-    // Notificación animada
+    // Notificación animada en el badge
     const badge = document.getElementById('profileCartBadge');
     if (badge) {
         badge.classList.add('scale-125', 'bg-cuycito-gold', 'text-black');
         setTimeout(() => badge.classList.remove('scale-125', 'bg-cuycito-gold', 'text-black'), 300);
     }
+};
+
+window.addToCart = window.addToProfileCart;
+window.toggleCartModal = window.toggleProfileCartModal;
+window.openCartModal = () => {
+    const modal = document.getElementById('profileCartModal');
+    if (modal) modal.classList.remove('hidden');
+    window.renderProfileCartUI();
+};
+window.closeCartModal = () => {
+    const modal = document.getElementById('profileCartModal');
+    if (modal) modal.classList.add('hidden');
 };
 
 window.updateProfileCartQuantity = (index, delta) => {
@@ -1768,6 +2006,12 @@ window.confirmCartCheckout = async () => {
 
     const subtotal = profileCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const referralDiscount = isCartReferralDiscountApplied ? 0.50 : 0.00;
+    
+    // Soporte para Cuenta Demo: Auto-recargar saldo si se agota en pruebas
+    if ((currentClientUser.isDemo || currentClientUser.id === 'demo_cuycito_user') && (currentClientUser.balance || 0) < (subtotal - referralDiscount)) {
+        currentClientUser.balance = 50.00;
+    }
+
     const userBalance = currentClientUser.balance || 0;
     const appliedBalance = Math.min(userBalance, Math.max(0, subtotal - referralDiscount));
     const finalPayable = Math.max(0, subtotal - referralDiscount - appliedBalance);
@@ -1776,11 +2020,36 @@ window.confirmCartCheckout = async () => {
         if (!confirm(`El total a pagar con tus descuentos es S/ ${finalPayable.toFixed(2)}.\n\n¿Deseas confirmar tu orden y procesar tus servicios?`)) return;
     }
 
+    // Cerrar modal de carrito e iniciar Cinemática de Pago VIP
+    window.toggleProfileCartModal();
+    const cinematicModal = document.getElementById('paymentCinematicModal');
+    const pBar = document.getElementById('cinematicProgressBar');
+    const sText = document.getElementById('cinematicStatusText');
+    const cTitle = document.getElementById('cinematicTitle');
+
+    if (cinematicModal) {
+        cinematicModal.classList.remove('hidden');
+        if (cTitle) cTitle.innerText = 'Procesando Pago VIP...';
+        if (pBar) pBar.style.width = '30%';
+        if (sText) sText.innerText = '1. Verificando saldo VIP en cuenta...';
+
+        await new Promise(r => setTimeout(r, 450));
+        if (pBar) pBar.style.width = '70%';
+        if (sText) sText.innerText = `2. Descontando saldo (-S/ ${appliedBalance.toFixed(2)})...`;
+
+        await new Promise(r => setTimeout(r, 550));
+        if (pBar) pBar.style.width = '100%';
+        if (sText) sText.innerText = '3. ¡Pago completado! Registrando servicios...';
+        if (cTitle) cTitle.innerText = '¡Compra Exitosa! 🎉';
+
+        await new Promise(r => setTimeout(r, 500));
+        cinematicModal.classList.add('hidden');
+    }
+
     // 1. Procesar descuento de referido de 1 solo uso si fue aplicado
     if (isCartReferralDiscountApplied && cartReferralCode) {
         currentClientUser.referralDiscountUsed = true;
 
-        // Buscar al referidor para abonarle su comision +S/ 0.50 y REGENERARLE un nuevo codigo unico
         try {
             const usersSnap = await getDocs(collection(db, "users"));
             usersSnap.forEach(async (uDoc) => {
@@ -1789,13 +2058,11 @@ window.confirmCartCheckout = async () => {
                 const nickCode = ('VIP-' + (uData.nickname || uData.name || '')).toUpperCase();
 
                 if ((assignedCode && cartReferralCode === assignedCode) || cartReferralCode === nickCode) {
-                    // Abonar +0.50 al referidor
                     const oldBal = uData.balance || 0;
                     const newBal = parseFloat((oldBal + 0.50).toFixed(2));
                     const newReferredCount = (uData.referredCount || 0) + 1;
                     const newEarnings = parseFloat(((uData.referralEarnings || 0) + 0.50).toFixed(2));
 
-                    // REGENERAR NUEVO CÓDIGO ÚNICO ALEATORIO PARA EL REFERIDOR VIP (Uso único)
                     const cleanName = (uData.nickname || uData.name || 'VIP').trim().substring(0, 4).toUpperCase().replace(/[^A-Z]/g, 'C');
                     const randSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
                     const newReferralCode = `VIP-${cleanName}-${randSuffix}`;
@@ -1804,10 +2071,9 @@ window.confirmCartCheckout = async () => {
                         balance: newBal,
                         referredCount: newReferredCount,
                         referralEarnings: newEarnings,
-                        referralCode: newReferralCode // 🔄 Código regenerado para su siguiente invitado
+                        referralCode: newReferralCode
                     }, { merge: true });
 
-                    // Registrar log de canje
                     const refLogItem = {
                         id: "ref_log_" + Date.now(),
                         referrerId: uDoc.id,
@@ -1838,10 +2104,9 @@ window.confirmCartCheckout = async () => {
         }, { merge: true });
     } catch(e) {}
 
-    // Actualizar localStorage
     localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
 
-    // 3. Crear suscripciones para cada producto comprado
+    // 3. Crear suscripciones para cada producto comprado en estado 'pending_activation'
     const today = new Date();
     const expiry = new Date();
     expiry.setDate(today.getDate() + 30);
@@ -1860,27 +2125,45 @@ window.confirmCartCheckout = async () => {
                 endDate: expiry.toISOString().split('T')[0],
                 cost: 0,
                 price: item.price,
+                status: 'pending_activation', // ⏳ Nuevo estado oficial de compra
                 createdAt: new Date().toISOString()
             };
 
-            clientSubscriptions.push(newSub);
+            clientSubscriptions.unshift(newSub);
             try {
                 await setDoc(doc(db, "subscriptions", subId), newSub, { merge: true });
             } catch(e) {}
         }
     });
 
-    // 4. Limpiar Carrito y Actualizar Interfaz
+    // 4. Limpiar Carrito y Emitir Alertas al Dashboard
+    const boughtServices = profileCart.map(item => `${item.title} (x${item.quantity}) - S/ ${(item.price * item.quantity).toFixed(2)}`).join(', ');
+    const boughtSummary = profileCart.map(i => i.title).join(', ');
+
+    try {
+        localStorage.setItem("cuycito_purchase_alert_trigger", JSON.stringify({
+            userName: currentClientUser.name,
+            userNickname: currentClientUser.nickname || currentClientUser.name,
+            userEmail: currentClientUser.email || currentClientUser.phone || '',
+            serviceName: boughtSummary,
+            servicesDetail: boughtServices,
+            amount: subtotal.toFixed(2),
+            status: "Pendiente de activación",
+            timestamp: Date.now()
+        }));
+    } catch(e) {}
+
     profileCart = [];
     isCartReferralDiscountApplied = false;
     cartReferralCode = '';
 
-    window.toggleProfileCartModal();
+    // Cambiar a la vista de servicios contratados
+    window.switchProfileTab('services');
     updateProfileUI();
     renderClientSubscriptions(clientSubscriptions);
-    updateMetrics(clientSubscriptions);
+    calculateMetrics(clientSubscriptions);
 
-    alert(`🎉 ¡Compra realizada con éxito!\n\nSe han activado tus productos y asignado a tus servicios. Tu nuevo saldo disponible es S/ ${newClientBalance.toFixed(2)}.`);
+    alert(`🎉 ¡Compra procesada exitosamente!\n\nTus productos han sido añadidos a tu lista con estado "Pendiente de Activación".\nSaldo descontado: S/ ${appliedBalance.toFixed(2)} | Nuevo saldo: S/ ${newClientBalance.toFixed(2)}.`);
 };
 
 window.checkRouletteEligibility = async () => {
