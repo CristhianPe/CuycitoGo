@@ -262,16 +262,26 @@ if (document.readyState === "loading") {
 // ==========================================================================
 // CONTROL DE ACCESO A TIENDA & MODO MANTENIMIENTO EN CLIENTE
 // ==========================================================================
-let isStoreMaintenanceActive = false;
+let isStoreMaintenanceActive = localStorage.getItem('cuycito_store_maintenance') === 'true';
 let storeSettingsSnapshotUnsubscribe = null;
 
 function initClientStoreMaintenanceListener() {
+    updateClientStoreMaintenanceState();
+
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'cuycito_store_maintenance') {
+            isStoreMaintenanceActive = e.newValue === 'true';
+            updateClientStoreMaintenanceState();
+        }
+    });
+
     try {
         if (storeSettingsSnapshotUnsubscribe) return;
         storeSettingsSnapshotUnsubscribe = onSnapshot(doc(db, "system_config", "store_settings"), (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 isStoreMaintenanceActive = data.maintenanceMode === true;
+                localStorage.setItem('cuycito_store_maintenance', isStoreMaintenanceActive ? 'true' : 'false');
             } else {
                 isStoreMaintenanceActive = false;
             }

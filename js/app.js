@@ -2050,18 +2050,30 @@ window.renderFinance = () => {
 // ==========================================================================
 // CONTROL DE ACCESO A TIENDA & MODO MANTENIMIENTO DE EMERGENCIA
 // ==========================================================================
-window.isStoreMaintenanceActive = false;
+window.isStoreMaintenanceActive = localStorage.getItem('cuycito_store_maintenance') === 'true';
 
 window.initStoreMaintenanceListener = () => {
+    // 1. Cargar estado local inmediato
+    const localVal = localStorage.getItem('cuycito_store_maintenance') === 'true';
+    window.isStoreMaintenanceActive = localVal;
+    window.updateStoreMaintenanceUI(localVal);
+
+    // 2. Listener Storage Cross-Tab
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'cuycito_store_maintenance') {
+            window.isStoreMaintenanceActive = e.newValue === 'true';
+            window.updateStoreMaintenanceUI(window.isStoreMaintenanceActive);
+        }
+    });
+
+    // 3. Listener Cloud Firestore
     try {
         onSnapshot(doc(db, "system_config", "store_settings"), (docSnap) => {
             if (docSnap.exists()) {
-                const data = docSnap.data();
-                window.isStoreMaintenanceActive = data.maintenanceMode === true;
-                window.updateStoreMaintenanceUI(window.isStoreMaintenanceActive);
-            } else {
-                window.isStoreMaintenanceActive = false;
-                window.updateStoreMaintenanceUI(false);
+                const isM = docSnap.data().maintenanceMode === true;
+                localStorage.setItem('cuycito_store_maintenance', isM ? 'true' : 'false');
+                window.isStoreMaintenanceActive = isM;
+                window.updateStoreMaintenanceUI(isM);
             }
         });
     } catch(err) {
@@ -2153,6 +2165,10 @@ window.updateStoreMaintenanceUI = (isMaintenance) => {
 window.initStoreMaintenanceListener();
 
 window.handleStoreMaintenanceToggle = async (isChecked) => {
+    localStorage.setItem('cuycito_store_maintenance', isChecked ? 'true' : 'false');
+    window.isStoreMaintenanceActive = isChecked;
+    window.updateStoreMaintenanceUI(isChecked);
+
     try {
         await setDoc(doc(db, "system_config", "store_settings"), {
             maintenanceMode: isChecked,
@@ -2160,17 +2176,8 @@ window.handleStoreMaintenanceToggle = async (isChecked) => {
             updatedAt: new Date().toISOString(),
             updatedBy: 'Dashboard Admin'
         }, { merge: true });
-
-        window.updateStoreMaintenanceUI(isChecked);
-        
-        if (isChecked) {
-            alert("🛑 ACCESO A TIENDA DESACTIVADO\n\nSe ha activado el Modo Mantenimiento. Los clientes no podrán ver el catálogo de compra y verán la pantalla de mantenimiento.");
-        } else {
-            alert("✅ ACCESO A TIENDA ACTIVADO\n\nLa tienda vuelve a estar operativa para todos los clientes.");
-        }
     } catch(err) {
-        console.error("Error al actualizar modo mantenimiento de tienda:", err);
-        alert("Error al actualizar configuración en la nube: " + err.message);
+        console.warn("Sincronización Firestore en Mantenimiento (guardado local OK):", err);
     }
 };
 
