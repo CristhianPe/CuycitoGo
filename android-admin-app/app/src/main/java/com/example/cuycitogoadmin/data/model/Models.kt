@@ -1,4 +1,28 @@
-package com.example.cuycitogoadmin.data.model
+ï»¿package com.example.cuycitogoadmin.data.model
+
+enum class AlarmCategory(val displayName: String) {
+    RECARGA_PENDIENTE("Recarga por Verificar"),
+    COMPRA_SERVICIO("Nueva Compra de Servicio"),
+    ACTIVACION_TV("Activacion de TV Smart")
+}
+
+data class AlarmEventModel(
+    val id: String = "",
+    val category: AlarmCategory = AlarmCategory.RECARGA_PENDIENTE,
+    val title: String = "",
+    val customerName: String = "",
+    val customerEmail: String = "",
+    val amount: Double = 0.0,
+    val detail: String = "",
+    val status: String = "pending", // pending, approved, rejected, Activo, pending_activation
+    val imageUrl: String = "",
+    val pinCode: String = "",
+    val rawTimestamp: Long = System.currentTimeMillis(),
+    val timeFormatted: String = "",
+    val isPending: Boolean = true,
+    val originalRecarga: RecargaModel? = null,
+    val originalTv: TvActivationModel? = null
+)
 
 data class RecargaModel(
     val id: String = "",
@@ -21,9 +45,11 @@ data class TvActivationModel(
     val accountEmail: String = "",
     val pinCode: String = "",
     val qrImageUrl: String = "",
-    val status: String = "Pendiente de activación", // Pendiente de activación, Activo
+    val status: String = "Pendiente de activacion", // Pendiente de activacion, Activo
     val requestedAt: String = "",
-    val profileName: String = ""
+    val profileName: String = "",
+    val price: Double = 0.0,
+    val rawTimestamp: Long = System.currentTimeMillis()
 )
 
 data class ClientModel(

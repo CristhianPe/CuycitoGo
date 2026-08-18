@@ -1,12 +1,8 @@
-package com.example.cuycitogoadmin.data.repository
+ï»¿package com.example.cuycitogoadmin.data.repository
 
 import android.content.Context
-import com.example.cuycitogoadmin.data.model.ClientModel
-import com.example.cuycitogoadmin.data.model.ProductModel
-import com.example.cuycitogoadmin.data.model.RecargaModel
-import com.example.cuycitogoadmin.data.model.TvActivationModel
+import com.example.cuycitogoadmin.data.model.*
 import com.google.firebase.FirebaseApp
-import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -14,37 +10,39 @@ import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.*
 
 class FirebaseManager(private val context: Context) {
 
     private val auth: FirebaseAuth by lazy {
-        ensureFirebaseInitialized()
+        initFirebaseIfNeeded()
         FirebaseAuth.getInstance()
     }
 
     private val firestore: FirebaseFirestore by lazy {
-        ensureFirebaseInitialized()
+        initFirebaseIfNeeded()
         FirebaseFirestore.getInstance()
     }
 
-    private fun ensureFirebaseInitialized() {
+    private fun initFirebaseIfNeeded() {
         if (FirebaseApp.getApps(context).isEmpty()) {
-            val options = FirebaseOptions.Builder()
+            val options = com.google.firebase.FirebaseOptions.Builder()
                 .setApiKey("AIzaSyC-_c45ORNlmAT3dlGOBXjOjkwrT6yx5F4")
-                .setApplicationId("1:528964293797:android:com.example.cuycitogoadmin")
+                .setApplicationId("1:528964293797:android:1234567890abcdef")
                 .setProjectId("cuycitogo-app")
                 .setStorageBucket("cuycitogo-app.firebasestorage.app")
-                .setGcmSenderId("528964293797")
                 .build()
             FirebaseApp.initializeApp(context, options)
         }
     }
 
-    // --- AUTHENTICATION ---
+    // --- AUTENTICACION ---
     fun isUserLoggedIn(): Boolean = auth.currentUser != null
 
-    fun getCurrentUserEmail(): String = auth.currentUser?.email ?: "Admin"
+    fun getCurrentUserEmail(): String = auth.currentUser?.email ?: "Administrador"
 
     suspend fun loginAdmin(email: String, pass: String): Result<Boolean> {
         return try {
@@ -76,21 +74,27 @@ class FirebaseManager(private val context: Context) {
                                 is String -> raw.toDoubleOrNull() ?: 0.0
                                 else -> 0.0
                             }
+                            val rawTs = when (val raw = data["createdAt"]) {
+                                is Number -> raw.toLong()
+                                is com.google.firebase.Timestamp -> raw.toDate().time
+                                else -> System.currentTimeMillis()
+                            }
                             RecargaModel(
                                 id = doc.id,
-                                clientName = data["clientName"] as? String ?: data["name"] as? String ?: "Cliente",
-                                clientEmail = data["clientEmail"] as? String ?: data["email"] as? String ?: "",
+                                clientName = data["userName"] as? String ?: data["name"] as? String ?: "Cliente",
+                                clientEmail = data["userEmail"] as? String ?: data["email"] as? String ?: "",
                                 amount = amountVal,
-                                paymentMethod = data["paymentMethod"] as? String ?: data["method"] as? String ?: "Yape",
+                                paymentMethod = data["method"] as? String ?: data["paymentMethod"] as? String ?: "Yape",
                                 voucherUrl = data["voucherUrl"] as? String ?: data["imageUrl"] as? String ?: "",
-                                status = data["status"] as? String ?: "pending",
-                                referenceCode = data["referenceCode"] as? String ?: data["operationNumber"] as? String ?: "",
-                                date = data["date"] as? String ?: "Hoy"
+                                status = (data["status"] as? String ?: "pending").lowercase(),
+                                referenceCode = data["referenceCode"] as? String ?: data["ref"] as? String ?: "",
+                                date = data["date"] as? String ?: "",
+                                timestamp = rawTs
                             )
                         } catch (e: Exception) {
                             null
                         }
-                    }
+                    }.sortedByDescending { it.timestamp }
                     trySend(list)
                 }
             }
@@ -104,7 +108,7 @@ class FirebaseManager(private val context: Context) {
                 .update("status", "approved", "verifiedAt", System.currentTimeMillis().toString())
                 .await()
 
-            // 2. Sumar saldo al cliente en la colección "users"
+            // 2. Sumar saldo al cliente en la coleccion "users"
             if (recarga.clientEmail.isNotBlank()) {
                 val querySnap = firestore.collection("users")
                     .whereEqualTo("email", recarga.clientEmail)
@@ -122,7 +126,7 @@ class FirebaseManager(private val context: Context) {
         }
     }
 
-    suspend fun rejectRecarga(recargaId: String, reason: String = "Comprobante no válido"): Result<Boolean> {
+    suspend fun rejectRecarga(recargaId: String, reason: String = "Comprobante no valido"): Result<Boolean> {
         return try {
             firestore.collection("recharge_orders").document(recargaId)
                 .update("status", "rejected", "rejectReason", reason)
@@ -133,7 +137,7 @@ class FirebaseManager(private val context: Context) {
         }
     }
 
-    // --- ACTIVACIONES DE TV (QR CODES REAL-TIME) ---
+    // --- ACTIVACIONES DE TV & COMPRAS DE SERVICIOS (REAL-TIME) ---
     fun getTvActivationsFlow(): Flow<List<TvActivationModel>> = callbackFlow {
         val listener: ListenerRegistration = firestore.collection("subscriptions")
             .addSnapshotListener { snapshot, error ->
@@ -148,28 +152,36 @@ class FirebaseManager(private val context: Context) {
                             val statusStr = data["status"] as? String ?: ""
                             val qrUrl = data["tvQrUrl"] as? String ?: data["qrImageUrl"] as? String ?: data["qrCode"] as? String ?: ""
                             val pin = data["pinCode"] as? String ?: data["code"] as? String ?: ""
-
-                            // Incluir si tiene estado pendiente o tiene imagen QR/código
-                            if (statusStr.contains("Pendiente", ignoreCase = true) || qrUrl.isNotBlank() || pin.isNotBlank()) {
-                                TvActivationModel(
-                                    id = doc.id,
-                                    person = data["person"] as? String ?: data["clientName"] as? String ?: "Cliente",
-                                    email = data["email"] as? String ?: "",
-                                    service = data["service"] as? String ?: "Streaming TV",
-                                    accountEmail = data["accountEmail"] as? String ?: "",
-                                    pinCode = pin,
-                                    qrImageUrl = qrUrl,
-                                    status = statusStr.ifBlank { "Pendiente de activación" },
-                                    requestedAt = data["startDate"] as? String ?: "Hoy",
-                                    profileName = data["profileName"] as? String ?: "Pantalla 1"
-                                )
-                            } else {
-                                null
+                            val priceVal = when (val raw = data["price"] ?: data["cost"] ?: data["amount"]) {
+                                is Number -> raw.toDouble()
+                                is String -> raw.toDoubleOrNull() ?: 0.0
+                                else -> 0.0
                             }
+
+                            val rawTs = when (val raw = data["createdAt"]) {
+                                is Number -> raw.toLong()
+                                is com.google.firebase.Timestamp -> raw.toDate().time
+                                else -> System.currentTimeMillis()
+                            }
+
+                            TvActivationModel(
+                                id = doc.id,
+                                person = data["person"] as? String ?: data["clientName"] as? String ?: "Cliente",
+                                email = data["email"] as? String ?: data["userEmail"] as? String ?: "",
+                                service = data["service"] as? String ?: data["name"] as? String ?: "Streaming TV",
+                                accountEmail = data["accountEmail"] as? String ?: "",
+                                pinCode = pin,
+                                qrImageUrl = qrUrl,
+                                status = statusStr.ifBlank { "Pendiente de activacion" },
+                                requestedAt = data["startDate"] as? String ?: "Hoy",
+                                profileName = data["profileName"] as? String ?: "Pantalla 1",
+                                price = priceVal,
+                                rawTimestamp = rawTs
+                            )
                         } catch (e: Exception) {
                             null
                         }
-                    }
+                    }.sortedByDescending { it.rawTimestamp }
                     trySend(list)
                 }
             }
@@ -184,6 +196,66 @@ class FirebaseManager(private val context: Context) {
             Result.success(true)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    // --- SISTEMA UNIFICADO DE ALARMAS & REGISTRO EN TIEMPO REAL ---
+    fun getLiveAlarmsFlow(): Flow<List<AlarmEventModel>> {
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+
+        return combine(getRecargasFlow(), getTvActivationsFlow()) { recargas, subscriptions ->
+            val alarmList = mutableListOf<AlarmEventModel>()
+
+            // 1. Convertir Recargas
+            recargas.forEach { r ->
+                val isPend = r.status.equals("pending", ignoreCase = true)
+                alarmList.add(
+                    AlarmEventModel(
+                        id = "recarga_${r.id}",
+                        category = AlarmCategory.RECARGA_PENDIENTE,
+                        title = "Recarga ${r.paymentMethod.uppercase()}: S/ %.2f".format(r.amount),
+                        customerName = r.clientName.ifBlank { "Cliente Cuycito" },
+                        customerEmail = r.clientEmail,
+                        amount = r.amount,
+                        detail = "Metodo: ${r.paymentMethod} - Ref: ${r.referenceCode.ifBlank { "N/A" }}",
+                        status = r.status,
+                        imageUrl = r.voucherUrl,
+                        rawTimestamp = r.timestamp,
+                        timeFormatted = try { dateFormat.format(Date(r.timestamp)) } catch (e: Exception) { "Reciente" },
+                        isPending = isPend,
+                        originalRecarga = r
+                    )
+                )
+            }
+
+            // 2. Convertir Compras de Servicios / Activaciones
+            subscriptions.forEach { s ->
+                val isPend = s.status.contains("pending", ignoreCase = true) ||
+                             s.status.contains("Pendiente", ignoreCase = true)
+                val isTv = s.qrImageUrl.isNotBlank() || s.pinCode.isNotBlank()
+
+                alarmList.add(
+                    AlarmEventModel(
+                        id = "sub_${s.id}",
+                        category = if (isTv) AlarmCategory.ACTIVACION_TV else AlarmCategory.COMPRA_SERVICIO,
+                        title = "Compra: ${s.service.uppercase()}",
+                        customerName = s.person.ifBlank { "Cliente VIP" },
+                        customerEmail = s.email,
+                        amount = s.price,
+                        detail = if (isTv) "TV Smart - Pin: ${s.pinCode.ifBlank { "QR Adjunto" }}" else "Perfil: ${s.profileName}",
+                        status = s.status,
+                        imageUrl = s.qrImageUrl,
+                        pinCode = s.pinCode,
+                        rawTimestamp = s.rawTimestamp,
+                        timeFormatted = s.requestedAt.ifBlank { "Reciente" },
+                        isPending = isPend,
+                        originalTv = s
+                    )
+                )
+            }
+
+            // Ordenar por mÃ¡s reciente primero
+            alarmList.sortedByDescending { it.rawTimestamp }
         }
     }
 
@@ -224,7 +296,7 @@ class FirebaseManager(private val context: Context) {
         awaitClose { listener.remove() }
     }
 
-    // --- TIENDA Y CATÁLOGO ---
+    // --- TIENDA Y CATALOGO ---
     fun getCatalogFlow(): Flow<List<ProductModel>> = callbackFlow {
         val listener: ListenerRegistration = firestore.collection("store_catalog")
             .addSnapshotListener { snapshot, error ->

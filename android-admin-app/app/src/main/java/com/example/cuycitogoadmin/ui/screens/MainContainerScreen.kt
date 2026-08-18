@@ -29,8 +29,9 @@ import com.example.cuycitogoadmin.theme.*
 import com.example.cuycitogoadmin.util.SoundAlertManager
 
 enum class AdminTab(val title: String) {
+    ALARMAS("Alarmas"),
     RECARGAS("Recargas"),
-    TV_ACTIVATIONS("Activación TV"),
+    TV_ACTIVATIONS("Activacion TV"),
     CLIENTES("Clientes"),
     TIENDA("Tienda")
 }
@@ -43,16 +44,20 @@ fun MainContainerScreen(
 ) {
     val context = LocalContext.current
     val soundManager = remember { SoundAlertManager(context) }
-    var currentTab by remember { mutableStateOf(AdminTab.RECARGAS) }
+    var currentTab by remember { mutableStateOf(AdminTab.ALARMAS) }
     var soundEnabled by remember { mutableStateOf(true) }
 
-    // State collections
+    // State collections en tiempo real
+    val liveAlarms by firebaseManager.getLiveAlarmsFlow().collectAsState(initial = emptyList())
     val recargas by firebaseManager.getRecargasFlow().collectAsState(initial = emptyList())
     val tvActivations by firebaseManager.getTvActivationsFlow().collectAsState(initial = emptyList())
     val clients by firebaseManager.getClientsFlow().collectAsState(initial = emptyList())
     val catalog by firebaseManager.getCatalogFlow().collectAsState(initial = emptyList())
 
     // Contadores de pendientes
+    val totalPendingAlarms = remember(liveAlarms) {
+        liveAlarms.count { it.isPending }
+    }
     val pendingRecargasCount = remember(recargas) {
         recargas.count { it.status.equals("pending", ignoreCase = true) }
     }
@@ -60,22 +65,14 @@ fun MainContainerScreen(
         tvActivations.count { it.status.contains("Pendiente", ignoreCase = true) }
     }
 
-    // Monitoreo reactivo de nuevas alertas
-    var lastPendingRecargasCount by remember { mutableStateOf(-1) }
-    var lastPendingTvCount by remember { mutableStateOf(-1) }
+    // Monitoreo reactivo de nuevas alertas con audio y vibración
+    var lastPendingAlarmsCount by remember { mutableStateOf(-1) }
 
-    LaunchedEffect(pendingRecargasCount) {
-        if (lastPendingRecargasCount in 0 until pendingRecargasCount && soundEnabled) {
+    LaunchedEffect(totalPendingAlarms) {
+        if (lastPendingAlarmsCount in 0 until totalPendingAlarms && soundEnabled) {
             soundManager.playRecargaAlert()
         }
-        lastPendingRecargasCount = pendingRecargasCount
-    }
-
-    LaunchedEffect(pendingTvCount) {
-        if (lastPendingTvCount in 0 until pendingTvCount && soundEnabled) {
-            soundManager.playTvActivationAlert()
-        }
-        lastPendingTvCount = pendingTvCount
+        lastPendingAlarmsCount = totalPendingAlarms
     }
 
     Scaffold(
@@ -108,7 +105,7 @@ fun MainContainerScreen(
                     }
                 },
                 actions = {
-                    // Botón silenciar / activar alarmas
+                    // Boton silenciar / activar alarmas
                     IconButton(onClick = { soundEnabled = !soundEnabled }) {
                         Icon(
                             imageVector = if (soundEnabled) Icons.Default.NotificationsActive else Icons.Default.NotificationsOff,
@@ -117,7 +114,7 @@ fun MainContainerScreen(
                         )
                     }
 
-                    // Botón Cerrar Sesión
+                    // Boton Cerrar Sesion
                     IconButton(onClick = {
                         firebaseManager.logout()
                         onLogout()
@@ -140,7 +137,32 @@ fun MainContainerScreen(
                 containerColor = CuycitoDarkCard,
                 tonalElevation = 8.dp
             ) {
-                // Tab 1: Recargas
+                // Tab 1: Widget de Alarmas & Radar Principal
+                NavigationBarItem(
+                    selected = currentTab == AdminTab.ALARMAS,
+                    onClick = { currentTab = AdminTab.ALARMAS },
+                    icon = {
+                        BadgedBox(badge = {
+                            if (totalPendingAlarms > 0) {
+                                Badge(containerColor = CuycitoRed) {
+                                    Text("$totalPendingAlarms", color = Color.White, fontWeight = FontWeight.Black)
+                                }
+                            }
+                        }) {
+                            Icon(Icons.Default.Radar, contentDescription = "Alarmas")
+                        }
+                    },
+                    label = { Text("Alarmas", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = CuycitoGold,
+                        selectedTextColor = CuycitoGold,
+                        indicatorColor = Color.Black,
+                        unselectedIconColor = CuycitoTextSecondary,
+                        unselectedTextColor = CuycitoTextSecondary
+                    )
+                )
+
+                // Tab 2: Recargas
                 NavigationBarItem(
                     selected = currentTab == AdminTab.RECARGAS,
                     onClick = { currentTab = AdminTab.RECARGAS },
@@ -155,7 +177,7 @@ fun MainContainerScreen(
                             Icon(Icons.Default.AccountBalanceWallet, contentDescription = "Recargas")
                         }
                     },
-                    label = { Text("Recargas", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("Recargas", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = CuycitoGold,
                         selectedTextColor = CuycitoGold,
@@ -165,7 +187,7 @@ fun MainContainerScreen(
                     )
                 )
 
-                // Tab 2: Activación TV
+                // Tab 3: Activacion TV
                 NavigationBarItem(
                     selected = currentTab == AdminTab.TV_ACTIVATIONS,
                     onClick = { currentTab = AdminTab.TV_ACTIVATIONS },
@@ -180,7 +202,7 @@ fun MainContainerScreen(
                             Icon(Icons.Default.Tv, contentDescription = "TV")
                         }
                     },
-                    label = { Text("TV QR", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("TV QR", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = CuycitoCyan,
                         selectedTextColor = CuycitoCyan,
@@ -190,14 +212,14 @@ fun MainContainerScreen(
                     )
                 )
 
-                // Tab 3: Clientes
+                // Tab 4: Clientes
                 NavigationBarItem(
                     selected = currentTab == AdminTab.CLIENTES,
                     onClick = { currentTab = AdminTab.CLIENTES },
                     icon = {
                         Icon(Icons.Default.People, contentDescription = "Clientes")
                     },
-                    label = { Text("Clientes", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("Clientes", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = CuycitoGold,
                         selectedTextColor = CuycitoGold,
@@ -207,14 +229,14 @@ fun MainContainerScreen(
                     )
                 )
 
-                // Tab 4: Tienda
+                // Tab 5: Tienda
                 NavigationBarItem(
                     selected = currentTab == AdminTab.TIENDA,
                     onClick = { currentTab = AdminTab.TIENDA },
                     icon = {
                         Icon(Icons.Default.Store, contentDescription = "Tienda")
                     },
-                    label = { Text("Tienda", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("Tienda", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = CuycitoGold,
                         selectedTextColor = CuycitoGold,
@@ -233,6 +255,12 @@ fun MainContainerScreen(
                 .padding(paddingValues)
         ) {
             when (currentTab) {
+                AdminTab.ALARMAS -> AlarmsScreen(
+                    alarms = liveAlarms,
+                    onApproveRecarga = { firebaseManager.approveRecarga(it) },
+                    onRejectRecarga = { id, reason -> firebaseManager.rejectRecarga(id, reason) },
+                    onMarkTvActivated = { firebaseManager.markTvActivated(it) }
+                )
                 AdminTab.RECARGAS -> RecargasScreen(
                     recargas = recargas,
                     onApproveRecarga = { firebaseManager.approveRecarga(it) },
