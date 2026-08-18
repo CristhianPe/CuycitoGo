@@ -1,6 +1,7 @@
-﻿package com.example.cuycitogoadmin.ui.screens
+package com.example.cuycitogoadmin.ui.screens
 import kotlinx.coroutines.launch
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -108,6 +109,25 @@ fun MainContainerScreen(
                     }
                 },
                 actions = {
+                    // Boton rapido de Mantenimiento de Tienda (Toggle Central)
+                    IconButton(onClick = {
+                        val next = !isStoreMaintenance
+                        scope.launch {
+                            firebaseManager.setStoreMaintenance(next)
+                            Toast.makeText(
+                                context,
+                                if (next) "🛑 Mantenimiento ACTIVADO (Clientes Bloqueados)" else "✅ Tienda OPERATIVA (Clientes Habilitados)",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Store,
+                            contentDescription = "Mantenimiento Tienda",
+                            tint = if (isStoreMaintenance) CuycitoRed else CuycitoGreen
+                        )
+                    }
+
                     // Boton silenciar / activar alarmas
                     IconButton(onClick = { soundEnabled = !soundEnabled }) {
                         Icon(
@@ -274,7 +294,20 @@ fun MainContainerScreen(
                     onMarkActivated = { firebaseManager.markTvActivated(it) }
                 )
                 AdminTab.CLIENTES -> ClientesScreen(clients = clients)
-                AdminTab.TIENDA -> TiendaScreen(products = catalog, isMaintenance = isStoreMaintenance, onToggleMaintenance = { isM -> scope.launch { firebaseManager.setStoreMaintenance(isM) } })
+                AdminTab.TIENDA -> TiendaScreen(
+                    products = catalog,
+                    isMaintenance = isStoreMaintenance,
+                    onToggleMaintenance = { isM ->
+                        scope.launch {
+                            firebaseManager.setStoreMaintenance(isM)
+                            Toast.makeText(
+                                context,
+                                if (isM) "🛑 Mantenimiento ACTIVADO (Clientes Bloqueados)" else "✅ Tienda OPERATIVA (Clientes Habilitados)",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                )
             }
         }
     }

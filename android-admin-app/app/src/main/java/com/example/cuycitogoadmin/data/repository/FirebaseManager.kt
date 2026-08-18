@@ -1,4 +1,4 @@
-﻿package com.example.cuycitogoadmin.data.repository
+package com.example.cuycitogoadmin.data.repository
 
 import android.content.Context
 import com.example.cuycitogoadmin.data.model.*
@@ -495,13 +495,21 @@ class FirebaseManager(private val context: Context) {
 
     suspend fun setStoreMaintenance(isMaintenance: Boolean) {
         withContext(Dispatchers.IO) {
-            val map = hashMapOf(
-                "maintenanceMode" to isMaintenance,
-                "status" to if (isMaintenance) "disabled" else "active",
-                "updatedAt" to java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).format(java.util.Date()),
-                "updatedBy" to "Android APK Admin"
-            )
-            firestore.collection("system_config").document("store_settings").set(map, com.google.firebase.firestore.SetOptions.merge())
+            try {
+                val map = hashMapOf(
+                    "maintenanceMode" to isMaintenance,
+                    "status" to if (isMaintenance) "disabled" else "active",
+                    "updatedAt" to SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).format(Date()),
+                    "updatedBy" to "Android APK Admin"
+                )
+                firestore.collection("system_config")
+                    .document("store_settings")
+                    .set(map, com.google.firebase.firestore.SetOptions.merge())
+                    .await()
+                android.util.Log.d("FirebaseManager", "Store maintenance updated to: $isMaintenance")
+            } catch (e: Exception) {
+                android.util.Log.e("FirebaseManager", "Error setting store maintenance", e)
+            }
         }
     }
 }

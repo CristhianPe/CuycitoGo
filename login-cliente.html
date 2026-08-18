@@ -48,43 +48,55 @@
     <!-- Contenedor Principal de Login -->
     <main class="flex-1 flex flex-col items-center justify-center px-4 py-6 space-y-4 w-full">
         
-        <!-- AVISO DE PROTOCOLO DE MANTENIMIENTO ACTIVO (BLOQUEO DE LOGIN) -->
-        <div id="loginMaintenanceNotice" class="hidden w-full max-w-md mx-auto">
-            <div class="bg-gradient-to-r from-red-950/95 via-black to-red-950/90 border-2 border-red-500/80 rounded-2xl p-4 shadow-2xl text-center space-y-2 glow-red animate-pulse">
-                <div class="w-10 h-10 mx-auto rounded-xl bg-red-500/20 text-red-400 border border-red-500/50 flex items-center justify-center text-xl shadow">
-                    🛠️
+        <!-- PÁGINA COMPLETA DE MANTENIMIENTO TÉCNICO (BLOQUEO TOTAL) -->
+        <div id="maintenanceFullScreen" class="hidden w-full max-w-lg mx-auto text-center space-y-6 bg-gradient-to-b from-[#180808] via-black to-[#121212] border-2 border-red-500/80 rounded-3xl p-8 sm:p-12 shadow-2xl glow-red animate-fade-in">
+            <div class="w-24 h-24 mx-auto rounded-3xl bg-red-500/10 border-2 border-red-500 flex items-center justify-center text-5xl text-red-400 shadow-[0_0_30px_rgba(239,68,68,0.3)] animate-bounce">
+                🛠️
+            </div>
+            
+            <div class="space-y-2.5">
+                <span class="bg-red-950 text-red-300 border border-red-500/60 text-[11px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-red-400 animate-ping"></span> PROTOCOLO DE MANTENIMIENTO ACTIVO
+                </span>
+                <h1 class="text-2xl sm:text-4xl font-black text-white">Estamos en Mantenimiento</h1>
+                <p class="text-sm text-gray-300 leading-relaxed max-w-md mx-auto">
+                    El acceso a la tienda y portal de clientes se encuentra temporalmente pausado por actualización de servidores e inventario.
+                </p>
+                <div class="p-3 bg-red-950/40 border border-red-500/30 rounded-xl text-xs text-red-300 font-semibold">
+                    ⏳ Tan pronto como concluyamos el mantenimiento, el acceso volverá a habilitarse de inmediato.
                 </div>
-                <div>
-                    <span class="bg-red-900 text-red-200 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                        Modo Mantenimiento Activo
-                    </span>
-                    <h3 class="text-sm font-black text-white mt-1">Acceso a Tienda Pausado Temporalmente</h3>
-                    <p class="text-xs text-gray-300 leading-snug mt-1">
-                        El acceso por login se encuentra pausado por labores de mantenimiento del servidor. Volveremos muy pronto con el servicio activo.
-                    </p>
-                </div>
+            </div>
+
+            <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a href="https://wa.me/?text=Hola%20CuycitoGO,%20deseo%20consultar%20sobre%20el%20mantenimiento%20de%20la%20tienda" target="_blank" class="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-extrabold text-xs px-6 py-3.5 rounded-xl transition shadow-lg glow-green flex items-center justify-center gap-2 uppercase tracking-wider">
+                    <i class="fa-brands fa-whatsapp text-lg"></i> Soporte VIP WhatsApp
+                </a>
+                <a href="index.html" class="w-full sm:w-auto bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 hover:text-white font-bold text-xs px-5 py-3.5 rounded-xl transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-house"></i> Ir al Inicio
+                </a>
             </div>
         </div>
 
-        <!-- BANNER DE APERTURA (+S/ 1.00 DE CRÉDITO) -->
-        <div id="openingBonusBanner" class="w-full max-w-md mx-auto">
-            <div class="bg-gradient-to-r from-amber-950/90 via-black to-emerald-950/90 border border-cuycito-gold/70 rounded-2xl p-4 shadow-xl flex items-center justify-between gap-3 glow-gold">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-cuycito-gold/20 text-cuycito-gold border border-cuycito-gold/40 flex items-center justify-center text-lg shrink-0 animate-bounce">
-                        <i class="fa-solid fa-gift"></i>
+        <div id="clientAuthContainer" class="w-full max-w-md space-y-4">
+            <!-- BANNER DE APERTURA (+S/ 1.00 DE CRÉDITO) -->
+            <div id="openingBonusBanner" class="w-full max-w-md mx-auto">
+                <div class="bg-gradient-to-r from-amber-950/90 via-black to-emerald-950/90 border border-cuycito-gold/70 rounded-2xl p-4 shadow-xl flex items-center justify-between gap-3 glow-gold">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-cuycito-gold/20 text-cuycito-gold border border-cuycito-gold/40 flex items-center justify-center text-lg shrink-0 animate-bounce">
+                            <i class="fa-solid fa-gift"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-black text-cuycito-gold uppercase tracking-wider block">🎉 ¡Gran Apertura CuycitoGO!</span>
+                            <h4 class="text-xs font-black text-white">S/ 1.00 Sol de Crédito Gratis de Bienvenida</h4>
+                        </div>
                     </div>
-                    <div>
-                        <span class="text-[10px] font-black text-cuycito-gold uppercase tracking-wider block">🎉 ¡Gran Apertura CuycitoGO!</span>
-                        <h4 class="text-xs font-black text-white">S/ 1.00 Sol de Crédito Gratis de Bienvenida</h4>
-                    </div>
+                    <button onclick="window.switchAuthTab('register')" class="bg-gradient-to-r from-cuycito-gold to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 text-black font-black text-[11px] px-3 py-1.5 rounded-xl transition shadow shrink-0">
+                        ¡Reclamar S/ 1.00!
+                    </button>
                 </div>
-                <button onclick="window.switchAuthTab('register')" class="bg-gradient-to-r from-cuycito-gold to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 text-black font-black text-[11px] px-3 py-1.5 rounded-xl transition shadow shrink-0">
-                    ¡Reclamar S/ 1.00!
-                </button>
             </div>
-        </div>
 
-        <div class="w-full max-w-md bg-[#121212] border border-gray-800 rounded-3xl p-8 shadow-2xl glow-border-red relative overflow-hidden">
+            <div class="w-full max-w-md bg-[#121212] border border-gray-800 rounded-3xl p-8 shadow-2xl glow-border-red relative overflow-hidden">
             <!-- Detalle decorativo dorado -->
             <div class="absolute -top-12 -right-12 w-32 h-32 bg-cuycito-gold/10 rounded-full blur-2xl"></div>
             <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-cuycito-red/10 rounded-full blur-2xl"></div>

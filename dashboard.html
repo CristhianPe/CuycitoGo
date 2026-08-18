@@ -63,10 +63,16 @@
                 </div>
             </div>
 
-            <!-- Control Rápido de Estado de Tienda (Modo Mantenimiento) -->
-            <div id="headerStoreStatusBtn" onclick="window.toggleStoreMaintenancePrompt()" class="cursor-pointer transition text-[11px] font-black uppercase tracking-wider px-3 py-2 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 flex items-center gap-2 shadow glow-gold" title="Estado de la Tienda VIP. Click para activar/desactivar modo mantenimiento.">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span id="headerStoreStatusText">Tienda: ACTIVA</span>
+            <!-- INTERRUPTOR MAESTRO DE ACCESO A TIENDA EN HEADER -->
+            <div id="headerStoreControlContainer" class="flex items-center gap-2.5 bg-black/90 border-2 border-emerald-500/70 px-3.5 py-1.5 rounded-xl shadow-lg glow-gold store-maintenance-header-box">
+                <div class="flex flex-col text-right">
+                    <span class="text-[10px] font-black uppercase tracking-wider store-switch-label text-emerald-400">TIENDA OPERATIVA</span>
+                    <span class="text-[9px] text-gray-400 store-switch-sublabel">Acceso Clientes OK</span>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="headerStoreMaintenanceToggle" onchange="window.handleStoreMaintenanceToggle(this.checked)" class="sr-only peer">
+                    <div class="w-12 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                </label>
             </div>
 
             <!-- Indicador único de Auto-Guardado en Nube (Interactivo) -->

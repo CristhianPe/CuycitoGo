@@ -2071,14 +2071,16 @@ window.initStoreMaintenanceListener = () => {
 
 window.updateStoreMaintenanceUI = (isMaintenance) => {
     // 1. Switches
+    const switchElHeader = document.getElementById('headerStoreMaintenanceToggle');
     const switchElGlobal = document.getElementById('globalStoreMaintenanceToggle');
     const switchEl1 = document.getElementById('storeMaintenanceSwitch');
     const switchEl2 = document.getElementById('storeMaintenanceSwitchCatalog');
+    if (switchElHeader) switchElHeader.checked = isMaintenance;
     if (switchElGlobal) switchElGlobal.checked = isMaintenance;
     if (switchEl1) switchEl1.checked = isMaintenance;
     if (switchEl2) switchEl2.checked = isMaintenance;
 
-    // 2. Badges e Indicadores en Tab 4 y Tab 5 y Barra Global
+    // 2. Badges e Indicadores en Header, Tab 4, Tab 5 y Barra Global
     const badges = document.querySelectorAll('.store-status-badge');
     badges.forEach(b => {
         if (isMaintenance) {
@@ -2102,50 +2104,51 @@ window.updateStoreMaintenanceUI = (isMaintenance) => {
 
     const labelEls = document.querySelectorAll('.store-switch-label');
     labelEls.forEach(l => {
-        l.innerText = isMaintenance ? "MODO MANTENIMIENTO" : "TIENDA OPERATIVA";
+        l.innerText = isMaintenance ? "MANTENIMIENTO" : "TIENDA OPERATIVA";
         l.className = isMaintenance ? "store-switch-label block text-xs font-black uppercase text-red-400" : "store-switch-label block text-xs font-black uppercase text-emerald-400";
     });
 
     const subLabelEls = document.querySelectorAll('.store-switch-sublabel');
     subLabelEls.forEach(sl => {
-        sl.innerText = isMaintenance ? "Acceso Clientes Bloqueado" : "Mantenimiento Desactivado";
+        sl.innerText = isMaintenance ? "Acceso Clientes Bloqueado" : "Acceso Clientes OK";
     });
 
     const cardEls = document.querySelectorAll('.store-maintenance-card');
     cardEls.forEach(c => {
         if (isMaintenance) {
-            c.classList.remove('border-emerald-500/50');
-            c.classList.add('border-red-500/70', 'shadow-[0_0_25px_rgba(239,68,68,0.2)]');
+            c.classList.remove('border-emerald-500/60', 'border-emerald-500/50');
+            c.classList.add('border-red-500/80', 'shadow-[0_0_25px_rgba(239,68,68,0.3)]');
         } else {
-            c.classList.remove('border-red-500/70', 'shadow-[0_0_25px_rgba(239,68,68,0.2)]');
-            c.classList.add('border-emerald-500/50');
+            c.classList.remove('border-red-500/80', 'shadow-[0_0_25px_rgba(239,68,68,0.3)]');
+            c.classList.add('border-emerald-500/60');
+        }
+    });
+
+    const headerBoxEls = document.querySelectorAll('.store-maintenance-header-box');
+    headerBoxEls.forEach(hb => {
+        if (isMaintenance) {
+            hb.classList.remove('border-emerald-500/70', 'glow-gold');
+            hb.classList.add('border-red-500/90', 'glow-red');
+        } else {
+            hb.classList.remove('border-red-500/90', 'glow-red');
+            hb.classList.add('border-emerald-500/70', 'glow-gold');
         }
     });
 
     const iconBoxEls = document.querySelectorAll('.store-control-icon-box');
     iconBoxEls.forEach(ib => {
         if (isMaintenance) {
-            ib.className = "store-control-icon-box w-12 h-12 rounded-2xl bg-red-500/20 text-red-400 border border-red-500/50 flex items-center justify-center text-2xl shadow shrink-0 animate-bounce";
+            ib.className = "store-control-icon-box w-11 h-11 rounded-xl bg-red-500/20 text-red-400 border border-red-500/50 flex items-center justify-center text-xl shadow shrink-0 animate-bounce";
             ib.innerHTML = '<i class="fa-solid fa-store-slash"></i>';
         } else {
-            ib.className = "store-control-icon-box w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-2xl shadow shrink-0";
+            ib.className = "store-control-icon-box w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xl shadow shrink-0";
             ib.innerHTML = '<i class="fa-solid fa-store"></i>';
         }
     });
-
-    // 4. Header Badge
-    const headerBtn = document.getElementById('headerStoreStatusBtn');
-    const headerText = document.getElementById('headerStoreStatusText');
-    if (headerBtn && headerText) {
-        if (isMaintenance) {
-            headerBtn.className = "cursor-pointer transition text-[11px] font-black uppercase tracking-wider px-3 py-2 rounded-xl bg-red-950/90 border border-red-500/70 text-red-300 flex items-center gap-2 shadow glow-red animate-pulse";
-            headerText.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Mantenimiento';
-        } else {
-            headerBtn.className = "cursor-pointer transition text-[11px] font-black uppercase tracking-wider px-3 py-2 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 flex items-center gap-2 shadow glow-gold";
-            headerText.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Tienda: ACTIVA';
-        }
-    }
 };
+
+// Iniciar listener de mantenimiento inmediatamente
+window.initStoreMaintenanceListener();
 
 window.handleStoreMaintenanceToggle = async (isChecked) => {
     try {
