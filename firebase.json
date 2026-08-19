@@ -1,10 +1,80 @@
 {
   "hosting": {
-    "public": "CuycitoGo",
+    "public": ".",
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "android-admin-app/**",
+      "backend/**",
+      "scripts/**",
+      "*.bat",
+      "*.apk",
+      "*.txt",
+      "recharge_tab.png"
+    ],
+    "redirects": [
+      {
+        "source": "/login",
+        "destination": "/mantenimiento.html",
+        "type": 302
+      },
+      {
+        "source": "/registro",
+        "destination": "/mantenimiento.html",
+        "type": 302
+      },
+      {
+        "source": "/perfil",
+        "destination": "/mantenimiento.html",
+        "type": 302
+      },
+      {
+        "source": "/tienda",
+        "destination": "/mantenimiento.html",
+        "type": 302
+      },
+      {
+        "source": "/login-cliente.html",
+        "destination": "/mantenimiento.html",
+        "type": 302
+      },
+      {
+        "source": "/perfil.html",
+        "destination": "/mantenimiento.html",
+        "type": 302
+      },
+      {
+        "source": "/invitacion",
+        "destination": "/invitacion.html",
+        "type": 301
+      },
+      {
+        "source": "/vip",
+        "destination": "/vip.html",
+        "type": 301
+      },
+      {
+        "source": "/unete",
+        "destination": "/invitacion.html",
+        "type": 301
+      },
+      {
+        "source": "/join",
+        "destination": "/invitacion.html",
+        "type": 301
+      }
+    ],
+    "headers": [
+      {
+        "source": "/*.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      }
     ]
   }
 }
