@@ -1,6 +1,8 @@
 {
   "hosting": {
     "public": ".",
+    "cleanUrls": true,
+    "trailingSlash": false,
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -8,66 +10,51 @@
       "android-admin-app/**",
       "backend/**",
       "scripts/**",
-      "*.bat",
-      "*.apk",
-      "*.txt",
+      "**/*.bat",
+      "**/*.apk",
+      "**/*.txt",
       "recharge_tab.png"
     ],
     "redirects": [
       {
         "source": "/login",
-        "destination": "/mantenimiento.html",
+        "destination": "/mantenimiento",
         "type": 302
       },
       {
         "source": "/registro",
-        "destination": "/mantenimiento.html",
+        "destination": "/mantenimiento",
         "type": 302
       },
       {
         "source": "/perfil",
-        "destination": "/mantenimiento.html",
+        "destination": "/mantenimiento",
         "type": 302
       },
       {
         "source": "/tienda",
-        "destination": "/mantenimiento.html",
+        "destination": "/mantenimiento",
         "type": 302
       },
       {
-        "source": "/login-cliente.html",
-        "destination": "/mantenimiento.html",
-        "type": 302
-      },
-      {
-        "source": "/perfil.html",
-        "destination": "/mantenimiento.html",
+        "source": "/login-cliente",
+        "destination": "/mantenimiento",
         "type": 302
       },
       {
         "source": "/invitacion",
-        "destination": "/invitacion.html",
+        "destination": "/invitacion",
         "type": 301
       },
       {
         "source": "/vip",
-        "destination": "/vip.html",
-        "type": 301
-      },
-      {
-        "source": "/unete",
-        "destination": "/invitacion.html",
-        "type": 301
-      },
-      {
-        "source": "/join",
-        "destination": "/invitacion.html",
+        "destination": "/vip",
         "type": 301
       }
     ],
     "headers": [
       {
-        "source": "/*.html",
+        "source": "/**",
         "headers": [
           {
             "key": "Cache-Control",
