@@ -394,58 +394,76 @@ let userSnapshotUnsubscribe = null;
 let usersCollectionSnapshotUnsubscribe = null;
 
 function initRealtimeUserBalanceListener() {
-    if (usersCollectionSnapshotUnsubscribe) {
-        usersCollectionSnapshotUnsubscribe();
-        usersCollectionSnapshotUnsubscribe = null;
+    if (userSnapshotUnsubscribe) {
+        userSnapshotUnsubscribe();
+        userSnapshotUnsubscribe = null;
     }
 
+    if (!currentClientUser) return;
+
     try {
-        usersCollectionSnapshotUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
-            if (!currentClientUser) return;
+        if (currentClientUser.id) {
+            // Protocolo de Alta Eficiencia: 1 sola lectura dirigida por ID de documento
+            userSnapshotUnsubscribe = onSnapshot(doc(db, "users", currentClientUser.id), (docSnap) => {
+                if (!docSnap.exists()) return;
+                const uData = docSnap.data();
+                const prevBalance = currentClientUser.balance;
+                const newBalance = uData.balance !== undefined ? parseFloat(uData.balance) : currentClientUser.balance;
+                
+                currentClientUser = { 
+                    ...currentClientUser, 
+                    id: docSnap.id, 
+                    ...uData, 
+                    balance: newBalance 
+                };
+                
+                localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+                updateProfileUI();
 
-            snapshot.forEach(d => {
-                const uData = d.data();
-                const currentName = (currentClientUser.name || '').trim().toLowerCase();
-                const currentNick = (currentClientUser.nickname || '').trim().toLowerCase();
-                const currentPhone = (currentClientUser.phone || '').trim();
-                const currentEmail = (currentClientUser.email || '').trim().toLowerCase();
-
-                const isMatch = (d.id === currentClientUser.id) ||
-                                (uData.phone && currentPhone && uData.phone.trim() === currentPhone) ||
-                                (uData.email && currentEmail && uData.email.trim().toLowerCase() === currentEmail) ||
-                                (uData.name && currentName && uData.name.trim().toLowerCase() === currentName) ||
-                                (uData.nickname && currentNick && uData.nickname.trim().toLowerCase() === currentNick);
-
-                if (isMatch) {
-                    const prevBalance = currentClientUser.balance;
-                    const newBalance = uData.balance !== undefined ? parseFloat(uData.balance) : currentClientUser.balance;
-                    
-                    currentClientUser = { 
-                        ...currentClientUser, 
-                        id: d.id, 
-                        ...uData, 
-                        balance: newBalance 
-                    };
-                    
-                    localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
-                    updateProfileUI();
-
-                    // Animación visual si el saldo fue modificado en vivo por el administrador
-                    if (prevBalance !== undefined && parseFloat(prevBalance) !== parseFloat(newBalance)) {
-                        console.log(`⚡ Saldo actualizado en vivo: S/ ${parseFloat(newBalance).toFixed(2)} (Antes: S/ ${parseFloat(prevBalance).toFixed(2)})`);
-                        const balDisplay = document.getElementById('profileBalanceDisplay');
-                        if (balDisplay) {
-                            balDisplay.classList.add('animate-bounce', 'text-emerald-400');
-                            setTimeout(() => {
-                                balDisplay.classList.remove('animate-bounce', 'text-emerald-400');
-                            }, 2500);
-                        }
+                if (prevBalance !== undefined && parseFloat(prevBalance) !== parseFloat(newBalance)) {
+                    console.log(`⚡ Saldo actualizado en vivo: S/ ${parseFloat(newBalance).toFixed(2)} (Antes: S/ ${parseFloat(prevBalance).toFixed(2)})`);
+                    const balDisplay = document.getElementById('profileBalanceDisplay');
+                    if (balDisplay) {
+                        balDisplay.classList.add('animate-bounce', 'text-emerald-400');
+                        setTimeout(() => {
+                            balDisplay.classList.remove('animate-bounce', 'text-emerald-400');
+                        }, 2500);
                     }
                 }
             });
-        });
+        } else if (currentClientUser.phone) {
+            // Fallback por query indexada de teléfono
+            const qUser = query(collection(db, "users"), where("phone", "==", currentClientUser.phone.trim()));
+            userSnapshotUnsubscribe = onSnapshot(qUser, (snap) => {
+                if (snap.empty) return;
+                const d = snap.docs[0];
+                const uData = d.data();
+                const prevBalance = currentClientUser.balance;
+                const newBalance = uData.balance !== undefined ? parseFloat(uData.balance) : currentClientUser.balance;
+                
+                currentClientUser = { 
+                    ...currentClientUser, 
+                    id: d.id, 
+                    ...uData, 
+                    balance: newBalance 
+                };
+                
+                localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+                updateProfileUI();
+
+                if (prevBalance !== undefined && parseFloat(prevBalance) !== parseFloat(newBalance)) {
+                    const balDisplay = document.getElementById('profileBalanceDisplay');
+                    if (balDisplay) {
+                        balDisplay.classList.add('animate-bounce', 'text-emerald-400');
+                        setTimeout(() => {
+                            balDisplay.classList.remove('animate-bounce', 'text-emerald-400');
+                        }, 2500);
+                    }
+                }
+            });
+        }
     } catch(err) {
-        console.warn("Error en listener de saldo en tiempo real:", err);
+        console.warn("Error en listener de saldo optimizado:", err);
     }
 }
 
