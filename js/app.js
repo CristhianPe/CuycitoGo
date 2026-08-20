@@ -3474,22 +3474,107 @@ window.renderCatalog = () => {
 };
 
 window.renderNotifications = () => {
-    const cont = document.getElementById('notificationsContainer'); if(!cont) return;
+    const cont = document.getElementById('notificationsContainer'); 
+    if(!cont) return;
     cont.innerHTML = '';
-    const exp = appState.subscriptions.filter(s => window.getDaysRemaining(s.endDate) <= 3 && window.getDaysRemaining(s.endDate) >= 0);
+
+    // 1. Cuentas Matrices por vencer (Aviso a partir de 1 semana = 7 días o menos)
+    const expiringMasters = (appState.masterAccounts || []).filter(acc => {
+        if (!acc.endDate) return false;
+        const days = window.getDaysRemaining(acc.endDate);
+        return days <= 7;
+    }).map(acc => {
+        const days = window.getDaysRemaining(acc.endDate);
+        return {
+            type: 'MASTER',
+            id: acc.id,
+            title: acc.service,
+            subtitle: acc.email,
+            endDate: acc.endDate,
+            days: days,
+            isExpired: days < 0,
+            badge: '👑 Matriz'
+        };
+    });
+
+    // 2. Suscripciones de Clientes por vencer (Aviso a partir de 3 días o menos)
+    const expiringSubs = (appState.subscriptions || []).filter(s => {
+        if (!s.endDate || s.status === 'pending_activation') return false;
+        const days = window.getDaysRemaining(s.endDate);
+        return days <= 3 && days >= 0;
+    }).map(s => {
+        const days = window.getDaysRemaining(s.endDate);
+        return {
+            type: 'CLIENT_SUB',
+            id: s.id,
+            title: s.person || 'Cliente',
+            subtitle: `${s.service} ${s.pin ? '(' + s.pin + ')' : ''}`,
+            endDate: s.endDate,
+            days: days,
+            isExpired: days < 0,
+            badge: '👤 Cliente'
+        };
+    });
+
+    // Unificar y ordenar por urgencia (menor cantidad de días primero)
+    const allAlerts = [...expiringMasters, ...expiringSubs].sort((a, b) => a.days - b.days);
+
     const alertCount = document.getElementById('alertCount');
-    if(alertCount) alertCount.innerText = exp.length;
+    if(alertCount) alertCount.innerText = allAlerts.length;
     const mobileAlertBadge = document.getElementById('mobileAlertCountBadge');
-    if(mobileAlertBadge) mobileAlertBadge.innerText = exp.length;
+    if(mobileAlertBadge) mobileAlertBadge.innerText = allAlerts.length;
     
-    if (exp.length === 0) {
-        cont.innerHTML = `<div class="p-3 bg-black/40 border border-gray-800/80 rounded-xl text-center text-gray-500 text-xs italic"><i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> No hay cuentas por vencer</div>`;
+    if (allAlerts.length === 0) {
+        cont.innerHTML = `<div class="p-3 bg-black/40 border border-gray-800/80 rounded-xl text-center text-gray-500 text-xs italic"><i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> No hay cuentas matrices ni clientes por vencer</div>`;
         return;
     }
 
-    exp.forEach(s => {
-        const days = window.getDaysRemaining(s.endDate);
-        cont.innerHTML += `<div class="p-3 bg-[#0a0a0a] border-l-4 ${days===0?'border-cuycito-red':'border-cuycito-gold'} shadow-lg rounded-r-xl"><div class="flex justify-between items-start font-bold mb-1"><span class="text-white text-xs">${s.person}</span><span class="${days===0?'text-cuycito-red_light':'text-cuycito-gold'} font-black text-[10px] px-2 rounded bg-black">${days===0?'HOY':days+' d'}</span></div><div class="text-gray-400 text-[11px]">${s.service}</div></div>`;
+    allAlerts.forEach(item => {
+        const isMaster = item.type === 'MASTER';
+        const isToday = item.days === 0;
+        const isExpired = item.days < 0;
+
+        let borderClass = 'border-cuycito-gold';
+        let badgeBgClass = 'bg-black text-cuycito-gold';
+        let timeLabel = `${item.days} d`;
+
+        if (isExpired) {
+            borderClass = 'border-red-600 bg-red-950/20';
+            badgeBgClass = 'bg-red-950 text-red-400 border border-red-500/50';
+            timeLabel = 'EXPIRÓ';
+        } else if (isToday) {
+            borderClass = 'border-cuycito-red animate-pulse';
+            badgeBgClass = 'bg-cuycito-red text-white';
+            timeLabel = 'HOY';
+        } else if (isMaster) {
+            borderClass = 'border-purple-500 bg-purple-950/20';
+            badgeBgClass = 'bg-purple-900/90 text-purple-200 border border-purple-400/50';
+        }
+
+        const tagHTML = isMaster
+            ? `<span class="bg-purple-950 text-purple-300 border border-purple-500/50 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
+                 <i class="fa-solid fa-crown text-[8px] text-yellow-400"></i> Matriz Proveedor
+               </span>`
+            : `<span class="bg-blue-950/80 text-blue-300 border border-blue-500/40 text-[9px] font-bold px-1.5 py-0.5 rounded">
+                 👤 Cliente
+               </span>`;
+
+        cont.innerHTML += `
+        <div class="p-3 bg-[#0a0a0a] border-l-4 ${borderClass} shadow-lg rounded-r-xl space-y-1 hover:bg-[#111] transition">
+            <div class="flex justify-between items-start font-bold gap-2">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    ${tagHTML}
+                    <span class="text-white text-xs font-black">${item.title}</span>
+                </div>
+                <span class="${badgeBgClass} font-black text-[10px] px-2 py-0.5 rounded shadow shrink-0">
+                    ${timeLabel}
+                </span>
+            </div>
+            <div class="flex justify-between items-center text-[11px] text-gray-400 font-mono">
+                <span class="truncate max-w-[150px]">${item.subtitle}</span>
+                <span class="text-[10px] text-gray-500">Vence: ${item.endDate}</span>
+            </div>
+        </div>`;
     });
 };
 
