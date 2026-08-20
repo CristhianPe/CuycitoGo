@@ -2678,22 +2678,29 @@ window.renderActiveTable = () => {
     // 2. RENDERIZAR TABLA GENERAL DE SERVICIOS
     if(!tbody) return;
     tbody.innerHTML = '';
-    const search = document.getElementById('searchActive') ? document.getElementById('searchActive').value.toLowerCase() : '';
-    const serviceFilter = document.getElementById('filterActiveService') ? document.getElementById('filterActiveService').value : '';
-    const statusFilter = document.getElementById('filterActiveStatus') ? document.getElementById('filterActiveStatus').value : 'VIGENTE';
+    const search = (document.getElementById('searchActive')?.value || '').toLowerCase().trim();
+    const serviceFilter = document.getElementById('filterActiveService')?.value || '';
+    const statusFilter = document.getElementById('filterActiveStatus')?.value || 'VIGENTE';
 
     let list = (appState.subscriptions || []).filter(sub => {
-        let matchSearch = (sub.person && sub.person.toLowerCase().includes(search)) || 
+        let matchSearch = !search ||
+                          (sub.person && sub.person.toLowerCase().includes(search)) || 
                           (sub.service && sub.service.toLowerCase().includes(search)) || 
-                          (sub.phone && sub.phone.toLowerCase().includes(search));
-        let matchService = serviceFilter === '' || sub.service === serviceFilter;
-        let matchStatus = true;
-        let isExpired = window.getDaysRemaining(sub.endDate) < 0;
-        let isPending = sub.status === 'pending_activation' || sub.status === 'pending' || !!sub.tvQrImage;
+                          (sub.phone && sub.phone.toLowerCase().includes(search)) ||
+                          (sub.clientPhone && sub.clientPhone.toLowerCase().includes(search)) ||
+                          (sub.clientCode && sub.clientCode.toLowerCase().includes(search)) ||
+                          (sub.clientNickname && sub.clientNickname.toLowerCase().includes(search)) ||
+                          (sub.email && sub.email.toLowerCase().includes(search));
 
+        let matchService = serviceFilter === '' || sub.service === serviceFilter;
+        let isExpired = window.getDaysRemaining(sub.endDate) < 0;
+        let isPending = sub.status === 'pending_activation' || sub.status === 'pending' || sub.status === 'esperando_proveedor' || !!sub.tvQrImage;
+
+        let matchStatus = true;
         if(statusFilter === 'VIGENTE') matchStatus = !isExpired && !isPending;
-        if(statusFilter === 'VENCIDO') matchStatus = isExpired && !isPending;
-        if(statusFilter === 'PENDING') matchStatus = isPending;
+        else if(statusFilter === 'VENCIDO') matchStatus = isExpired && !isPending;
+        else if(statusFilter === 'PENDING') matchStatus = isPending;
+        else if(statusFilter === 'ALL' || statusFilter === 'TODOS') matchStatus = true;
 
         return matchSearch && matchService && matchStatus;
     });
@@ -2701,35 +2708,60 @@ window.renderActiveTable = () => {
     const activeCountBadge = document.getElementById('activeCountBadge');
     if (activeCountBadge) activeCountBadge.innerText = list.length;
 
-    tbody.innerHTML = list.map(sub => {
-        let isExp = window.getDaysRemaining(sub.endDate) < 0;
-        let isPending = sub.status === 'pending_activation' || sub.status === 'pending' || !!sub.tvQrImage;
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500 italic">No se encontraron servicios activos con esos filtros.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = list.map((sub, idx) => {
+        const subId = sub.id || `sub_${idx}`;
+        let days = window.getDaysRemaining(sub.endDate);
+        let isExp = days < 0;
+        let isPending = sub.status === 'pending_activation' || sub.status === 'pending' || sub.status === 'esperando_proveedor' || !!sub.tvQrImage;
+        
         let statusBadge = isPending 
-            ? `<span class="bg-yellow-950 text-yellow-300 border border-yellow-500/40 text-[10px] font-black px-2 py-0.5 rounded animate-pulse">⏳ Pendiente</span>`
+            ? `<span class="bg-yellow-950 text-yellow-300 border border-yellow-500/40 text-[10px] font-black px-2 py-0.5 rounded animate-pulse">⏳ ${sub.status === 'esperando_proveedor' ? 'Espera Proveedor' : 'Pendiente'}</span>`
             : isExp 
                 ? `<span class="bg-red-950 text-red-400 border border-red-500/40 text-[10px] font-black px-2 py-0.5 rounded">🔴 Vencido</span>` 
                 : `<span class="bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded">🟢 Activo</span>`;
 
+        const clientCodeBadge = sub.clientCode 
+            ? `<span class="bg-indigo-950/90 text-indigo-300 border border-indigo-500/40 text-[9px] font-black px-1.5 py-0.2 rounded font-mono block w-max mt-0.5">${sub.clientCode}</span>` 
+            : '';
+
+        const daysRemainingLabel = isExp 
+            ? `<span class="text-red-400 font-bold block text-[10px]">Expiró</span>` 
+            : `<span class="text-gray-400 text-[10px] block">(${days} días restantes)</span>`;
+
         return `
         <tr class="hover:bg-gray-900/50 transition">
-            <td class="p-4 font-bold text-white">${sub.person}</td>
-            <td class="p-4 font-black text-cuycito-gold">${sub.service}</td>
-            <td class="p-4 font-mono text-[11px] text-gray-400">${sub.email || 'Sin correo asignado'}</td>
-            <td class="p-4 font-mono text-[11px] text-gray-300">${sub.endDate}</td>
+            <td class="p-4">
+                <div class="font-bold text-white text-xs">${sub.person || 'Sin nombre'}</div>
+                ${clientCodeBadge}
+            </td>
+            <td class="p-4 font-black text-cuycito-gold">${sub.service || 'Servicio'}</td>
+            <td class="p-4 font-mono text-[11px] text-gray-400">
+                <div>${sub.email || 'Sin correo'}</div>
+                ${sub.pin ? `<div class="text-cuycito-gold text-[10px]">PIN: ${sub.pin}</div>` : ''}
+            </td>
+            <td class="p-4 font-mono text-[11px] text-gray-300">
+                <div>${sub.endDate || '-'}</div>
+                ${daysRemainingLabel}
+            </td>
             <td class="p-4 text-center">${statusBadge}</td>
             <td class="p-4 text-center">
                 <div class="flex items-center justify-center gap-1 bg-black p-1 rounded-lg border border-gray-800">
-                    <input type="number" id="renew_${sub.id}" value="1" min="1" class="w-10 bg-transparent text-center text-cuycito-gold font-bold outline-none">
-                    <button onclick="window.renewSubscription('${sub.id}', 'renew_${sub.id}')" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black px-2 py-1 rounded font-black transition">
+                    <input type="number" id="renew_${subId}" value="1" min="1" class="w-10 bg-transparent text-center text-cuycito-gold font-bold outline-none">
+                    <button onclick="window.renewSubscription('${subId}', 'renew_${subId}')" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black px-2 py-1 rounded font-black transition">
                         <i class="fa-solid fa-rotate-right"></i>
                     </button>
                 </div>
             </td>
             <td class="p-4 text-center">
                 <div class="flex items-center justify-center gap-1.5">
-                    <button onclick="window.notifyClientOrderWhatsApp('${sub.id}')" class="bg-[#25D366] hover:bg-emerald-500 text-black p-2 rounded-lg transition" title="Avisar al cliente por WhatsApp"><i class="fa-brands fa-whatsapp text-xs font-bold"></i></button>
-                    <button onclick="window.openEditModal('${sub.id}')" class="bg-blue-950 hover:bg-blue-900 text-blue-300 p-2 rounded-lg transition" title="Editar"><i class="fa-solid fa-pen text-xs"></i></button>
-                    <button onclick="window.deleteSubscription('${sub.id}')" class="bg-red-950 hover:bg-red-900 text-red-400 p-2 rounded-lg transition" title="Eliminar"><i class="fa-solid fa-trash text-xs"></i></button>
+                    <button onclick="window.notifyClientOrderWhatsApp('${subId}')" class="bg-[#25D366] hover:bg-emerald-500 text-black p-2 rounded-lg transition" title="Avisar al cliente por WhatsApp"><i class="fa-brands fa-whatsapp text-xs font-bold"></i></button>
+                    <button onclick="window.openEditModal('${subId}')" class="bg-blue-950 hover:bg-blue-900 text-blue-300 p-2 rounded-lg transition" title="Editar"><i class="fa-solid fa-pen text-xs"></i></button>
+                    <button onclick="window.deleteSubscription('${subId}')" class="bg-red-950 hover:bg-red-900 text-red-400 p-2 rounded-lg transition shadow" title="Eliminar"><i class="fa-solid fa-trash text-xs"></i></button>
                 </div>
             </td>
         </tr>
@@ -3226,6 +3258,30 @@ window.initRealtimeHistoryListener = () => {
     }
 };
 window.initRealtimeHistoryListener();
+
+// Listener en tiempo real para Suscripciones (Servicios Activos)
+let subscriptionsSnapshotUnsubscribe = null;
+window.initRealtimeSubscriptionsListener = () => {
+    if (subscriptionsSnapshotUnsubscribe) return;
+    try {
+        subscriptionsSnapshotUnsubscribe = onSnapshot(collection(db, "subscriptions"), (snapshot) => {
+            const updatedSubs = [];
+            snapshot.forEach(d => {
+                const data = d.data();
+                updatedSubs.push({ ...data, id: d.id });
+            });
+            appState.subscriptions = updatedSubs;
+            const subsView = document.getElementById('view-subs');
+            if (subsView && !subsView.classList.contains('hidden')) {
+                window.renderActiveTable();
+            }
+            window.renderNotifications();
+        });
+    } catch(err) {
+        console.warn("Error en listener de subscriptions:", err);
+    }
+};
+window.initRealtimeSubscriptionsListener();
 
 // =====================================
 // 10.1. GESTIÓN DE SOLICITUDES DE CUENTA GRATIS & CÓDIGO DE REFERIDO VIP (+S/ 0.50)

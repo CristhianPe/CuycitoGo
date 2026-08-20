@@ -568,21 +568,34 @@ function isSubscriptionBelongingToClient(sub, client) {
     const clientId = (client.id || '').toString().trim();
     const clientCode = (client.clientCode || getClientCode(client) || '').toString().trim().toUpperCase();
     const clientPhone = (client.phone || '').toString().replace(/\D/g, '');
+    const clientName = (client.name || '').trim().toLowerCase();
 
     const subClientId = (sub.clientId || sub.userId || '').toString().trim();
     const subClientCode = (sub.clientCode || '').toString().trim().toUpperCase();
     const subPhone = (sub.clientPhone || sub.phone || '').toString().replace(/\D/g, '');
+    const subPerson = (sub.person || '').trim().toLowerCase();
 
-    // 1. Identificador Principal de Cliente (sub.clientId / sub.userId === client.id)
-    if (clientId && subClientId && clientId === subClientId) return true;
+    // 1. Identificador Principal de Firestore (sub.clientId === client.id)
+    if (subClientId) {
+        return clientId === subClientId;
+    }
 
     // 2. Identificador Único de Cliente (sub.clientCode === client.clientCode -> ej: CLI-1024)
-    if (clientCode && subClientCode && clientCode === subClientCode) return true;
+    if (subClientCode && subClientCode !== 'CLI-000' && subClientCode !== 'CLI-1001') {
+        return clientCode === subClientCode;
+    }
 
     // 3. Identificador Telefónico Único (mínimo 7 dígitos)
-    if (clientPhone && subPhone && clientPhone.length >= 7 && clientPhone === subPhone) return true;
+    if (subPhone && subPhone.length >= 7 && clientPhone && clientPhone.length >= 7) {
+        return clientPhone === subPhone;
+    }
 
-    // 4. Si es cuenta demo
+    // 4. Nombre exacto si no hay IDs
+    if (subPerson && clientName && subPerson === clientName) {
+        return true;
+    }
+
+    // 5. Si es cuenta demo
     if (client.isDemo && sub.isDemo) return true;
 
     return false;
@@ -598,12 +611,16 @@ async function loadClientSubscriptions() {
         cachedSubs = JSON.parse(localStorage.getItem("cuycito_client_subscriptions") || "[]");
     } catch(e) {}
 
-    clientSubscriptions = [];
+    const cachedMap = new Map();
     cachedSubs.forEach(data => {
-        if (isSubscriptionBelongingToClient(data, currentClientUser)) {
-            clientSubscriptions.push(data);
+        const item = { ...data, id: data.id || `cached_${Date.now()}` };
+        if (isSubscriptionBelongingToClient(item, currentClientUser)) {
+            if (!cachedMap.has(item.id)) {
+                cachedMap.set(item.id, item);
+            }
         }
     });
+    clientSubscriptions = Array.from(cachedMap.values());
 
     if (currentClientUser.isDemo && clientSubscriptions.length === 0) {
         const today = new Date();
@@ -637,15 +654,22 @@ async function loadClientSubscriptions() {
         if (!subscriptionsSnapshotUnsubscribe) {
             subscriptionsSnapshotUnsubscribe = onSnapshot(collection(db, "subscriptions"), (subSnap) => {
                 const remoteSubDocs = [];
-                subSnap.forEach(d => remoteSubDocs.push({ id: d.id, ...d.data() }));
+                subSnap.forEach(d => {
+                    const data = d.data();
+                    remoteSubDocs.push({ ...data, id: d.id });
+                });
                 localStorage.setItem("cuycito_client_subscriptions", JSON.stringify(remoteSubDocs));
 
-                const matchedRemote = [];
+                const matchedMap = new Map();
                 remoteSubDocs.forEach(data => {
                     if (isSubscriptionBelongingToClient(data, currentClientUser)) {
-                        matchedRemote.push(data);
+                        if (!matchedMap.has(data.id)) {
+                            matchedMap.set(data.id, data);
+                        }
                     }
                 });
+
+                const matchedRemote = Array.from(matchedMap.values());
 
                 if (matchedRemote.length > 0 || !currentClientUser.isDemo) {
                     clientSubscriptions = matchedRemote;
