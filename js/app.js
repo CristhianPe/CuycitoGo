@@ -896,16 +896,29 @@ let selectedAssignClientId = null;
 let currentAssignDurationMonths = 1;
 
 window.openAssignModal = (accId, slotIndex) => {
-    currentTargetAcc = accId;
-    currentTargetSlot = slotIndex;
+    currentTargetSlot = parseInt(slotIndex) || 0;
     selectedAssignClientId = null;
     currentAssignDurationMonths = 1;
 
-    const acc = appState.masterAccounts.find(a => a.id === accId);
-    if (!acc) return;
+    let acc = (appState.masterAccounts || []).find(a => 
+        (a.id && a.id.toString() === (accId || '').toString()) ||
+        (a.email && a.email === accId)
+    );
+
+    if (!acc && typeof accId === 'number' && appState.masterAccounts[accId]) {
+        acc = appState.masterAccounts[accId];
+    }
+    if (!acc && appState.masterAccounts.length > 0) {
+        acc = appState.masterAccounts[0];
+    }
+    if (!acc) {
+        alert("No se encontró la cuenta matriz seleccionada.");
+        return;
+    }
+    currentTargetAcc = acc.id || accId;
     
     const labelEl = document.getElementById('assignServiceLabel');
-    if (labelEl) labelEl.innerText = `${acc.service} (Cupo #${slotIndex + 1}) - ${acc.email}`;
+    if (labelEl) labelEl.innerText = `${acc.service || 'Servicio'} (Cupo #${currentTargetSlot + 1}) - ${acc.email || ''}`;
 
     // Resetear a Paso 1 (Buscador y Selección de Clientes)
     document.getElementById('assignStep1_SelectClient')?.classList.remove('hidden');
@@ -915,13 +928,24 @@ window.openAssignModal = (accId, slotIndex) => {
     if (searchInput) searchInput.value = '';
 
     window.filterAssignClients();
-    document.getElementById('assignModal')?.classList.remove('hidden');
+    
+    const modal = document.getElementById('assignModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
 };
 
 window.filterAssignClients = () => {
     const list = document.getElementById('assignClientsList');
     if (!list) return;
     list.innerHTML = '';
+
+    // Si appState.clients está vacío, intentar recuperar de localStorage
+    if (!appState.clients || appState.clients.length === 0) {
+        try {
+            appState.clients = JSON.parse(localStorage.getItem("cuycito_clients") || "[]");
+        } catch(e){}
+    }
 
     const searchTerm = (document.getElementById('searchAssignClientInput')?.value || '').toLowerCase().trim();
 
@@ -946,7 +970,8 @@ window.filterAssignClients = () => {
         return;
     }
 
-    list.innerHTML = clients.map(client => {
+    list.innerHTML = clients.map((client, idx) => {
+        const cId = client.id || client.phone || `client_${idx}`;
         const clientCode = client.clientCode || window.getClientCode(client);
         const balance = parseFloat(client.balance || 0).toFixed(2);
         const isOnline = !!client.isOnline;
@@ -969,7 +994,7 @@ window.filterAssignClients = () => {
                     </p>
                 </div>
             </div>
-            <button type="button" onclick="window.selectClientForAssign('${client.id}')" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black font-black text-xs px-3.5 py-1.5 rounded-lg transition shadow flex items-center gap-1">
+            <button type="button" onclick="window.selectClientForAssign('${cId}')" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black font-black text-xs px-3.5 py-1.5 rounded-lg transition shadow flex items-center gap-1">
                 <span>Asignar</span> <i class="fa-solid fa-arrow-right text-[10px]"></i>
             </button>
         </div>`;
@@ -977,11 +1002,24 @@ window.filterAssignClients = () => {
 };
 
 window.selectClientForAssign = (clientId) => {
-    const client = (appState.clients || []).find(c => c.id === clientId);
-    if (!client) return;
+    let client = (appState.clients || []).find(c => 
+        c.id === clientId || 
+        (c.id && c.id.toString() === (clientId || '').toString()) ||
+        (c.phone && c.phone.toString() === (clientId || '').toString()) ||
+        (c.clientCode && c.clientCode === clientId)
+    );
 
-    selectedAssignClientId = clientId;
-    const acc = appState.masterAccounts.find(a => a.id === currentTargetAcc);
+    if (!client) {
+        alert("No se pudo seleccionar el cliente.");
+        return;
+    }
+
+    selectedAssignClientId = client.id || clientId;
+    let acc = (appState.masterAccounts || []).find(a => 
+        a.id === currentTargetAcc || 
+        (a.id && a.id.toString() === (currentTargetAcc || '').toString()) ||
+        (a.email && a.email === currentTargetAcc)
+    );
 
     // Actualizar Resumen en Paso 2
     const codeEl = document.getElementById('assignSelectedClientCode');
@@ -2760,7 +2798,10 @@ window.renderMasterAccounts = () => {
     const grid = document.getElementById('masterGrid'); if(!grid) return;
     grid.innerHTML = '';
     
-    appState.masterAccounts.forEach(acc => {
+    appState.masterAccounts.forEach((acc, accIdx) => {
+        if (!acc.id) {
+            acc.id = `master_${acc.email ? acc.email.replace(/[^a-zA-Z0-9]/g, '_') : accIdx}`;
+        }
         let occupied = (acc.profiles || []).filter(p => p !== null).length;
         let freeSlots = Math.max(0, acc.capacity - occupied);
         let occColor = occupied === acc.capacity ? 'text-cuycito-red border-cuycito-red' : 'text-emerald-400 border-emerald-400/50';
