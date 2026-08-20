@@ -49,26 +49,35 @@ window.getSubscriptionPrice = getSubscriptionPrice;
 // o si la Cuenta Raíz / Dashboard autorizó explícitamente la visibilidad.
 function isCredentialsVisibleForClient(sub) {
     if (!sub) return false;
-    const sName = (sub.service || '').toLowerCase();
 
-    // 1. REGLA CRUNCHYROLL: Entrega directa de credenciales autorizada
-    if (sName.includes('crunchyroll') || sName.includes('crunchy')) {
-        return true;
+    // 1. REGLA SUPREMA: SI LA SUSCRIPCIÓN INDIVIDUAL ESTÁ MARCADA COMO OCULTA
+    // Si hidePassword es true (booleano o texto "true") o hidePasswordFromClient es true o showCredentials es false
+    if (sub.hidePassword === true || sub.hidePassword === "true" || 
+        sub.hidePasswordFromClient === true || sub.hidePasswordFromClient === "true" ||
+        sub.showCredentials === false || sub.showCredentials === "false" ||
+        sub.showCredentialsToClient === false || sub.showCredentialsToClient === "false") {
+        return false;
     }
 
-    // 2. REGLA DE CUENTA RAÍZ / DASHBOARD ADMIN:
-    // Buscar la cuenta raíz (Master Account) en el inventario por ID o por Correo
+    // 2. REGLA DE CUENTA RAÍZ (Master Account) ASOCIADA:
     let masterAcc = null;
     if (sub.masterAccountId) {
         masterAcc = allMasterAccounts.find(m => m.id === sub.masterAccountId);
     }
-    if (!masterAcc && sub.email) {
-        masterAcc = allMasterAccounts.find(m => m.email && m.email.trim().toLowerCase() === sub.email.trim().toLowerCase());
+    if (!masterAcc && sub.id) {
+        masterAcc = allMasterAccounts.find(m => m.profiles && Array.isArray(m.profiles) && m.profiles.includes(sub.id));
+    }
+    if (!masterAcc && (sub.email || sub.accountEmail)) {
+        const subEmail = (sub.email || sub.accountEmail || '').trim().toLowerCase();
+        if (subEmail) {
+            masterAcc = allMasterAccounts.find(m => m.email && m.email.trim().toLowerCase() === subEmail);
+        }
     }
 
-    // Si la cuenta raíz tiene hidePasswordFromClient === true, es ESTRICTAMENTE OCULTA
+    // Si la cuenta raíz tiene hidePasswordFromClient === true o showCredentialsToClient === false, es ESTRICTAMENTE OCULTA
     if (masterAcc) {
-        if (masterAcc.hidePasswordFromClient === true || masterAcc.showCredentialsToClient === false) {
+        if (masterAcc.hidePasswordFromClient === true || masterAcc.hidePasswordFromClient === "true" || 
+            masterAcc.showCredentialsToClient === false || masterAcc.showCredentialsToClient === "false") {
             return false;
         }
         if (masterAcc.showCredentialsToClient === true || masterAcc.hidePasswordFromClient === false) {
@@ -76,13 +85,19 @@ function isCredentialsVisibleForClient(sub) {
         }
     }
 
-    // 3. REGLA DE SUSCRIPCIÓN INDIVIDUAL:
-    if (sub.hidePassword === true) return false;
-    if (sub.showCredentials === true) return true;
-    if (sub.hidePassword === false) return true;
+    // 3. REGLA EXPLÍCITA DE VISIBILIDAD DE SUSCRIPCIÓN:
+    if (sub.showCredentials === true || sub.showCredentialsToClient === true || sub.hidePassword === false) {
+        return true;
+    }
 
-    // POR DEFECTO EN TODOS LOS DEMÁS SERVICIOS (Netflix, Disney+, Prime, HBO, Spotify, etc.):
-    // CERO REVELACIÓN DE CREDENCIALES (Protegido por Servidor)
+    // 4. REGLA DE CRUNCHYROLL (por defecto visible, salvo que esté oculta explícitamente en pasos 1 o 2)
+    const sName = (sub.service || '').toLowerCase();
+    if (sName.includes('crunchyroll') || sName.includes('crunchy')) {
+        return true;
+    }
+
+    // 5. POR DEFECTO PARA CUALQUIER OTRO SERVICIO (Netflix, Disney+, HBO/Max, Prime, Spotify, etc.):
+    // PROTEGIDO / OCULTO
     return false;
 }
 window.isCredentialsVisibleForClient = isCredentialsVisibleForClient;
@@ -106,6 +121,25 @@ let rechargePollingInterval = null;
 let rechargeCountdownInterval = null;
 let masterAccountsSnapshotUnsubscribe = null;
 let subscriptionsSnapshotUnsubscribe = null;
+
+// ==========================================================================
+// PROTOCOLO DE MANTENIMIENTO EN PERFIL CLIENTE: EXPULSIÓN INMEDIATA EN VIVO
+// ==========================================================================
+try {
+    onSnapshot(doc(db, "system_config", "store_settings"), (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.maintenanceMode === true || data.is_store_open === false) {
+                console.log("🛑 MODO MANTENIMIENTO ACTIVADO: Expulsando cliente a mantenimiento.html...");
+                localStorage.removeItem("cuycitoClient");
+                sessionStorage.clear();
+                window.location.replace('mantenimiento.html');
+            }
+        }
+    });
+} catch(err) {
+    console.warn("Error en listener de mantenimiento en profile.js:", err);
+}
 
 const CENTRAL_WHATSAPP_PHONE = "";
 const BACKEND_API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
@@ -249,6 +283,12 @@ async function initProfilePage() {
         console.warn("Usuario no refrescado de Firestore:", fireErr);
     }
 
+    // Iniciar listener en tiempo real para reflejar cambios de saldo instantáneos
+    initRealtimeUserBalanceListener();
+
+    // Iniciar rastreador de presencia en vivo (online/offline)
+    initClientPresenceTracker();
+
     // Iniciar listener de mantenimiento de tienda en tiempo real
     initClientStoreMaintenanceListener();
 }
@@ -306,8 +346,108 @@ function updateClientStoreMaintenanceState() {
 }
 window.updateClientStoreMaintenanceState = updateClientStoreMaintenanceState;
 
+// ==========================================================================
+// RASTREADOR DE ESTADO DE CONEXIÓN EN VIVO (ONLINE / OFFLINE)
+// ==========================================================================
+let presenceHeartbeatInterval = null;
+
+async function sendClientPresence(isOnline = true) {
+    if (!currentClientUser || !currentClientUser.id) return;
+    try {
+        await setDoc(doc(db, "users", currentClientUser.id), {
+            isOnline: isOnline,
+            lastSeen: new Date().toISOString()
+        }, { merge: true });
+    } catch(e) {}
+}
+
+function initClientPresenceTracker() {
+    // 1. Enviar estado online de inmediato al cargar
+    sendClientPresence(true);
+
+    // 2. Heartbeat cada 30 segundos
+    if (presenceHeartbeatInterval) clearInterval(presenceHeartbeatInterval);
+    presenceHeartbeatInterval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            sendClientPresence(true);
+        }
+    }, 30000);
+
+    // 3. Detectar cambio de visibilidad de pestaña
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === 'visible') {
+            sendClientPresence(true);
+        } else {
+            sendClientPresence(false);
+        }
+    });
+
+    // 4. Detectar cierre de pestaña o salida
+    window.addEventListener("beforeunload", () => {
+        sendClientPresence(false);
+    });
+}
+window.sendClientPresence = sendClientPresence;
+
 // Sincroniza los datos más recientes del usuario desde Firestore (saldo, nickname, etc.)
 let userSnapshotUnsubscribe = null;
+let usersCollectionSnapshotUnsubscribe = null;
+
+function initRealtimeUserBalanceListener() {
+    if (usersCollectionSnapshotUnsubscribe) {
+        usersCollectionSnapshotUnsubscribe();
+        usersCollectionSnapshotUnsubscribe = null;
+    }
+
+    try {
+        usersCollectionSnapshotUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+            if (!currentClientUser) return;
+
+            snapshot.forEach(d => {
+                const uData = d.data();
+                const currentName = (currentClientUser.name || '').trim().toLowerCase();
+                const currentNick = (currentClientUser.nickname || '').trim().toLowerCase();
+                const currentPhone = (currentClientUser.phone || '').trim();
+                const currentEmail = (currentClientUser.email || '').trim().toLowerCase();
+
+                const isMatch = (d.id === currentClientUser.id) ||
+                                (uData.phone && currentPhone && uData.phone.trim() === currentPhone) ||
+                                (uData.email && currentEmail && uData.email.trim().toLowerCase() === currentEmail) ||
+                                (uData.name && currentName && uData.name.trim().toLowerCase() === currentName) ||
+                                (uData.nickname && currentNick && uData.nickname.trim().toLowerCase() === currentNick);
+
+                if (isMatch) {
+                    const prevBalance = currentClientUser.balance;
+                    const newBalance = uData.balance !== undefined ? parseFloat(uData.balance) : currentClientUser.balance;
+                    
+                    currentClientUser = { 
+                        ...currentClientUser, 
+                        id: d.id, 
+                        ...uData, 
+                        balance: newBalance 
+                    };
+                    
+                    localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+                    updateProfileUI();
+
+                    // Animación visual si el saldo fue modificado en vivo por el administrador
+                    if (prevBalance !== undefined && parseFloat(prevBalance) !== parseFloat(newBalance)) {
+                        console.log(`⚡ Saldo actualizado en vivo: S/ ${parseFloat(newBalance).toFixed(2)} (Antes: S/ ${parseFloat(prevBalance).toFixed(2)})`);
+                        const balDisplay = document.getElementById('profileBalanceDisplay');
+                        if (balDisplay) {
+                            balDisplay.classList.add('animate-bounce', 'text-emerald-400');
+                            setTimeout(() => {
+                                balDisplay.classList.remove('animate-bounce', 'text-emerald-400');
+                            }, 2500);
+                        }
+                    }
+                }
+            });
+        });
+    } catch(err) {
+        console.warn("Error en listener de saldo en tiempo real:", err);
+    }
+}
 
 async function refreshUserDataFromFirestore() {
     if (!currentClientUser) return;
@@ -319,26 +459,17 @@ async function refreshUserDataFromFirestore() {
             if (d.id === currentClientUser.id || 
                 (uData.phone && currentClientUser.phone && uData.phone.trim() === currentClientUser.phone.trim()) ||
                 (uData.email && currentClientUser.email && uData.email.trim().toLowerCase() === currentClientUser.email.trim().toLowerCase()) ||
-                (uData.name && currentClientUser.name && uData.name.trim().toLowerCase() === currentClientUser.name.trim().toLowerCase())) {
+                (uData.name && currentClientUser.name && uData.name.trim().toLowerCase() === currentClientUser.name.trim().toLowerCase()) ||
+                (uData.nickname && currentClientUser.nickname && uData.nickname.trim().toLowerCase() === currentClientUser.nickname.trim().toLowerCase())) {
                 matchedDoc = { id: d.id, ...uData };
             }
         });
 
         if (matchedDoc) {
+            const prevBalance = currentClientUser.balance;
             currentClientUser = { ...currentClientUser, ...matchedDoc };
             localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
             updateProfileUI();
-
-            // Suscribirse a cambios en tiempo real del usuario
-            if (!userSnapshotUnsubscribe && matchedDoc.id) {
-                userSnapshotUnsubscribe = onSnapshot(doc(db, "users", matchedDoc.id), (docSnap) => {
-                    if (docSnap.exists()) {
-                        currentClientUser = { ...currentClientUser, id: docSnap.id, ...docSnap.data() };
-                        localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
-                        updateProfileUI();
-                    }
-                });
-            }
         }
     } catch (e) {
         console.error("Error refrescando usuario desde Firestore:", e);
@@ -375,6 +506,10 @@ function updateProfileUI() {
     if (rouletteBal) rouletteBal.innerText = `S/ ${balance}`;
     if (avatar && nickname) avatar.innerText = nickname.charAt(0).toUpperCase();
 
+    const clientCode = getClientCode(currentClientUser);
+    const codeBadge = document.getElementById('profileClientCodeBadge');
+    if (codeBadge) codeBadge.innerText = `ID: ${clientCode}`;
+
     // Rellenar modal de edición
     const editReal = document.getElementById('editRealName');
     const editNick = document.getElementById('editNickname');
@@ -391,42 +526,46 @@ function updateProfileUI() {
 // 2. CARGA DE SUSCRIPCIONES DEL CLIENTE
 // ==========================================
 
-// Helper para vincular suscripciones con el cliente mediante múltiples criterios
+function getClientCode(client) {
+    if (!client) return 'CLI-000';
+    if (client.clientCode) return client.clientCode;
+    if (client.phone) {
+        const cleanDigits = client.phone.toString().replace(/\D/g, '');
+        if (cleanDigits.length >= 4) {
+            return `CLI-${cleanDigits.slice(-4)}`;
+        }
+    }
+    if (client.id) {
+        const cleanId = client.id.toString().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        return `CLI-${cleanId.slice(-4)}`;
+    }
+    return 'CLI-1001';
+}
+window.getClientCode = getClientCode;
+
+// Helper para vincular suscripciones con el cliente EXCLUSIVAMENTE por Identificador ID
 function isSubscriptionBelongingToClient(sub, client) {
     if (!sub || !client) return false;
 
-    const normalize = (str) => (str || '').toString().trim().toLowerCase().replace(/^@/, '');
-
-    const clientName = normalize(client.name);
-    const clientNickname = normalize(client.nickname);
+    const clientId = (client.id || '').toString().trim();
+    const clientCode = (client.clientCode || getClientCode(client) || '').toString().trim().toUpperCase();
     const clientPhone = (client.phone || '').toString().replace(/\D/g, '');
-    const clientEmail = normalize(client.email);
-    const clientId = normalize(client.id);
 
-    const subPerson = normalize(sub.person);
-    const subNickname = normalize(sub.userNickname || sub.nickname);
-    const subClientId = normalize(sub.userId || sub.clientId);
-    const subClientEmail = normalize(sub.clientEmail || sub.userEmail);
-    const subPhone = (sub.phone || sub.clientPhone || '').toString().replace(/\D/g, '');
+    const subClientId = (sub.clientId || sub.userId || '').toString().trim();
+    const subClientCode = (sub.clientCode || '').toString().trim().toUpperCase();
+    const subPhone = (sub.clientPhone || sub.phone || '').toString().replace(/\D/g, '');
 
-    // 1. Coincidencia por ID de cliente
+    // 1. Identificador Principal de Cliente (sub.clientId / sub.userId === client.id)
     if (clientId && subClientId && clientId === subClientId) return true;
 
-    // 2. Coincidencia por Teléfono (mínimo 7 dígitos)
-    if (clientPhone && subPhone && clientPhone.length >= 7 && (clientPhone.endsWith(subPhone) || subPhone.endsWith(clientPhone))) return true;
+    // 2. Identificador Único de Cliente (sub.clientCode === client.clientCode -> ej: CLI-1024)
+    if (clientCode && subClientCode && clientCode === subClientCode) return true;
 
-    // 3. Coincidencia por Correo de cliente
-    if (clientEmail && subClientEmail && clientEmail === subClientEmail) return true;
+    // 3. Identificador Telefónico Único (mínimo 7 dígitos)
+    if (clientPhone && subPhone && clientPhone.length >= 7 && clientPhone === subPhone) return true;
 
-    // 4. Coincidencia por Nickname
-    if (clientNickname && subNickname && clientNickname === subNickname) return true;
-    if (clientNickname && subPerson && (clientNickname === subPerson || subPerson.includes(clientNickname) || clientNickname.includes(subPerson))) return true;
-
-    // 5. Coincidencia por Nombre
-    if (clientName && subPerson && (clientName === subPerson || subPerson.includes(clientName) || clientName.includes(subPerson))) return true;
-
-    // 6. Si es cuenta demo
-    if (client.isDemo && (sub.isDemo || subPerson === 'cliente demo' || subPerson === 'cuycitogodemo' || subPerson === normalize(client.name))) return true;
+    // 4. Si es cuenta demo
+    if (client.isDemo && sub.isDemo) return true;
 
     return false;
 }
@@ -713,8 +852,8 @@ function renderClientSubscriptions(subs) {
                         <span>Copiar Datos de Acceso</span>
                     </button>
                 `;
-            } else if (isTvService) {
-                // STREAMING TV SMART (Netflix, Disney, Prime Video, HBO Max): Foto QR de TV
+            } else if (isTvService || sName.includes('google') || sName.includes('ai') || sName.includes('combo') || sName.includes('promo') || sub.status === 'esperando_proveedor') {
+                // STREAMING CON PROVEEDOR (Netflix, Disney, Prime Video, HBO Max, Google AI, Promociones):
                 if (sub.tvQrImage) {
                     credentialsBlockHTML = `
                         <div class="bg-gradient-to-r from-emerald-950/40 via-black to-emerald-950/20 border border-emerald-500/50 rounded-2xl p-3 text-center space-y-2">
@@ -728,35 +867,47 @@ function renderClientSubscriptions(subs) {
                             <p class="text-[10px] text-gray-300">Tu asesor está escaneando el QR para activar tu TV. Recibirás tu confirmación en breve.</p>
                         </div>
                     `;
+                    const btnText = 'Cambiar Foto QR de mi TV';
+                    actionBtnHTML = `
+                        <button onclick="window.openTvQrModal('${sub.id}', '${sub.service}')" class="w-full bg-gradient-to-r from-amber-500 via-cuycito-gold to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs py-3 px-3 rounded-xl transition shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider">
+                            <i class="fa-solid fa-rotate text-sm"></i>
+                            <span>${btnText}</span>
+                        </button>
+                    `;
                 } else {
                     credentialsBlockHTML = `
-                        <div class="bg-gradient-to-r from-amber-950/40 via-black to-amber-950/20 border border-yellow-500/40 rounded-2xl p-3.5 text-center space-y-2">
+                        <div class="bg-gradient-to-r from-amber-950/50 via-black to-amber-950/30 border border-yellow-500/50 rounded-2xl p-4 text-center space-y-3 shadow-lg">
                             <div class="flex items-center justify-center gap-2 text-yellow-400 font-bold text-xs">
-                                <i class="fa-solid fa-tv text-sm"></i>
-                                <span>Activación en Televisor Requerida (1 TV)</span>
+                                <i class="fa-solid fa-hourglass-half text-sm animate-pulse"></i>
+                                <span>Esperando que el proveedor se contacte contigo</span>
                             </div>
-                            <p class="text-[11px] text-gray-300 leading-snug">Se necesita captura del código QR de activación de tu televisor (${sub.service}). Abre la app en tu TV y toma la foto para vincular tu pantalla.</p>
+                            <p class="text-[11px] text-gray-300 leading-snug">
+                                Tu pedido de <strong>${sub.service}</strong> ha sido recibido y enviado al proveedor oficial. En breve se comunicarán contigo para la entrega de tus accesos o activación en tu dispositivo.
+                            </p>
+                            <div class="flex flex-col sm:flex-row gap-2 justify-center pt-1">
+                                <a href="https://wa.me/51966504229?text=Hola%20CuycitoGO,%20acabo%20de%20comprar%20${encodeURIComponent(sub.service)}%20y%20deseo%20consultar%20el%20estado%20de%20mi%20pedido." target="_blank" class="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-emerald-500 text-black font-black text-xs py-2.5 px-4 rounded-xl transition shadow glow-green uppercase tracking-wider">
+                                    <i class="fa-brands fa-whatsapp text-sm"></i>
+                                    <span>Consultar por WhatsApp</span>
+                                </a>
+                                <button onclick="window.openTvQrModal('${sub.id}', '${sub.service}')" class="inline-flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 hover:text-white font-bold text-xs py-2 px-3 rounded-xl transition">
+                                    <i class="fa-solid fa-camera"></i> Subir QR TV
+                                </button>
+                            </div>
                         </div>
                     `;
                 }
-
-                const btnText = sub.tvQrImage ? 'Cambiar Foto QR de mi TV' : 'Tomar Foto QR de mi TV (1 TV)';
-                const btnIcon = sub.tvQrImage ? 'fa-solid fa-rotate' : 'fa-solid fa-camera';
-                actionBtnHTML = `
-                    <button onclick="window.openTvQrModal('${sub.id}', '${sub.service}')" class="w-full bg-gradient-to-r from-amber-500 via-cuycito-gold to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs py-3 px-3 rounded-xl transition shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider">
-                        <i class="${btnIcon} text-sm"></i>
-                        <span>${btnText}</span>
-                    </button>
-                `;
             } else {
                 // Otros servicios estándar
                 credentialsBlockHTML = `
-                    <div class="bg-yellow-950/20 border border-yellow-500/30 rounded-2xl p-3 text-center space-y-1">
+                    <div class="bg-yellow-950/20 border border-yellow-500/30 rounded-2xl p-4 text-center space-y-2">
                         <div class="flex items-center justify-center gap-1.5 text-yellow-400 text-xs font-bold">
                             <i class="fa-solid fa-hourglass-half"></i>
                             <span>Activación en Proceso</span>
                         </div>
-                        <p class="text-[10px] text-gray-400">Tu cuenta está siendo configurada por el equipo de CuycitoGO.</p>
+                        <p class="text-[11px] text-gray-300">Tu cuenta está siendo configurada por el equipo de CuycitoGO.</p>
+                        <a href="https://wa.me/51966504229?text=Hola%20CuycitoGO,%20deseo%20consultar%20mi%20activación%20de%20${encodeURIComponent(sub.service)}" target="_blank" class="inline-flex items-center justify-center gap-1.5 bg-[#25D366] hover:bg-emerald-500 text-black font-black text-xs py-2 px-3 rounded-xl transition">
+                            <i class="fa-brands fa-whatsapp"></i> Contactar Soporte
+                        </a>
                     </div>
                 `;
             }
@@ -1915,7 +2066,10 @@ window.requestRenewalWhatsApp = (serviceName, endDate) => {
     window.open(`https://wa.me/${CENTRAL_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
 };
 
-window.logoutClient = () => {
+window.logoutClient = async () => {
+    try {
+        await sendClientPresence(false);
+    } catch(e){}
     localStorage.removeItem("cuycitoClient");
     window.location.replace("login-cliente.html");
 };
@@ -3022,35 +3176,127 @@ window.confirmCartCheckout = async () => {
 
     localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
 
-    // 3. Crear suscripciones para cada producto comprado en estado 'pending_activation'
+    // 3. Crear suscripciones para cada producto comprado según su tipo de servicio
     const today = new Date();
     const expiry = new Date();
     expiry.setDate(today.getDate() + 30);
 
-    profileCart.forEach(async (item) => {
+    for (const item of profileCart) {
+        const itemTitle = item.title || '';
+        const isCrunchy = itemTitle.toLowerCase().includes('crunchyroll') || itemTitle.toLowerCase().includes('crunchy');
+
         for (let i = 0; i < item.quantity; i++) {
             const subId = "sub_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
-            const newSub = {
-                id: subId,
-                person: currentClientUser.name,
-                service: item.title,
-                accountEmail: "activacion@cuycitogo.pe",
-                profileName: `Perfil ${currentClientUser.nickname || currentClientUser.name}`,
-                pin: Math.floor(1000 + Math.random() * 9000).toString(),
-                startDate: today.toISOString().split('T')[0],
-                endDate: expiry.toISOString().split('T')[0],
-                cost: 0,
-                price: item.price,
-                status: 'pending_activation', // ⏳ Nuevo estado oficial de compra
-                createdAt: new Date().toISOString()
-            };
 
-            clientSubscriptions.unshift(newSub);
-            try {
-                await setDoc(doc(db, "subscriptions", subId), newSub, { merge: true });
-            } catch(e) {}
+            if (isCrunchy) {
+                // FLUJO CRUNCHYROLL: Asignar cupo libre dentro de matriz de cuentas
+                let assignedMaster = null;
+                let assignedSlotIndex = -1;
+
+                for (const master of allMasterAccounts) {
+                    const mServ = (master.service || '').toLowerCase();
+                    if (mServ.includes('crunchyroll') || mServ.includes('crunchy')) {
+                        const profiles = master.profiles || [];
+                        const cap = master.capacity || 5;
+                        for (let s = 0; s < cap; s++) {
+                            if (!profiles[s]) {
+                                assignedMaster = master;
+                                assignedSlotIndex = s;
+                                break;
+                            }
+                        }
+                        if (assignedMaster) break;
+                    }
+                }
+
+                const clientCode = getClientCode(currentClientUser);
+
+                if (assignedMaster && assignedSlotIndex !== -1) {
+                    const pinSlot = `Perfil ${assignedSlotIndex + 1}`;
+                    const newSub = {
+                        id: subId,
+                        clientId: currentClientUser.id,
+                        clientCode: clientCode,
+                        clientPhone: currentClientUser.phone || '',
+                        clientNickname: currentClientUser.nickname || currentClientUser.name,
+                        person: currentClientUser.name,
+                        phone: currentClientUser.phone || '',
+                        service: "Crunchyroll",
+                        email: assignedMaster.email,
+                        pass: assignedMaster.pass || assignedMaster.password || 'CuycitoCrunchy2026',
+                        pin: pinSlot,
+                        startDate: today.toISOString().split('T')[0],
+                        endDate: expiry.toISOString().split('T')[0],
+                        cost: 0,
+                        price: item.price,
+                        status: 'active', // 🟢 Activo de inmediato por matriz
+                        masterAccountId: assignedMaster.id,
+                        slotIndex: assignedSlotIndex,
+                        createdAt: new Date().toISOString()
+                    };
+
+                    if (!assignedMaster.profiles) assignedMaster.profiles = [];
+                    assignedMaster.profiles[assignedSlotIndex] = subId;
+                    clientSubscriptions.unshift(newSub);
+
+                    try {
+                        await setDoc(doc(db, "subscriptions", subId), newSub, { merge: true });
+                        await setDoc(doc(db, "masterAccounts", assignedMaster.id), assignedMaster, { merge: true });
+                    } catch(e) {}
+                } else {
+                    // Si no hay cuenta cargada aún en inventario, asignar con acceso estándar activo
+                    const newSub = {
+                        id: subId,
+                        clientId: currentClientUser.id,
+                        clientCode: clientCode,
+                        clientPhone: currentClientUser.phone || '',
+                        clientNickname: currentClientUser.nickname || currentClientUser.name,
+                        person: currentClientUser.name,
+                        phone: currentClientUser.phone || '',
+                        service: "Crunchyroll",
+                        email: "crunchyroll.vip@cuycitogo.pe",
+                        pass: "CuycitoCrunchy2026",
+                        pin: `Perfil ${Math.floor(1 + Math.random() * 4)}`,
+                        startDate: today.toISOString().split('T')[0],
+                        endDate: expiry.toISOString().split('T')[0],
+                        cost: 0,
+                        price: item.price,
+                        status: 'active',
+                        createdAt: new Date().toISOString()
+                    };
+                    clientSubscriptions.unshift(newSub);
+                    try {
+                        await setDoc(doc(db, "subscriptions", subId), newSub, { merge: true });
+                    } catch(e) {}
+                }
+            } else {
+                // FLUJO NETFLIX, DISNEY, HBO, PRIME VIDEO, GOOGLE AI, PROMOCIONES:
+                // Estado 'esperando_proveedor' (Esperar que el proveedor se contacte contigo)
+                const clientCode = getClientCode(currentClientUser);
+                const newSub = {
+                    id: subId,
+                    clientId: currentClientUser.id,
+                    clientCode: clientCode,
+                    clientPhone: currentClientUser.phone || '',
+                    clientNickname: currentClientUser.nickname || currentClientUser.name,
+                    person: currentClientUser.name,
+                    phone: currentClientUser.phone || '',
+                    service: item.title,
+                    startDate: today.toISOString().split('T')[0],
+                    endDate: expiry.toISOString().split('T')[0],
+                    cost: 0,
+                    price: item.price,
+                    status: 'esperando_proveedor', // ⏳ Esperando proveedor
+                    createdAt: new Date().toISOString()
+                };
+
+                clientSubscriptions.unshift(newSub);
+                try {
+                    await setDoc(doc(db, "subscriptions", subId), newSub, { merge: true });
+                } catch(e) {}
+            }
         }
-    });
+    }
 
     // 4. Limpiar Carrito y Emitir Alertas al Dashboard
     const boughtServices = profileCart.map(item => `${item.title} (x${item.quantity}) - S/ ${(item.price * item.quantity).toFixed(2)}`).join(', ');

@@ -1,42 +1,24 @@
 import { db, collection, getDocs, setDoc, doc, query, where, onSnapshot } from './firebase-config.js';
 
 // ==========================================================================
-// PROTOCOLO DE MANTENIMIENTO: PAUSAR ACCESO POR LOGIN
+// PROTOCOLO DE MANTENIMIENTO: INHABILITAR ACCESO Y REDIRIGIR A MANTENIMIENTO.HTML
 // ==========================================================================
 let isStoreInMaintenance = false;
 
 try {
     onSnapshot(doc(db, "system_config", "store_settings"), (docSnap) => {
-        const fullScreen = document.getElementById('maintenanceFullScreen');
-        const authContainer = document.getElementById('clientAuthContainer');
-        const notice = document.getElementById('loginMaintenanceNotice');
-        const btn = document.getElementById('btnLoginSubmit');
-        const alertBox = document.getElementById('loginAlertBox');
-
-        if (docSnap.exists() && docSnap.data().maintenanceMode === true) {
-            isStoreInMaintenance = true;
-            if (fullScreen) fullScreen.classList.remove('hidden');
-            if (authContainer) authContainer.classList.add('hidden');
-            if (notice) notice.classList.remove('hidden');
-            if (btn) {
-                btn.classList.remove('from-cuycito-redDark', 'via-cuycito-red', 'to-cuycito-redHover');
-                btn.classList.add('bg-gray-800', 'text-gray-400', 'border', 'border-red-500/50');
-                btn.innerHTML = '<i class="fa-solid fa-lock text-red-400 mr-1.5"></i> Acceso Pausado por Mantenimiento';
-            }
-        } else {
-            isStoreInMaintenance = false;
-            if (fullScreen) fullScreen.classList.add('hidden');
-            if (authContainer) authContainer.classList.remove('hidden');
-            if (notice) notice.classList.add('hidden');
-            if (btn && !btn.disabled) {
-                btn.className = "w-full bg-gradient-to-r from-cuycito-redDark via-cuycito-red to-cuycito-redHover hover:from-cuycito-red hover:to-cuycito-gold text-white font-extrabold py-3.5 rounded-xl transition-all duration-300 shadow-lg glow-red text-sm flex items-center justify-center gap-2 uppercase tracking-wider";
-                btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Ingresar a Mi Cuenta';
-            }
-            if (alertBox && alertBox.innerText.includes('mantenimiento')) {
-                alertBox.classList.add('hidden');
-                alertBox.innerText = '';
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.maintenanceMode === true || data.is_store_open === false) {
+                isStoreInMaintenance = true;
+                console.log("🛑 MODO MANTENIMIENTO ACTIVADO: Redirigiendo a mantenimiento.html...");
+                localStorage.removeItem("cuycitoClient");
+                sessionStorage.clear();
+                window.location.replace('mantenimiento.html');
+                return;
             }
         }
+        isStoreInMaintenance = false;
     });
 } catch(err) {
     console.warn("Error en listener de mantenimiento login:", err);
@@ -177,10 +159,19 @@ if (form) {
             const snap = await getDocs(q);
 
             if (!snap.empty) {
-                const userData = snap.docs[0].data();
+                const docId = snap.docs[0].id;
+                const userData = { id: docId, ...snap.docs[0].data(), isOnline: true, lastSeen: new Date().toISOString() };
                 if (!userData.nickname) {
                     userData.nickname = userData.name;
                 }
+
+                try {
+                    await setDoc(doc(db, "users", docId), {
+                        isOnline: true,
+                        lastSeen: new Date().toISOString()
+                    }, { merge: true });
+                } catch(e){}
+
                 localStorage.setItem("cuycitoClient", JSON.stringify(userData));
                 btn.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i> ¡Acceso Concedido!';
                 

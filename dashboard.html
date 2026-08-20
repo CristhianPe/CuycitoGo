@@ -18,45 +18,46 @@
 </head>
 <body class="h-full flex flex-col font-sans selection:bg-cuycito-gold selection:text-black hidden" id="mainBody">
 
-    <header class="bg-cuycito-dark border-b-2 border-cuycito-red px-4 sm:px-6 py-3 flex items-center justify-between shrink-0 shadow-lg shadow-cuycito-red/10 z-10">
-        <div class="flex items-center gap-2.5 sm:gap-4">
-            <img src="assets/img/logo.png" alt="CuycitoGO" class="h-10 sm:h-14 object-contain drop-shadow-[0_0_15px_rgba(255,183,3,0.35)]">
+    <header class="bg-cuycito-dark border-b-2 border-cuycito-red px-3 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-lg shadow-cuycito-red/10 z-20 sticky top-0">
+        <!-- LADO IZQUIERDO: LOGO + INTERRUPTOR ÚNICO DE MANTENIMIENTO -->
+        <div class="flex items-center gap-2 sm:gap-4">
+            <img src="assets/img/logo.png" alt="CuycitoGO" class="h-9 sm:h-12 object-contain drop-shadow-[0_0_15px_rgba(255,183,3,0.35)]">
             <div>
-                <h1 class="text-xl sm:text-3xl font-black tracking-widest text-cuycito-gold drop-shadow-md leading-none" style="font-family: impact, sans-serif;">CuycitoGO</h1>
-                <p class="text-[9px] sm:text-xs text-gray-400 uppercase tracking-widest font-bold">Admin Center PRO</p>
+                <h1 class="text-lg sm:text-2xl font-black tracking-widest text-cuycito-gold drop-shadow-md leading-none" style="font-family: impact, sans-serif;">CuycitoGO</h1>
+                <p class="text-[8px] sm:text-[10px] text-gray-400 uppercase tracking-widest font-bold hidden xs:block">Admin Center PRO</p>
             </div>
             
-            <!-- INTERRUPTOR MAESTRO DE ACCESO A TIENDA (SIEMPRE VISIBLE EN EL HEADER) -->
-            <div class="store-maintenance-header-box flex items-center gap-2.5 bg-black/90 border-2 border-emerald-500/80 px-3 py-1.5 rounded-2xl shadow-xl ml-2 sm:ml-4 transition-all">
-                <div class="flex flex-col text-right">
-                    <span class="text-[10px] sm:text-xs font-black uppercase tracking-wider store-switch-label text-emerald-400">TIENDA OPERATIVA</span>
-                    <span class="text-[9px] text-gray-400 store-switch-sublabel hidden sm:inline">Acceso Clientes OK</span>
+            <!-- INTERRUPTOR MAESTRO ÚNICO: PROTOCOLO DE MANTENIMIENTO (RESPONSIVE) -->
+            <div id="topHeaderStoreSwitchContainer" class="flex items-center gap-2 bg-black/90 border border-gray-800 hover:border-gray-700 px-2.5 py-1 rounded-xl shadow transition ml-1 sm:ml-2">
+                <div class="text-right">
+                    <span id="topHeaderStoreSwitchLabel" class="block text-[10px] sm:text-[11px] font-black uppercase text-emerald-400 leading-tight">TIENDA OPERATIVA</span>
+                    <span id="topHeaderStoreSwitchSublabel" class="text-[8px] sm:text-[9px] text-gray-500 hidden sm:block leading-none">Clientes con acceso</span>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="headerStoreMaintenanceToggle" onchange="window.handleStoreMaintenanceToggle(this.checked)" class="sr-only peer">
-                    <div class="w-12 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                    <input type="checkbox" id="globalStoreMaintenanceToggle" onchange="window.handleStoreMaintenanceToggle(this.checked)" class="sr-only peer">
+                    <div class="w-10 sm:w-11 h-5 sm:h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 sm:after:h-5 after:w-4 sm:after:w-5 after:transition-all peer-checked:bg-red-600"></div>
                 </label>
             </div>
         </div>
 
-        <!-- Controles para PC -->
-        <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <!-- LADO DERECHO: CONTROLES PARA PC / ESCRITORIO (>= 1280px) -->
+        <div class="hidden xl:flex items-center gap-2">
             <!-- Botón de Estado de Notificaciones Chrome -->
             <button 
                 id="btnChromeNotifStatus" 
                 onclick="window.requestChromeNotificationPermission()" 
-                class="hidden md:flex bg-yellow-950/80 hover:bg-yellow-900/80 border border-yellow-500/50 text-xs px-3 py-1.5 rounded-xl transition items-center gap-2 shadow glow-gold cursor-pointer"
+                class="bg-yellow-950/80 hover:bg-yellow-900/80 border border-yellow-500/50 text-xs px-2.5 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow glow-gold cursor-pointer"
                 title="Haz clic para activar o verificar notificaciones de Google Chrome"
             >
                 <i class="fa-solid fa-bell text-yellow-400 text-sm animate-pulse"></i>
-                <span class="text-yellow-300 font-bold hidden lg:inline">Alertas</span>
+                <span class="text-yellow-300 font-bold text-xs">Alertas</span>
             </button>
 
             <!-- Menú Rápido de Pruebas de Notificación -->
-            <div class="relative group hidden sm:block">
+            <div class="relative group">
                 <button class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 text-xs px-2.5 py-1.5 rounded-xl transition font-bold flex items-center gap-1" title="Probar Alertas">
                     <i class="fa-solid fa-vial text-cyan-400"></i>
-                    <span class="hidden md:inline">Test</span>
+                    <span>Test</span>
                 </button>
                 <div class="absolute right-0 top-full mt-2 w-48 bg-[#161616] border border-gray-800 rounded-xl p-2 shadow-2xl space-y-1 hidden group-hover:block z-50 animate-fade-in">
                     <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider px-2 py-1">Probar Alertas:</div>
@@ -76,107 +77,109 @@
             </div>
 
             <!-- Indicador único de Auto-Guardado en Nube (Interactivo) -->
-            <div id="dbStatus" onclick="window.triggerManualSync()" class="cursor-pointer hover:border-emerald-400 transition text-[11px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl bg-black/90 border border-emerald-500/50 text-emerald-400 flex items-center gap-2 shadow glow-gold" title="Auto-guardado activo. Haz click para forzar sincronización inmediata.">
+            <div id="dbStatus" onclick="window.triggerManualSync()" class="cursor-pointer hover:border-emerald-400 transition text-[11px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl bg-black/90 border border-emerald-500/50 text-emerald-400 flex items-center gap-1.5 shadow" title="Auto-guardado activo. Haz click para forzar sincronización inmediata.">
                 <i class="fa-solid fa-cloud-check text-emerald-400 text-sm animate-pulse"></i>
-                <span id="dbStatusText">Nube Sincronizada</span>
+                <span id="dbStatusText">Nube OK</span>
             </div>
 
-            <div class="flex items-center bg-black p-1 rounded-xl border border-cuycito-red/50">
-                <span class="text-xs text-slate-400 px-2 font-medium">Moneda:</span>
-                <button id="currencyPEN" onclick="window.setGlobalCurrency('PEN')" class="px-3 py-1 text-xs font-bold rounded bg-cuycito-gold text-black transition">PEN (S/)</button>
-                <button id="currencyUSD" onclick="window.setGlobalCurrency('USD')" class="px-3 py-1 text-xs font-bold rounded text-slate-400 hover:text-cuycito-gold transition">USD ($)</button>
+            <!-- Selector de Moneda -->
+            <div class="flex items-center bg-black p-0.5 rounded-xl border border-cuycito-red/50">
+                <button id="currencyPEN" onclick="window.setGlobalCurrency('PEN')" class="px-2 py-1 text-[11px] font-bold rounded bg-cuycito-gold text-black transition">PEN (S/)</button>
+                <button id="currencyUSD" onclick="window.setGlobalCurrency('USD')" class="px-2 py-1 text-[11px] font-bold rounded text-slate-400 hover:text-cuycito-gold transition">USD ($)</button>
             </div>
             
-            <button onclick="document.getElementById('pwdGenModal').classList.remove('hidden'); window.generatePassword();" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition shadow">
-                <i class="fa-solid fa-key"></i> Generar Pass
+            <button onclick="document.getElementById('pwdGenModal').classList.remove('hidden'); window.generatePassword();" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition shadow">
+                <i class="fa-solid fa-key"></i> Pass
             </button>
             
-            <button onclick="document.getElementById('jsonModal').classList.remove('hidden')" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-white text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition" title="Backup / Restauración JSON">
+            <button onclick="document.getElementById('jsonModal').classList.remove('hidden')" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-white text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 font-bold transition" title="Backup / Restauración JSON">
                 <i class="fa-solid fa-code text-cuycito-red"></i> JSON
             </button>
             
-            <button onclick="window.logoutApp()" class="bg-gray-900 hover:bg-cuycito-redDark border border-gray-800 text-gray-300 hover:text-white text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 font-bold transition">
+            <button onclick="window.logoutApp()" class="bg-gray-900 hover:bg-cuycito-redDark border border-gray-800 text-gray-300 hover:text-white text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 font-bold transition">
                 <i class="fa-solid fa-right-from-bracket"></i> Salir
             </button>
         </div>
 
-        <!-- Controles para Móvil & Tablets (< 1280px) -->
-        <div class="flex xl:hidden items-center gap-2">
-            <button onclick="window.toggleMobileSidebar(true)" class="bg-gradient-to-r from-cuycito-red to-orange-500 hover:from-red-600 hover:to-orange-400 text-white font-black text-xs px-3 py-2 rounded-xl transition shadow flex items-center gap-1.5 glow-red">
+        <!-- LADO DERECHO: CONTROLES PARA MÓVIL Y TABLET (< 1280px) -->
+        <div class="flex xl:hidden items-center gap-1.5 sm:gap-2">
+            <button onclick="window.toggleMobileSidebar(true)" class="bg-gradient-to-r from-cuycito-red to-orange-500 hover:from-red-600 hover:to-orange-400 text-white font-black text-xs px-2.5 sm:px-3 py-1.5 rounded-xl transition shadow flex items-center gap-1.5 glow-red">
                 <i class="fa-solid fa-bolt text-yellow-300"></i>
                 <span class="hidden xs:inline">+ Operación</span>
             </button>
             
-            <button onclick="window.toggleMobileAlertsSidebar(true)" class="relative bg-gray-900 hover:bg-gray-800 border border-yellow-500/50 text-cuycito-gold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5 font-bold" title="Alertas por Vencer & Notas">
-                <i class="fa-solid fa-bell text-yellow-400"></i>
-                <span id="mobileAlertCountBadge" class="bg-cuycito-red text-white text-[10px] font-black px-1.5 py-0.2 rounded-full shadow glow-red animate-pulse">0</span>
+            <button onclick="window.toggleMobileAlertsSidebar(true)" class="relative bg-gray-900 hover:bg-gray-800 border border-yellow-500/50 text-cuycito-gold text-xs p-2 rounded-xl transition flex items-center gap-1 font-bold" title="Alertas por Vencer & Notas">
+                <i class="fa-solid fa-bell text-sm"></i>
+                <span id="mobileAlertCount" class="hidden absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">0</span>
             </button>
 
-            <button onclick="window.toggleMobileUtilsModal(true)" class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-cuycito-gold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5 font-black" title="Menú de Utilidades">
-                <i class="fa-solid fa-bars"></i>
+            <button onclick="window.logoutApp()" class="bg-gray-900 hover:bg-red-950 border border-gray-800 text-gray-400 hover:text-red-400 p-2 rounded-xl text-xs transition" title="Cerrar sesión">
+                <i class="fa-solid fa-right-from-bracket"></i>
             </button>
         </div>
     </header>
 
-    <div class="flex-1 flex overflow-hidden relative">
-        
-        <!-- Backdrop para móvil -->
-        <div id="sidebarBackdrop" onclick="window.toggleMobileSidebar(false)" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 xl:hidden hidden"></div>
-
-        <!-- Sidebar Adaptativo (Fijo en Desktop >= 1280px, Drawer en Móvil) -->
-        <aside id="dashboardSidebar" class="fixed xl:static inset-y-0 left-0 z-50 xl:z-auto w-80 max-w-[85vw] bg-cuycito-dark border-r border-cuycito-red/30 p-5 overflow-y-auto shrink-0 flex flex-col gap-4 custom-scrollbar transition-transform duration-300 -translate-x-full xl:translate-x-0 shadow-2xl xl:shadow-none">
-            
-            <!-- Barra de cierre en móvil -->
-            <div class="flex items-center justify-between xl:hidden border-b border-gray-800 pb-3">
-                <span class="text-xs font-black text-cuycito-gold uppercase tracking-wider flex items-center gap-1.5">
-                    <i class="fa-solid fa-bolt text-yellow-400"></i> Operación Rápida
-                </span>
-                <button onclick="window.toggleMobileSidebar(false)" class="text-gray-400 hover:text-white text-base p-1">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-
-            <button onclick="document.getElementById('bulkAddModal').classList.remove('hidden'); window.generateBulkCells(); window.toggleMobileSidebar(false);" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs py-3 rounded flex justify-center items-center gap-2 font-black transition glow-gold uppercase tracking-widest border border-blue-400/50 mb-2">
-                <i class="fa-solid fa-users"></i> Registro Múltiple
-            </button>
-
-            <h2 class="hidden xl:flex text-sm font-black uppercase tracking-widest text-cuycito-gold border-b border-cuycito-red pb-2 items-center gap-2">
-                <i class="fa-solid fa-bolt"></i> Operación Rápida
-            </h2>
-            <form id="txForm" onsubmit="window.handleFormSubmit(event)" class="space-y-4 text-xs font-medium">
+    <div class="flex flex-1 overflow-hidden relative">
+        <!-- SIDEBAR DE AGREGAR OPERACIÓN RÁPIDA -->
+        <aside id="mainSidebar" class="w-80 bg-cuycito-dark border-r border-gray-800 flex flex-col justify-between p-6 shadow-2xl z-30 transition-all duration-300 absolute inset-y-0 left-0 transform -translate-x-full xl:relative xl:translate-x-0">
+            <form id="txForm" onsubmit="window.handleFormSubmit(event)" class="space-y-4 text-xs">
+                <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+                    <h3 class="text-sm font-black text-cuycito-gold uppercase tracking-wider">Nueva Operación</h3>
+                    <button type="button" onclick="window.toggleMobileSidebar(false)" class="xl:hidden text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-base"></i></button>
+                </div>
+                
                 <div>
-                    <label class="block text-gray-400 mb-1">Tipo de Operación</label>
-                    <select id="txType" onchange="window.toggleTypeUI()" class="w-full bg-black border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold">
-                        <option value="VENTA">Venta (Cliente)</option>
-                        <option value="COMPRA">Compra (Proveedor)</option>
+                    <label class="block text-gray-400 mb-1">Tipo de Movimiento</label>
+                    <select id="txType" onchange="window.toggleTypeUI()" class="w-full bg-black border border-gray-800 rounded p-2 text-white font-bold outline-none focus:border-cuycito-gold">
+                        <option value="VENTA">🟢 VENTA (Cliente)</option>
+                        <option value="COMPRA">🔴 COMPRA (Proveedor)</option>
                     </select>
                 </div>
+                
                 <div>
-                    <label id="personLabel" class="block text-gray-400 mb-1">Nombre del Cliente (Identificador)</label>
-                    <input type="text" id="personName" required placeholder="Ej. Juan Pérez" class="w-full bg-black border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold">
+                    <label id="personLabel" class="block text-gray-400 mb-1">Nombre o ID del Cliente (Identificador)</label>
+                    <input type="text" id="personName" list="clientsDatalist" required placeholder="Ej: CLI-1024 o Juan Pérez" class="w-full bg-black border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold">
+                    <datalist id="clientsDatalist"></datalist>
                 </div>
+
                 <div>
-                    <label class="block text-gray-400 mb-1">Servicio Streaming</label>
+                    <label class="block text-gray-400 mb-1">Servicio</label>
                     <select id="txService" onchange="window.handleServiceSelectChange('txService', 'txServiceCustom')" class="w-full bg-black border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold"></select>
-                    <input type="text" id="txServiceCustom" placeholder="Nombre del nuevo servicio..." class="hidden w-full bg-black border border-cuycito-gold rounded p-2 text-white mt-2 outline-none">
+                    <input type="text" id="txServiceCustom" placeholder="Escribe el nombre del nuevo servicio..." class="w-full bg-black border border-cuycito-gold rounded p-2 text-white outline-none mt-2 hidden text-xs">
                 </div>
-                <div class="p-3 bg-[#0a0a0a] rounded-lg border border-gray-800 space-y-3">
-                    <p class="font-bold text-cuycito-red_light text-xs uppercase tracking-wider"><i class="fa-solid fa-key"></i> Credenciales</p>
-                    <input type="text" id="credEmail" placeholder="Correo / Usuario" class="w-full bg-cuycito-dark border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="text" id="credPass" placeholder="Contraseña" class="bg-cuycito-dark border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold">
-                        <input type="text" id="credPin" placeholder="PIN / Perfil" class="bg-cuycito-dark border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold">
+
+                <!-- Credenciales asignadas -->
+                <div class="bg-black/40 p-3 rounded-lg border border-gray-800/80 space-y-2">
+                    <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Credenciales de Acceso</span>
+                    <div>
+                        <input type="text" id="credEmail" placeholder="Correo / Usuario" class="w-full bg-black border border-gray-800 rounded p-1.5 text-white outline-none focus:border-cuycito-gold text-[11px]">
                     </div>
-                    <div class="flex items-center gap-2 pt-1">
-                        <input type="checkbox" id="credHidePass" class="w-3.5 h-3.5 accent-cuycito-gold bg-black border-gray-700">
-                        <label for="credHidePass" class="text-[10px] text-gray-400 font-semibold cursor-pointer">🔒 Ocultar contraseña al cliente en su portal</label>
+                    <div>
+                        <input type="text" id="credPass" placeholder="Contraseña" class="w-full bg-black border border-gray-800 rounded p-1.5 text-white outline-none focus:border-cuycito-gold text-[11px]">
+                    </div>
+                    <div>
+                        <input type="text" id="credPin" placeholder="Perfil / PIN (Opcional)" class="w-full bg-black border border-gray-800 rounded p-1.5 text-white outline-none focus:border-cuycito-gold text-[11px]">
+                    </div>
+                    <div class="pt-1 flex items-center justify-between">
+                        <label class="text-[10px] text-gray-400 flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" id="credHidePass" class="rounded bg-black border-gray-700 text-cuycito-gold focus:ring-0">
+                            <span>Ocultar Contraseña al Cliente</span>
+                        </label>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div><label class="block text-gray-400 mb-1">Monto Cobrado</label><input type="number" step="0.01" id="txAmount" required placeholder="0.00" class="w-full bg-black border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold"></div>
-                    <div><label class="block text-gray-400 mb-1">Moneda</label><select id="txCurrency" class="w-full bg-black border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold"><option value="PEN">PEN (S/)</option><option value="USD">USD ($)</option></select></div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-gray-400 mb-1">Monto</label><input type="number" step="0.01" id="txAmount" required placeholder="0.00" class="w-full bg-black border border-gray-800 rounded p-2 text-white font-bold outline-none focus:border-cuycito-gold"></div>
+                    <div>
+                        <label class="block text-gray-400 mb-1">Moneda</label>
+                        <select id="txCurrency" class="w-full bg-black border border-gray-800 rounded p-2 text-white font-bold outline-none focus:border-cuycito-gold">
+                            <option value="PEN">PEN (S/)</option>
+                            <option value="USD">USD ($)</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
+                
+                <div class="grid grid-cols-2 gap-2">
                     <div><label class="block text-gray-400 mb-1">Fecha Inicio</label><input type="date" id="startDate" required onchange="window.calculateEndDate()" class="w-full bg-black border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold text-[10px]"></div>
                     <div><label class="block text-gray-400 mb-1">Meses (30d)</label><input type="number" min="1" value="1" id="durationMonths" required onchange="window.calculateEndDate()" class="w-full bg-black border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold"></div>
                 </div>
@@ -192,41 +195,6 @@
 
         <main class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar relative" style="background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png'); background-color: rgba(10, 10, 10, 0.85); background-blend-mode: overlay;">
             
-            <!-- ========================================================= -->
-            <!-- BARRA DE CONTROL GLOBAL: INTERRUPTOR DE ACCESO A TIENDA   -->
-            <!-- (CASOS CRÍTICOS / MODO MANTENIMIENTO)                     -->
-            <!-- ========================================================= -->
-            <div id="globalStoreMaintenanceBar" class="store-maintenance-card bg-gradient-to-r from-gray-900 via-black to-gray-900 border-2 border-emerald-500/60 rounded-2xl p-4 shadow-2xl transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div class="flex items-center gap-3.5">
-                    <div class="store-control-icon-box w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xl shadow shrink-0">
-                        <i class="fa-solid fa-store"></i>
-                    </div>
-                    <div class="space-y-0.5">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span class="text-xs sm:text-sm font-black text-white uppercase tracking-wider">Protocolo de Acceso a Tienda & Clientes</span>
-                            <span class="store-status-badge bg-emerald-950 text-emerald-300 border border-emerald-500/60 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Clientes Activados (Tienda Operativa)
-                            </span>
-                        </div>
-                        <p class="store-status-desc text-xs text-gray-400 leading-snug">
-                            Acceso por login habilitado para todos los clientes. Compras y tienda operativas.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-4 bg-black/90 border border-gray-800 px-4 py-2 rounded-2xl shrink-0 w-full sm:w-auto justify-between sm:justify-end">
-                    <div class="text-right">
-                        <span class="store-switch-label block text-xs font-black uppercase text-emerald-400">TIENDA OPERATIVA</span>
-                        <span class="store-switch-sublabel text-[10px] text-gray-500">Mantenimiento Desactivado</span>
-                    </div>
-                    
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="globalStoreMaintenanceToggle" onchange="window.handleStoreMaintenanceToggle(this.checked)" class="sr-only peer">
-                        <div class="w-14 h-7 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-red-600"></div>
-                    </label>
-                </div>
-            </div>
-
             <div class="flex border-b border-gray-800 gap-2 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth flex-nowrap pb-2 shrink-0">
                 <button id="tab-btn-subs" onclick="window.switchTab('subs')" class="text-cuycito-gold border-b-2 border-cuycito-gold pb-2 font-black uppercase tracking-wider text-xs sm:text-sm transition shrink-0 whitespace-nowrap"><i class="fa-solid fa-layer-group"></i> Servicios Activos</button>
                 <button id="tab-btn-master" onclick="window.switchTab('master')" class="text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-xs sm:text-sm transition shrink-0 whitespace-nowrap"><i class="fa-solid fa-server"></i> Cuentas Raíz</button>
@@ -347,54 +315,12 @@
 
             <!-- TAB 4: ACCESOS TIENDA -->
             <section id="view-clients" class="hidden space-y-6">
-                <!-- INTERRUPTOR DE ACCESO A TIENDA & MODO MANTENIMIENTO CRÍTICO -->
-                <div class="store-maintenance-card bg-gradient-to-r from-gray-900 via-black to-gray-900 border-2 border-emerald-500/50 rounded-2xl p-4 sm:p-5 shadow-2xl transition-all duration-300">
-                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                        <div class="flex items-start sm:items-center gap-3.5">
-                            <div class="store-control-icon-box w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-2xl shadow shrink-0">
-                                <i class="fa-solid fa-store"></i>
-                            </div>
-                            <div class="space-y-1">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <h3 class="text-sm sm:text-base font-black text-white uppercase tracking-wider">Control de Acceso a Tienda (Casos Críticos)</h3>
-                                    <span class="store-status-badge bg-emerald-950 text-emerald-300 border border-emerald-500/60 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Clientes Activados (Tienda Abierta)
-                                    </span>
-                                </div>
-                                <p class="store-status-desc text-xs text-gray-400 leading-snug">
-                                    Los clientes pueden explorar el catálogo, agregar saldo y adquirir pantallas con normalidad.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-4 bg-black/90 border border-gray-800 px-4 py-2.5 rounded-2xl shrink-0 w-full sm:w-auto justify-between sm:justify-end">
-                            <div class="text-right">
-                                <span class="store-switch-label block text-xs font-black uppercase text-emerald-400">TIENDA OPERATIVA</span>
-                                <span class="store-switch-sublabel text-[10px] text-gray-500">Mantenimiento Desactivado</span>
-                            </div>
-                            
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="storeMaintenanceSwitch" onchange="window.handleStoreMaintenanceToggle(this.checked)" class="sr-only peer">
-                                <div class="w-14 h-7 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-red-600"></div>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 bg-black/50 p-4 rounded-xl border border-gray-800">
                     <div>
                         <h3 class="text-sm font-black text-white uppercase"><i class="fa-solid fa-address-book text-blue-400 mr-1.5"></i> Gestión de Accesos & Servicios de Clientes</h3>
                         <p class="text-xs text-gray-400 mt-0.5">Verifica solicitudes de cuenta gratis, valida referidos VIP y administra credenciales de clientes.</p>
                     </div>
                     <div class="flex items-center gap-3 flex-wrap">
-                        <!-- Interruptor en barra de clientes -->
-                        <div class="store-maintenance-card flex items-center gap-2.5 bg-black border-2 border-emerald-500/70 px-3.5 py-1.5 rounded-xl shadow">
-                            <span class="store-switch-label text-[11px] font-black uppercase text-emerald-400">TIENDA OPERATIVA</span>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="storeMaintenanceSwitchClientsRow" onchange="window.handleStoreMaintenanceToggle(this.checked)" class="sr-only peer">
-                                <div class="w-12 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-                            </label>
-                        </div>
                         <button onclick="window.openClientModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-4 py-2.5 rounded-lg glow-gold transition flex items-center gap-2">
                             <i class="fa-solid fa-user-plus"></i> Crear Acceso Web Manual
                         </button>
@@ -470,6 +396,7 @@
                                         <th class="p-4">Nickname</th>
                                         <th class="p-4">Número (Usuario)</th>
                                         <th class="p-4">Contraseña</th>
+                                        <th class="p-4 text-emerald-400 font-black">SALDOS (Editable)</th>
                                         <th class="p-4">Servicios Activos Enlazados</th>
                                         <th class="p-4 text-center">Acciones & Enlazado</th>
                                     </tr>
@@ -529,40 +456,6 @@
 
             <!-- TAB 5: CATÁLOGO WEB & PUBLICACIÓN CON STOCK -->
             <section id="view-catalog" class="hidden space-y-4 pb-10">
-                <!-- INTERRUPTOR DE ACCESO A TIENDA & MODO MANTENIMIENTO CRÍTICO -->
-                <div class="store-maintenance-card bg-gradient-to-r from-gray-900 via-black to-gray-900 border-2 border-emerald-500/50 rounded-2xl p-4 sm:p-5 shadow-2xl transition-all duration-300">
-                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                        <div class="flex items-start sm:items-center gap-3.5">
-                            <div class="store-control-icon-box w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-2xl shadow shrink-0">
-                                <i class="fa-solid fa-store"></i>
-                            </div>
-                            <div class="space-y-1">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <h3 class="text-sm sm:text-base font-black text-white uppercase tracking-wider">Control de Acceso a Tienda (Casos Críticos)</h3>
-                                    <span class="store-status-badge bg-emerald-950 text-emerald-300 border border-emerald-500/60 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Clientes Activados (Tienda Abierta)
-                                    </span>
-                                </div>
-                                <p class="store-status-desc text-xs text-gray-400 leading-snug">
-                                    Los clientes pueden explorar el catálogo, agregar saldo y adquirir pantallas con normalidad.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-4 bg-black/90 border border-gray-800 px-4 py-2.5 rounded-2xl shrink-0 w-full sm:w-auto justify-between sm:justify-end">
-                            <div class="text-right">
-                                <span class="store-switch-label block text-xs font-black uppercase text-emerald-400">TIENDA OPERATIVA</span>
-                                <span class="store-switch-sublabel text-[10px] text-gray-500">Mantenimiento Desactivado</span>
-                            </div>
-                            
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="storeMaintenanceSwitchCatalog" onchange="window.handleStoreMaintenanceToggle(this.checked)" class="sr-only peer">
-                                <div class="w-14 h-7 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-red-600"></div>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-black/50 p-4 rounded-xl border border-gray-800">
                     <div>
                         <h3 class="text-sm font-black text-cuycito-gold uppercase"><i class="fa-solid fa-tags text-cuycito-gold mr-1.5"></i> Gestión del Catálogo Web & Stock en Vivo</h3>
@@ -710,11 +603,12 @@
                                     <th class="p-3">Tipo de Acreditación</th>
                                     <th class="p-3">Referencia / Comprobante</th>
                                     <th class="p-3 text-center">Estado</th>
+                                    <th class="p-3 text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="completedRechargesTableBody" class="divide-y divide-gray-800 font-mono">
                                 <tr>
-                                    <td colspan="6" class="p-8 text-center text-gray-500 font-sans">Cargando historial de recargas...</td>
+                                    <td colspan="7" class="p-8 text-center text-gray-500 font-sans">Cargando historial de recargas...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2013,8 +1907,8 @@
         </div>
     </div>
 
-    <script src="js/ai-marketing-agent.js?v=2.6"></script>
-    <script src="js/admin-notifications.js?v=2.6"></script>
-    <script type="module" src="js/app.js?v=2.6"></script>
+    <script src="js/ai-marketing-agent.js?v=2.9"></script>
+    <script src="js/admin-notifications.js?v=2.9"></script>
+    <script type="module" src="js/app.js?v=2.9"></script>
 </body>
 </html>

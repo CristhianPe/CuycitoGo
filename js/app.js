@@ -179,7 +179,23 @@ onAuthStateChanged(auth, async (user) => {
             clientSnap.forEach(d => {
                 const data = d.data();
                 if (!data.nickname) data.nickname = data.name || 'Cliente';
+                data.id = d.id;
                 appState.clients.push(data);
+            });
+
+            // Saneamiento y auto-asignación de identificador ID en suscripciones heredadas
+            appState.subscriptions.forEach(async (s) => {
+                if (!s.clientId && s.person && s.person !== 'Sin Asignar') {
+                    const matched = appState.clients.find(c => (c.name || '').trim().toLowerCase() === s.person.trim().toLowerCase());
+                    if (matched) {
+                        s.clientId = matched.id;
+                        s.clientCode = matched.clientCode || window.getClientCode(matched);
+                        s.clientPhone = matched.phone || '';
+                        try {
+                            await setDoc(doc(db, "subscriptions", s.id), s, { merge: true });
+                        } catch(e){}
+                    }
+                }
             });
 
             const catalogSnap = await getDocs(collection(db, "store_catalog"));
@@ -492,11 +508,52 @@ window.handleFormSubmit = async (e) => {
     const amount = parseFloat(document.getElementById('txAmount').value) || 0;
     const currency = document.getElementById('txCurrency').value;
 
-    const newSub = { id, type, person, service, email, pass, pin, hidePassword, showCredentials, amount, currency, startDate, endDate, months };
+    let matchedClientId = null;
+    let matchedClientCode = null;
+    let matchedClientPhone = null;
+    let matchedClientPersonName = person;
+
+    const matchedClient = appState.clients.find(c => {
+        const cName = (c.name || '').trim().toLowerCase();
+        const cNick = (c.nickname || '').trim().toLowerCase();
+        const cPhone = (c.phone || '').trim();
+        const cCode = (c.clientCode || window.getClientCode(c)).trim().toLowerCase();
+        const searchVal = person.toLowerCase();
+        return cCode === searchVal || cName === searchVal || cNick === searchVal || cPhone === person || (person.includes(cCode) && cCode.length > 3);
+    });
+
+    if (matchedClient) {
+        matchedClientId = matchedClient.id;
+        matchedClientCode = matchedClient.clientCode || window.getClientCode(matchedClient);
+        matchedClientPhone = matchedClient.phone;
+        matchedClientPersonName = matchedClient.name;
+    }
+
+    const newSub = { 
+        id, 
+        type, 
+        person: matchedClientPersonName, 
+        clientId: matchedClientId,
+        clientCode: matchedClientCode,
+        clientPhone: matchedClientPhone,
+        service, 
+        email, 
+        pass, 
+        pin, 
+        hidePassword, 
+        hidePasswordFromClient: hidePassword,
+        showCredentials, 
+        showCredentialsToClient: showCredentials,
+        amount, 
+        currency, 
+        startDate, 
+        endDate, 
+        months 
+    };
     appState.subscriptions.push(newSub);
 
     const txId = 'tx_cuy_' + Date.now();
-    const newTx = { id: txId, date: startDate, type, person, service, amount, currency };
+    const newTx = { id: txId, date: startDate, type, person: matchedClientPersonName, service, amount, currency, clientId: matchedClientId, clientCode: matchedClientCode };
     appState.history.push(newTx);
 
     try {
@@ -505,7 +562,7 @@ window.handleFormSubmit = async (e) => {
 
         // Si es una Venta a un cliente con código de referido, registrar compra efectuada
         if (type === 'VENTA') {
-            const client = appState.clients.find(c => (c.name || '').trim().toLowerCase() === person.toLowerCase() || (c.nickname || '').trim().toLowerCase() === person.toLowerCase());
+            const client = matchedClient || appState.clients.find(c => (c.name || '').trim().toLowerCase() === person.toLowerCase() || (c.nickname || '').trim().toLowerCase() === person.toLowerCase());
             if (client && (client.referredCodeUsed || client.referredBy)) {
                 const refCodeUsed = client.referredCodeUsed || client.referredBy;
                 const referrer = appState.clients.find(c => {
@@ -727,19 +784,36 @@ window.toggleMasterCredentialsVisibility = async (accId) => {
 
     // Sincronizar todas las suscripciones de esta Cuenta Raíz (por perfiles, masterAccountId o email)
     appState.subscriptions.forEach(async (sub) => {
-        const isLinkedByProfile = acc.profiles && acc.profiles.includes(sub.id);
+        const isLinkedByProfile = acc.profiles && Array.isArray(acc.profiles) && acc.profiles.includes(sub.id);
         const isLinkedById = sub.masterAccountId === acc.id;
         const isLinkedByEmail = sub.email && acc.email && sub.email.trim().toLowerCase() === acc.email.trim().toLowerCase();
 
         if (isLinkedByProfile || isLinkedById || isLinkedByEmail) {
+            sub.masterAccountId = acc.id;
             sub.hidePassword = acc.hidePasswordFromClient;
+            sub.hidePasswordFromClient = acc.hidePasswordFromClient;
             sub.showCredentials = acc.showCredentialsToClient;
-            try { await setDoc(doc(db, "subscriptions", sub.id), sub, { merge: true }); } catch(e){}
+            sub.showCredentialsToClient = acc.showCredentialsToClient;
+            try { 
+                await setDoc(doc(db, "subscriptions", sub.id), {
+                    hidePassword: acc.hidePasswordFromClient,
+                    hidePasswordFromClient: acc.hidePasswordFromClient,
+                    showCredentials: acc.showCredentialsToClient,
+                    showCredentialsToClient: acc.showCredentialsToClient,
+                    masterAccountId: acc.id,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true }); 
+            } catch(e){}
         }
     });
 
     try {
-        await setDoc(doc(db, "masterAccounts", acc.id), acc, { merge: true });
+        await setDoc(doc(db, "masterAccounts", acc.id), {
+            ...acc,
+            hidePasswordFromClient: acc.hidePasswordFromClient,
+            showCredentialsToClient: acc.showCredentialsToClient,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
     } catch(e) { console.error(e); }
 
     window.renderMasterAccounts();
@@ -841,14 +915,17 @@ window.confirmAssignSlot = async (subId) => {
     if (!acc || !sub) return;
 
     acc.profiles[currentTargetSlot] = sub.id;
+    sub.masterAccountId = acc.id;
     sub.email = acc.email;
     sub.pass = acc.pass;
     sub.hidePassword = !!acc.hidePasswordFromClient;
-    sub.showCredentials = !!acc.showCredentialsToClient;
+    sub.hidePasswordFromClient = !!acc.hidePasswordFromClient;
+    sub.showCredentials = !acc.hidePasswordFromClient;
+    sub.showCredentialsToClient = !acc.hidePasswordFromClient;
 
     try {
-        await setDoc(doc(db, "masterAccounts", acc.id), acc);
-        await setDoc(doc(db, "subscriptions", sub.id), sub);
+        await setDoc(doc(db, "masterAccounts", acc.id), acc, { merge: true });
+        await setDoc(doc(db, "subscriptions", sub.id), sub, { merge: true });
     } catch(e){}
 
     document.getElementById('assignModal').classList.add('hidden');
@@ -998,37 +1075,50 @@ window.generateRandomClientPhoneAndPass = () => {
 };
 
 window.openClientModal = (clientId = null) => {
-    const banner = document.getElementById('newAccessGeneratedBanner');
-    if (banner) banner.classList.add('hidden');
+    try {
+        const banner = document.getElementById('newAccessGeneratedBanner');
+        if (banner) banner.classList.add('hidden');
 
-    const dataList = document.getElementById('clientNamesList');
-    dataList.innerHTML = '';
-    const uniqueNames = [...new Set(appState.subscriptions.map(s => s.person))].filter(Boolean);
-    uniqueNames.forEach(name => { dataList.innerHTML += `<option value="${name}">`; });
+        const dataList = document.getElementById('clientNamesList');
+        if (dataList) {
+            dataList.innerHTML = '';
+            const uniqueNames = [...new Set(appState.subscriptions.map(s => s.person))].filter(Boolean);
+            uniqueNames.forEach(name => { dataList.innerHTML += `<option value="${name}">`; });
+        }
 
-    if(!clientId) {
-        document.getElementById('cId').value = 'user_' + Date.now();
-        document.getElementById('cName').value = '';
-        document.getElementById('cNickname').value = '';
-        document.getElementById('cPhone').value = '';
-        document.getElementById('cEmail').value = '';
-        document.getElementById('cPass').value = Math.random().toString(36).slice(-8);
-        window.switchClientModalTab('pending');
-    } else {
-        const c = appState.clients.find(x => x.id === clientId);
-        document.getElementById('cId').value = c.id;
-        document.getElementById('cName').value = c.name;
-        document.getElementById('cNickname').value = c.nickname || c.name;
-        document.getElementById('cPhone').value = c.phone;
-        document.getElementById('cEmail').value = c.email || '';
-        document.getElementById('cPass').value = c.pass;
-        window.switchClientModalTab('manual');
+        if(!clientId) {
+            if (document.getElementById('cId')) document.getElementById('cId').value = 'user_' + Date.now();
+            if (document.getElementById('cName')) document.getElementById('cName').value = '';
+            if (document.getElementById('cNickname')) document.getElementById('cNickname').value = '';
+            if (document.getElementById('cPhone')) document.getElementById('cPhone').value = '';
+            if (document.getElementById('cEmail')) document.getElementById('cEmail').value = '';
+            if (document.getElementById('cPass')) document.getElementById('cPass').value = Math.random().toString(36).slice(-8);
+            window.switchClientModalTab('pending');
+        } else {
+            const c = appState.clients.find(x => x.id === clientId || (x.id && x.id.toString() === clientId.toString()) || x.phone === clientId || x.name === clientId);
+            if (!c) {
+                console.error("Cliente no encontrado en appState.clients para edición:", clientId);
+                alert("No se encontró el registro del cliente.");
+                return;
+            }
+            if (document.getElementById('cId')) document.getElementById('cId').value = c.id;
+            if (document.getElementById('cName')) document.getElementById('cName').value = c.name || '';
+            if (document.getElementById('cNickname')) document.getElementById('cNickname').value = c.nickname || c.name || '';
+            if (document.getElementById('cPhone')) document.getElementById('cPhone').value = c.phone || '';
+            if (document.getElementById('cEmail')) document.getElementById('cEmail').value = c.email || '';
+            if (document.getElementById('cPass')) document.getElementById('cPass').value = c.pass || '';
+            window.switchClientModalTab('manual');
+        }
+        const modal = document.getElementById('clientModal');
+        if (modal) modal.classList.remove('hidden');
+    } catch(err) {
+        console.error("Error abriendo modal de cliente:", err);
+        alert("Error al abrir modal de edición: " + err.message);
     }
-    document.getElementById('clientModal').classList.remove('hidden');
 };
 
 window.saveClient = async () => {
-    const id = document.getElementById('cId').value;
+    const id = document.getElementById('cId').value || ('user_' + Date.now());
     const name = document.getElementById('cName').value.trim();
     const nickname = document.getElementById('cNickname').value.trim() || name;
     const phone = document.getElementById('cPhone').value.trim();
@@ -1040,16 +1130,33 @@ window.saveClient = async () => {
     const existing = appState.clients.find(c => c.phone === phone && c.id !== id);
     if (existing) return alert("Este número ya está registrado como acceso de otro cliente.");
 
-    const newClient = { id, name, nickname, email, pass, phone };
+    const oldClient = appState.clients.find(c => c.id === id) || {};
+    const newClient = { 
+        ...oldClient,
+        id, 
+        name, 
+        nickname, 
+        email, 
+        pass, 
+        phone,
+        clientCode: oldClient.clientCode || window.getClientCode({ id, phone, name }),
+        updatedAt: new Date().toISOString()
+    };
+
     const index = appState.clients.findIndex(c => c.id === id);
     if(index > -1) appState.clients[index] = newClient;
     else appState.clients.push(newClient);
 
     try {
-        await setDoc(doc(db, "users", id), newClient);
-        document.getElementById('clientModal').classList.add('hidden');
+        await setDoc(doc(db, "users", id), newClient, { merge: true });
+        const modal = document.getElementById('clientModal');
+        if (modal) modal.classList.add('hidden');
         window.renderClients();
-    } catch(e) { alert("Error guardando cliente."); }
+        alert("✅ Datos del cliente actualizados y guardados con éxito.");
+    } catch(e) { 
+        console.error("Error guardando cliente:", e);
+        alert("Error guardando cliente: " + e.message); 
+    }
 };
 
 window.deleteClient = async () => {
@@ -1120,7 +1227,16 @@ window.renderCsmLinkedList = () => {
     if (!container) return;
 
     const clientNameNorm = (activeManagingClient.name || '').trim().toLowerCase();
-    const linked = appState.subscriptions.filter(s => s.person && s.person.trim().toLowerCase() === clientNameNorm);
+    const clientPhoneNorm = (activeManagingClient.phone || '').toString().replace(/\D/g, '');
+    const clientCode = window.getClientCode(activeManagingClient);
+
+    const linked = appState.subscriptions.filter(s => {
+        if (s.clientId && activeManagingClient.id && s.clientId === activeManagingClient.id) return true;
+        if (s.clientCode && clientCode && s.clientCode === clientCode) return true;
+        const sPhone = (s.clientPhone || s.phone || '').toString().replace(/\D/g, '');
+        if (sPhone && clientPhoneNorm && sPhone.length >= 7 && sPhone === clientPhoneNorm) return true;
+        return false;
+    });
 
     if (badge) badge.innerText = `${linked.length} servicios`;
 
@@ -1174,7 +1290,7 @@ window.renderCsmAvailableSubs = () => {
     const clientNameNorm = (activeManagingClient.name || '').trim().toLowerCase();
 
     const available = appState.subscriptions.filter(s => {
-        const isNotSame = !s.person || s.person.trim().toLowerCase() !== clientNameNorm;
+        const isNotSame = s.clientId !== activeManagingClient.id && (!s.person || s.person.trim().toLowerCase() !== clientNameNorm);
         const match = (s.service || '').toLowerCase().includes(searchTerm) ||
                       (s.email || '').toLowerCase().includes(searchTerm) ||
                       (s.person || '').toLowerCase().includes(searchTerm);
@@ -1194,6 +1310,9 @@ window.unlinkServiceFromClient = async (subId) => {
 
     if (confirm(`¿Desvincular "${sub.service}" de ${activeManagingClient.name}? El servicio pasará a estado "Sin Asignar" para que puedas reasignarlo a otro cliente.`)) {
         sub.person = 'Sin Asignar';
+        sub.clientId = null;
+        sub.clientCode = null;
+        sub.clientPhone = null;
         try {
             await setDoc(doc(db, "subscriptions", sub.id), sub);
             window.renderCsmLinkedList();
@@ -1234,10 +1353,13 @@ window.linkSelectedSubToClient = async () => {
     if (!sub) return;
 
     sub.person = activeManagingClient.name;
+    sub.clientId = activeManagingClient.id;
+    sub.clientCode = activeManagingClient.clientCode || window.getClientCode(activeManagingClient);
+    sub.clientPhone = activeManagingClient.phone;
 
     try {
         await setDoc(doc(db, "subscriptions", sub.id), sub);
-        alert(`✅ ¡Servicio "${sub.service}" vinculado exitosamente a ${activeManagingClient.name}!`);
+        alert(`✅ ¡Servicio "${sub.service}" vinculado exitosamente a ${activeManagingClient.name} (ID: ${sub.clientCode})!`);
         window.renderCsmLinkedList();
         window.renderCsmAvailableSubs();
         window.renderClients();
@@ -1271,13 +1393,18 @@ window.createAndLinkDirectSub = async () => {
 
     const newSub = {
         id: 'sub_cuy_' + Date.now(),
+        clientId: activeManagingClient.id,
+        clientCode: activeManagingClient.clientCode || window.getClientCode(activeManagingClient),
+        clientPhone: activeManagingClient.phone,
         person: activeManagingClient.name,
         service: service,
         email: email,
         pass: pass,
         pin: pin,
         hidePassword,
+        hidePasswordFromClient: hidePassword,
         showCredentials,
+        showCredentialsToClient: showCredentials,
         amount: amount,
         currency: 'PEN',
         startDate: startStr,
@@ -2070,83 +2197,31 @@ window.initStoreMaintenanceListener = () => {
 };
 
 window.updateStoreMaintenanceUI = (isMaintenance) => {
-    // 1. Switches
-    const switchElHeader = document.getElementById('headerStoreMaintenanceToggle');
+    // 1. Interruptor Maestro Único en Header
     const switchElGlobal = document.getElementById('globalStoreMaintenanceToggle');
-    const switchEl1 = document.getElementById('storeMaintenanceSwitch');
-    const switchEl2 = document.getElementById('storeMaintenanceSwitchCatalog');
-    const switchElClientsRow = document.getElementById('storeMaintenanceSwitchClientsRow');
-    if (switchElHeader) switchElHeader.checked = isMaintenance;
     if (switchElGlobal) switchElGlobal.checked = isMaintenance;
-    if (switchEl1) switchEl1.checked = isMaintenance;
-    if (switchEl2) switchEl2.checked = isMaintenance;
-    if (switchElClientsRow) switchElClientsRow.checked = isMaintenance;
 
-    // 2. Badges e Indicadores en Header, Tab 4, Tab 5 y Barra Global
-    const badges = document.querySelectorAll('.store-status-badge');
-    badges.forEach(b => {
+    const labelEl = document.getElementById('topHeaderStoreSwitchLabel');
+    if (labelEl) {
+        labelEl.innerText = isMaintenance ? "MANTENIMIENTO" : "TIENDA OPERATIVA";
+        labelEl.className = isMaintenance ? "block text-[11px] font-black uppercase text-red-400 animate-pulse" : "block text-[11px] font-black uppercase text-emerald-400";
+    }
+
+    const subLabelEl = document.getElementById('topHeaderStoreSwitchSublabel');
+    if (subLabelEl) {
+        subLabelEl.innerText = isMaintenance ? "Acceso clientes bloqueado" : "Clientes con acceso";
+    }
+
+    const containerEl = document.getElementById('topHeaderStoreSwitchContainer');
+    if (containerEl) {
         if (isMaintenance) {
-            b.className = "store-status-badge bg-red-950 text-red-300 border border-red-500/60 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 animate-pulse";
-            b.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400 animate-ping"></span> Clientes Desactivados (En Mantenimiento)';
+            containerEl.classList.remove('border-gray-800');
+            containerEl.classList.add('border-red-500/80', 'glow-red');
         } else {
-            b.className = "store-status-badge bg-emerald-950 text-emerald-300 border border-emerald-500/60 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1";
-            b.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Clientes Activados (Tienda Operativa)';
+            containerEl.classList.remove('border-red-500/80', 'glow-red');
+            containerEl.classList.add('border-gray-800');
         }
-    });
-
-    // 3. Textos y Cards
-    const descEls = document.querySelectorAll('.store-status-desc');
-    descEls.forEach(d => {
-        if (isMaintenance) {
-            d.innerHTML = '<strong class="text-red-400">MODO CRÍTICO ACTIVO:</strong> El acceso a la tienda y login está pausado para los clientes. Al entrar verán el mensaje "Estamos en mantenimiento".';
-        } else {
-            d.innerHTML = 'Acceso por login habilitado para todos los clientes. Compras y tienda operativas.';
-        }
-    });
-
-    const labelEls = document.querySelectorAll('.store-switch-label');
-    labelEls.forEach(l => {
-        l.innerText = isMaintenance ? "MANTENIMIENTO" : "TIENDA OPERATIVA";
-        l.className = isMaintenance ? "store-switch-label block text-xs font-black uppercase text-red-400" : "store-switch-label block text-xs font-black uppercase text-emerald-400";
-    });
-
-    const subLabelEls = document.querySelectorAll('.store-switch-sublabel');
-    subLabelEls.forEach(sl => {
-        sl.innerText = isMaintenance ? "Acceso Clientes Bloqueado" : "Acceso Clientes OK";
-    });
-
-    const cardEls = document.querySelectorAll('.store-maintenance-card');
-    cardEls.forEach(c => {
-        if (isMaintenance) {
-            c.classList.remove('border-emerald-500/60', 'border-emerald-500/50');
-            c.classList.add('border-red-500/80', 'shadow-[0_0_25px_rgba(239,68,68,0.3)]');
-        } else {
-            c.classList.remove('border-red-500/80', 'shadow-[0_0_25px_rgba(239,68,68,0.3)]');
-            c.classList.add('border-emerald-500/60');
-        }
-    });
-
-    const headerBoxEls = document.querySelectorAll('.store-maintenance-header-box');
-    headerBoxEls.forEach(hb => {
-        if (isMaintenance) {
-            hb.classList.remove('border-emerald-500/70', 'glow-gold');
-            hb.classList.add('border-red-500/90', 'glow-red');
-        } else {
-            hb.classList.remove('border-red-500/90', 'glow-red');
-            hb.classList.add('border-emerald-500/70', 'glow-gold');
-        }
-    });
-
-    const iconBoxEls = document.querySelectorAll('.store-control-icon-box');
-    iconBoxEls.forEach(ib => {
-        if (isMaintenance) {
-            ib.className = "store-control-icon-box w-11 h-11 rounded-xl bg-red-500/20 text-red-400 border border-red-500/50 flex items-center justify-center text-xl shadow shrink-0 animate-bounce";
-            ib.innerHTML = '<i class="fa-solid fa-store-slash"></i>';
-        } else {
-            ib.className = "store-control-icon-box w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xl shadow shrink-0";
-            ib.innerHTML = '<i class="fa-solid fa-store"></i>';
-        }
-    });
+    }
 };
 
 // Iniciar listener de mantenimiento inmediatamente
@@ -2156,6 +2231,7 @@ window.handleStoreMaintenanceToggle = async (isChecked) => {
     try {
         await setDoc(doc(db, "system_config", "store_settings"), {
             maintenanceMode: isChecked,
+            is_store_open: !isChecked,
             status: isChecked ? 'disabled' : 'active',
             updatedAt: new Date().toISOString(),
             updatedBy: 'Dashboard Admin'
@@ -2164,9 +2240,9 @@ window.handleStoreMaintenanceToggle = async (isChecked) => {
         window.updateStoreMaintenanceUI(isChecked);
         
         if (isChecked) {
-            alert("🛑 ACCESO A TIENDA DESACTIVADO\n\nSe ha activado el Modo Mantenimiento. Los clientes no podrán ver el catálogo de compra y verán la pantalla de mantenimiento.");
+            alert("🛑 MODO MANTENIMIENTO ACTIVADO\n\nEl acceso por login y a la tienda ha sido inhabilitado para los clientes. Al ingresar serán redirigidos a la página de mantenimiento.");
         } else {
-            alert("✅ ACCESO A TIENDA ACTIVADO\n\nLa tienda vuelve a estar operativa para todos los clientes.");
+            alert("✅ TIENDA OPERATIVA\n\nEl acceso por login y la tienda se encuentran nuevamente habilitados para todos los clientes.");
         }
     } catch(err) {
         console.error("Error al actualizar modo mantenimiento de tienda:", err);
@@ -2269,6 +2345,10 @@ window.renderActiveTable = () => {
                             <span>Activar Servicio</span>
                         </button>
 
+                        <button onclick="window.notifyClientOrderWhatsApp('${sub.id}')" class="bg-[#25D366] hover:bg-emerald-500 text-black font-bold text-xs p-2.5 rounded-xl transition flex items-center justify-center gap-1 shrink-0" title="Avisar al cliente por WhatsApp">
+                            <i class="fa-brands fa-whatsapp text-sm"></i>
+                        </button>
+
                         <button onclick="window.deletePendingActivation('${sub.id}')" class="bg-red-950/80 hover:bg-red-900 text-red-300 hover:text-white border border-red-500/40 font-bold text-xs p-2.5 rounded-xl transition flex items-center justify-center gap-1 shrink-0" title="Eliminar / Rechazar Solicitud">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
@@ -2329,14 +2409,51 @@ window.renderActiveTable = () => {
                 </div>
             </td>
             <td class="p-4 text-center">
-                <div class="flex items-center justify-center gap-2">
-                    <button onclick="window.openEditModal('${sub.id}')" class="bg-blue-950 hover:bg-blue-900 text-blue-300 p-2 rounded-lg transition" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                    <button onclick="window.deleteSubscription('${sub.id}')" class="bg-red-950 hover:bg-red-900 text-red-400 p-2 rounded-lg transition" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                <div class="flex items-center justify-center gap-1.5">
+                    <button onclick="window.notifyClientOrderWhatsApp('${sub.id}')" class="bg-[#25D366] hover:bg-emerald-500 text-black p-2 rounded-lg transition" title="Avisar al cliente por WhatsApp"><i class="fa-brands fa-whatsapp text-xs font-bold"></i></button>
+                    <button onclick="window.openEditModal('${sub.id}')" class="bg-blue-950 hover:bg-blue-900 text-blue-300 p-2 rounded-lg transition" title="Editar"><i class="fa-solid fa-pen text-xs"></i></button>
+                    <button onclick="window.deleteSubscription('${sub.id}')" class="bg-red-950 hover:bg-red-900 text-red-400 p-2 rounded-lg transition" title="Eliminar"><i class="fa-solid fa-trash text-xs"></i></button>
                 </div>
             </td>
         </tr>
         `;
     }).join('');
+};
+
+window.notifyClientOrderWhatsApp = (subId) => {
+    const sub = (appState.subscriptions || []).find(s => s.id === subId);
+    if (!sub) return alert("Servicio no encontrado.");
+
+    let clientPhone = sub.phone || '';
+    if (!clientPhone) {
+        const client = (appState.clients || []).find(c => 
+            (c.name && c.name.trim().toLowerCase() === (sub.person || '').trim().toLowerCase()) ||
+            (c.nickname && c.nickname.trim().toLowerCase() === (sub.person || '').trim().toLowerCase())
+        );
+        if (client) clientPhone = client.phone || '';
+    }
+
+    const cleanPhone = clientPhone.replace(/\D/g, '');
+    const serviceName = sub.service || 'Servicio Streaming VIP';
+    const email = sub.email || sub.accountEmail || '';
+    const pass = sub.pass || sub.accountPassword || '';
+    const pin = sub.pin || '';
+    const endDate = sub.endDate || '30 días';
+
+    let msg = `¡Hola *${sub.person || 'Cliente VIP'}*! 🐹🍿\n\n`;
+    msg += `Tu pedido de *${serviceName}* en *CuycitoGO* ya está listo y activado:\n\n`;
+    if (email) msg += `📧 *Correo / Usuario:* ${email}\n`;
+    if (pass) msg += `🔑 *Contraseña:* ${pass}\n`;
+    if (pin) msg += `👤 *Perfil / PIN:* ${pin}\n`;
+    msg += `📅 *Vencimiento:* ${endDate}\n\n`;
+    msg += `💡 _Disfruta de tu contenido en 4K Ultra HD sin cortes. Cualquier consulta estamos a tu completa disposición._ 🚀`;
+
+    const encodedMsg = encodeURIComponent(msg);
+    const waUrl = cleanPhone 
+        ? `https://wa.me/${cleanPhone.startsWith('51') ? cleanPhone : '51' + cleanPhone}?text=${encodedMsg}`
+        : `https://wa.me/?text=${encodedMsg}`;
+
+    window.open(waUrl, '_blank');
 };
 
 window.deletePendingActivation = async (subId) => {
@@ -2485,6 +2602,37 @@ window.renderMasterAccounts = () => {
     });
 };
 
+window.getClientCode = (client) => {
+    if (!client) return 'CLI-000';
+    if (client.clientCode) return client.clientCode;
+    if (client.phone) {
+        const cleanDigits = client.phone.toString().replace(/\D/g, '');
+        if (cleanDigits.length >= 4) {
+            return `CLI-${cleanDigits.slice(-4)}`;
+        }
+    }
+    if (client.id) {
+        const cleanId = client.id.toString().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        return `CLI-${cleanId.slice(-4)}`;
+    }
+    return 'CLI-1001';
+};
+
+window.updateClientsDatalist = () => {
+    const datalist = document.getElementById('clientsDatalist');
+    if (!datalist) return;
+    let optionsHTML = '';
+    appState.clients.forEach(c => {
+        const code = window.getClientCode(c);
+        optionsHTML += `<option value="${code}">[${code}] ${c.name} (@${c.nickname || c.name}) - ${c.phone}</option>`;
+        optionsHTML += `<option value="${c.name}">[${code}] ${c.name} - ${c.phone}</option>`;
+    });
+    datalist.innerHTML = optionsHTML;
+};
+
+// =====================================
+// 10. RENDERIZADO DE ACCESOS TIENDA (CLIENTES)
+// =====================================
 window.renderClients = () => {
     const tbody = document.getElementById('clientsTableBody');
     if(!tbody) return;
@@ -2496,26 +2644,40 @@ window.renderClients = () => {
         const cName = (c.name || '').toLowerCase();
         const cNick = (c.nickname || '').toLowerCase();
         const cPhone = (c.phone || '').toLowerCase();
+        const cCode = (c.clientCode || window.getClientCode(c)).toLowerCase();
         
         const hasMatchingService = appState.subscriptions.some(s => 
-            s.person && s.person.trim().toLowerCase() === cName && 
+            ((s.clientId && c.id && s.clientId === c.id) || (s.person && s.person.trim().toLowerCase() === cName)) && 
             (s.service || '').toLowerCase().includes(search)
         );
 
-        return cName.includes(search) || cNick.includes(search) || cPhone.includes(search) || hasMatchingService;
+        return cName.includes(search) || cNick.includes(search) || cPhone.includes(search) || cCode.includes(search) || hasMatchingService;
     });
 
     const badge = document.getElementById('clientsCountBadge');
     if(badge) badge.innerText = `${filteredClients.length} Clientes`;
 
+    window.updateClientsDatalist();
+
     if (filteredClients.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 italic">No se encontraron accesos de clientes.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500 italic">No se encontraron accesos de clientes.</td></tr>`;
         return;
     }
     
     filteredClients.forEach(c => {
+        const clientCode = window.getClientCode(c);
+        c.clientCode = clientCode;
         const clientNameNorm = (c.name || '').trim().toLowerCase();
-        const linkedSubs = appState.subscriptions.filter(s => s.person && s.person.trim().toLowerCase() === clientNameNorm);
+        const clientPhoneNorm = (c.phone || '').toString().replace(/\D/g, '');
+
+        // VINCULACIÓN UNÍVOCA Y ESTRICTA: Evita confundir clientes con nombres similares
+        const linkedSubs = appState.subscriptions.filter(s => {
+            if (s.clientId && c.id && s.clientId === c.id) return true;
+            if (s.clientCode && clientCode && s.clientCode === clientCode) return true;
+            const sPhone = (s.clientPhone || s.phone || '').toString().replace(/\D/g, '');
+            if (sPhone && clientPhoneNorm && sPhone.length >= 7 && sPhone === clientPhoneNorm) return true;
+            return false;
+        });
         
         let servicesHTML = '';
         if (linkedSubs.length === 0) {
@@ -2547,11 +2709,33 @@ window.renderClients = () => {
             servicesHTML += `</div>`;
         }
 
+        const currencySymbol = appState.globalCurrency === 'PEN' ? 'S/' : '$';
+
+        const now = Date.now();
+        const lastSeenMs = c.lastSeen ? new Date(c.lastSeen).getTime() : 0;
+        const isOnline = (c.isOnline === true) && ((now - lastSeenMs) < (1000 * 90));
+
+        const statusIndicatorHTML = isOnline
+            ? `<span class="relative flex h-3 w-3 shrink-0" title="🟢 Conectado ahora en su cuenta (En línea)">
+                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                 <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]"></span>
+               </span>`
+            : `<span class="inline-flex rounded-full h-3 w-3 bg-gray-600 border border-gray-500/60 shrink-0 shadow-sm" title="⚪ Desconectado / Sin sesión activa"></span>`;
+
         tbody.innerHTML += `
         <tr class="hover:bg-gray-800/60 transition">
             <td class="p-4">
-                <div class="font-black text-white text-xs">${c.name}</div>
-                <div class="text-[10px] text-gray-500 font-mono">${c.email || 'Sin correo'}</div>
+                <div class="flex items-center gap-3">
+                    ${statusIndicatorHTML}
+                    <div>
+                        <div class="font-black text-white text-xs flex items-center gap-1.5 flex-wrap">
+                            <span>${c.name}</span>
+                            <span class="bg-indigo-950/90 text-indigo-300 border border-indigo-500/40 text-[10px] font-black px-1.5 py-0.2 rounded font-mono" title="Identificador Único del Cliente">ID: ${clientCode}</span>
+                            ${isOnline ? `<span class="text-[9px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-1.5 py-0.2 rounded font-sans">En línea</span>` : ''}
+                        </div>
+                        <div class="text-[10px] text-gray-500 font-mono">${c.email || 'Sin correo'}</div>
+                    </div>
+                </div>
             </td>
             <td class="p-4">
                 <span class="bg-cuycito-gold/20 text-cuycito-gold text-[11px] font-extrabold px-2.5 py-1 rounded-lg border border-cuycito-gold/40">
@@ -2560,7 +2744,15 @@ window.renderClients = () => {
             </td>
             <td class="p-4 font-mono text-blue-400 font-bold text-xs"><i class="fa-solid fa-mobile-screen mr-1"></i> ${c.phone}</td>
             <td class="p-4 font-mono text-cuycito-gold text-xs">${c.pass}</td>
-            <td class="p-4 font-mono font-black text-emerald-400 text-xs">$ ${(c.balance || 0).toFixed(2)}</td>
+            <td class="p-4">
+                <div class="flex items-center gap-1 bg-black/90 border border-emerald-500/40 hover:border-emerald-400 rounded-xl p-1.5 w-max shadow transition">
+                    <span class="text-xs font-black text-emerald-400 font-mono pl-1">${currencySymbol}</span>
+                    <input type="number" step="0.50" id="client_bal_${c.id}" value="${(c.balance || 0).toFixed(2)}" class="w-16 bg-transparent text-emerald-300 font-mono font-black text-xs outline-none focus:text-white text-right pr-1">
+                    <button onclick="window.updateClientBalanceDirectly('${c.id}', 'client_bal_${c.id}')" class="bg-emerald-500 hover:bg-emerald-400 text-black px-2 py-1 rounded-lg text-xs font-black transition shadow flex items-center gap-1" title="Guardar nuevo saldo">
+                        <i class="fa-solid fa-check"></i>
+                    </button>
+                </div>
+            </td>
             <td class="p-4">${servicesHTML}</td>
             <td class="p-4 text-center">
                 <div class="flex items-center justify-center gap-1.5">
@@ -2581,6 +2773,71 @@ window.renderClients = () => {
         </tr>`;
     });
 };
+
+window.updateClientBalanceDirectly = async (clientId, inputId) => {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const newBal = parseFloat(input.value);
+    if (isNaN(newBal) || newBal < 0) {
+        return alert("Por favor ingresa un monto de saldo válido (mayor o igual a 0).");
+    }
+
+    const client = appState.clients.find(c => c.id === clientId);
+    if (!client) return alert("Cliente no encontrado.");
+
+    const oldBal = client.balance || 0;
+    client.balance = newBal;
+
+    try {
+        await setDoc(doc(db, "users", clientId), { 
+            balance: newBal,
+            name: client.name,
+            nickname: client.nickname || client.name,
+            phone: client.phone || '',
+            email: client.email || '',
+            pass: client.pass || '',
+            updatedAt: new Date().toISOString() 
+        }, { merge: true });
+
+        saveLocal();
+        window.notifyAutoSave(`Saldo de ${client.name || client.nickname} actualizado a S/ ${newBal.toFixed(2)}`);
+        window.renderClients();
+        alert(`✅ Saldo de "${client.name || client.nickname}" actualizado con éxito:\n\nNuevo Saldo: S/ ${newBal.toFixed(2)}\n(Saldo anterior: S/ ${oldBal.toFixed(2)})`);
+    } catch(err) {
+        console.error("Error al actualizar saldo de cliente:", err);
+        alert("❌ Error al guardar el saldo en la nube: " + err.message);
+    }
+};
+
+// Listener en tiempo real para estado de conexión de clientes (Online / Offline)
+let clientsPresenceSnapshotUnsubscribe = null;
+window.initRealtimeClientsPresenceListener = () => {
+    if (clientsPresenceSnapshotUnsubscribe) return;
+    try {
+        clientsPresenceSnapshotUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+            const updatedClients = [];
+            snapshot.forEach(d => {
+                const data = { ...d.data(), id: d.id };
+                if (!data.nickname) data.nickname = data.name || 'Cliente';
+                data.clientCode = window.getClientCode(data);
+                updatedClients.push(data);
+            });
+            appState.clients = updatedClients;
+            window.renderClients();
+        });
+    } catch(err) {
+        console.warn("Error en listener de clientes en vivo:", err);
+    }
+};
+window.initRealtimeClientsPresenceListener();
+
+// Auto-refresco de estado de presencia cada 15 segundos
+setInterval(() => {
+    const clientsView = document.getElementById('view-clients');
+    if (clientsView && !clientsView.classList.contains('hidden')) {
+        window.renderClients();
+    }
+}, 15000);
 
 // =====================================
 // 10.1. GESTIÓN DE SOLICITUDES DE CUENTA GRATIS & CÓDIGO DE REFERIDO VIP (+S/ 0.50)
@@ -3217,7 +3474,7 @@ window.renderRechargesTable = async () => {
     // 2. Renderizar tabla de historial
     if (completedBody) {
         if (completedOrders.length === 0) {
-            completedBody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 font-sans">Aún no hay recargas procesadas registradas.</td></tr>`;
+            completedBody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500 font-sans">Aún no hay recargas procesadas registradas.</td></tr>`;
         } else {
             let html = '';
             completedOrders.forEach(order => {
@@ -3235,12 +3492,38 @@ window.renderRechargesTable = async () => {
                     <td class="p-3">${typeBadge}</td>
                     <td class="p-3 font-mono text-[11px] text-gray-400 truncate max-w-[150px]">${order.transferReference || 'N/A'}</td>
                     <td class="p-3 text-center">
-                        <span class="bg-emerald-950 text-emerald-400 border border-emerald-500/50 text-[10px] font-black px-2 py-0.5 rounded">🟢 Acreditado</span>
+                        <span class="bg-emerald-950 text-emerald-400 border border-emerald-500/50 text-[10px] font-black px-2.5 py-1 rounded-lg">🟢 Acreditado</span>
+                    </td>
+                    <td class="p-3 text-center">
+                        <button onclick="window.deleteCompletedRecharge('${order.id}')" class="bg-red-950/80 hover:bg-red-700 text-red-300 hover:text-white border border-red-500/40 px-2.5 py-1 rounded-lg transition text-xs font-bold flex items-center justify-center gap-1 mx-auto shadow" title="Eliminar este registro permanentemente">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                            <span class="text-[10px] uppercase tracking-wider font-extrabold">Eliminar</span>
+                        </button>
                     </td>
                 </tr>`;
             });
             completedBody.innerHTML = html;
         }
+    }
+};
+
+window.deleteCompletedRecharge = async (orderId) => {
+    const order = appState.recharges.find(r => r.id === orderId);
+    const clientName = order ? (order.userName || order.userNickname || order.userId || 'Cliente') : 'Cliente';
+    const amount = order ? (order.creditedAmount || order.exactAmount || order.baseAmount || 0) : 0;
+    
+    if (!confirm(`¿Estás seguro de eliminar este registro de recarga procesada de S/ ${amount.toFixed(2)} del cliente "${clientName}"?\n\nEsta acción eliminará el registro del historial permanentemente.`)) {
+        return;
+    }
+
+    try {
+        await deleteDoc(doc(db, "recharge_orders", orderId));
+        appState.recharges = appState.recharges.filter(r => r.id !== orderId);
+        window.renderRechargesTable();
+        alert("✅ Registro de recarga procesada eliminado con éxito.");
+    } catch (err) {
+        console.error("Error al eliminar registro de recarga:", err);
+        alert("❌ Error al eliminar el registro: " + err.message);
     }
 };
 
@@ -3356,7 +3639,7 @@ window.filterRechargesHistory = () => {
     ));
 
     if (filtered.length === 0) {
-        completedBody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 font-sans">No se encontraron recargas con "${query}".</td></tr>`;
+        completedBody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500 font-sans">No se encontraron recargas con "${query}".</td></tr>`;
         return;
     }
 
@@ -3372,11 +3655,17 @@ window.filterRechargesHistory = () => {
         <tr class="hover:bg-black/50 transition">
             <td class="p-3 text-[11px] text-gray-400 font-mono">${dateStr}</td>
             <td class="p-3 font-bold text-white">${order.userName || order.userId}</td>
-            <td class="p-3 font-black text-emerald-400">$ ${(order.creditedAmount || order.exactAmount || order.baseAmount || 0).toFixed(2)} ${order.currency || 'USD'}</td>
+            <td class="p-3 font-black text-emerald-400">S/ ${(order.creditedAmount || order.exactAmount || order.baseAmount || 0).toFixed(2)}</td>
             <td class="p-3">${typeBadge}</td>
             <td class="p-3 font-mono text-[11px] text-gray-400 truncate max-w-[150px]">${order.transferReference || 'N/A'}</td>
             <td class="p-3 text-center">
-                <span class="bg-emerald-950 text-emerald-400 border border-emerald-500/50 text-[10px] font-black px-2 py-0.5 rounded">🟢 Acreditado</span>
+                <span class="bg-emerald-950 text-emerald-400 border border-emerald-500/50 text-[10px] font-black px-2.5 py-1 rounded-lg">🟢 Acreditado</span>
+            </td>
+            <td class="p-3 text-center">
+                <button onclick="window.deleteCompletedRecharge('${order.id}')" class="bg-red-950/80 hover:bg-red-700 text-red-300 hover:text-white border border-red-500/40 px-2.5 py-1 rounded-lg transition text-xs font-bold flex items-center justify-center gap-1 mx-auto shadow" title="Eliminar este registro permanentemente">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                    <span class="text-[10px] uppercase tracking-wider font-extrabold">Eliminar</span>
+                </button>
             </td>
         </tr>`;
     });
