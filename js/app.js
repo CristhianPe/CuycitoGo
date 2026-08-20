@@ -1029,19 +1029,37 @@ window.renderPendingClientsList = () => {
 window.autoCreateClientAccess = async (personName) => {
     const randomPhone = '9' + Math.floor(10000000 + Math.random() * 90000000);
     const randomPass = Math.random().toString(36).slice(-8);
-    const defaultNickname = personName; // Por defecto el Nickname es igual al Nombre
+    const defaultNickname = personName;
     const id = 'user_' + Date.now();
+    const clientCode = window.getClientCode({ id, phone: randomPhone, name: personName });
 
     const newClient = {
         id,
+        clientCode,
         name: personName,
         nickname: defaultNickname,
         phone: randomPhone,
         pass: randomPass,
-        email: ''
+        email: '',
+        balance: 0.00,
+        isOnline: false,
+        lastSeen: new Date().toISOString(),
+        createdAt: new Date().toISOString()
     };
 
     appState.clients.push(newClient);
+
+    // Auto-vincular inmediatamente todas las suscripciones de esta persona a su nuevo ID
+    appState.subscriptions.forEach(async (s) => {
+        if (!s.clientId && s.person && s.person.trim().toLowerCase() === personName.trim().toLowerCase()) {
+            s.clientId = id;
+            s.clientCode = clientCode;
+            s.clientPhone = randomPhone;
+            try {
+                await setDoc(doc(db, "subscriptions", s.id), s, { merge: true });
+            } catch(e){}
+        }
+    });
 
     try {
         await setDoc(doc(db, "users", id), newClient);
@@ -3200,8 +3218,10 @@ window.approveRegistrationRequest = async (reqId) => {
     }
 
     // 2. Crear usuario en Firebase y appState con S/ 1.00 de Crédito de Bienvenida
+    const clientCode = window.getClientCode({ id: newUserId, phone: req.phone, name: req.name });
     const newUser = {
         id: newUserId,
+        clientCode: clientCode,
         name: req.name,
         nickname: req.name.split(' ')[0],
         phone: req.phone,
@@ -3209,6 +3229,8 @@ window.approveRegistrationRequest = async (reqId) => {
         pass: defaultPass,
         balance: 1.00, // 🎉 S/ 1.00 Sol de Regalo de Apertura
         referredCodeUsed: req.referralCode || '',
+        isOnline: false,
+        lastSeen: new Date().toISOString(),
         createdAt: new Date().toISOString()
     };
 
