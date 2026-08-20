@@ -160,15 +160,15 @@ onAuthStateChanged(auth, async (user) => {
         try {
             const subSnap = await getDocs(collection(db, "subscriptions"));
             appState.subscriptions = []; 
-            subSnap.forEach(d => appState.subscriptions.push(d.data()));
+            subSnap.forEach(d => appState.subscriptions.push({ id: d.id, ...d.data() }));
 
             const histSnap = await getDocs(collection(db, "history"));
             appState.history = []; 
-            histSnap.forEach(d => appState.history.push(d.data()));
+            histSnap.forEach(d => appState.history.push({ id: d.id, ...d.data() }));
 
             const masterSnap = await getDocs(collection(db, "masterAccounts"));
             appState.masterAccounts = []; 
-            masterSnap.forEach(d => appState.masterAccounts.push(d.data()));
+            masterSnap.forEach(d => appState.masterAccounts.push({ id: d.id, ...d.data() }));
 
             const servSnap = await getDocs(collection(db, "services"));
             let cloudServices = []; 
@@ -177,9 +177,9 @@ onAuthStateChanged(auth, async (user) => {
             const clientSnap = await getDocs(collection(db, "users"));
             appState.clients = []; 
             clientSnap.forEach(d => {
-                const data = d.data();
+                const data = { ...d.data(), id: d.id };
                 if (!data.nickname) data.nickname = data.name || 'Cliente';
-                data.id = d.id;
+                data.clientCode = window.getClientCode(data);
                 appState.clients.push(data);
             });
 
@@ -201,7 +201,7 @@ onAuthStateChanged(auth, async (user) => {
             const catalogSnap = await getDocs(collection(db, "store_catalog"));
             appState.catalog = []; 
             catalogSnap.forEach(d => {
-                const item = d.data();
+                const item = { id: d.id, ...d.data() };
                 if (!item.imageUrl || item.imageUrl.trim() === '') {
                     item.imageUrl = resolveProductImage(item);
                 }
@@ -335,11 +335,22 @@ window.switchTab = (tabId) => {
                 : "text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5";
         }
     });
-    if(cleanId === 'finance') window.renderFinance();
+    if(cleanId === 'subs') {
+        window.renderActiveTable();
+    }
+    if(cleanId === 'master') {
+        window.renderMasterAccounts();
+    }
+    if(cleanId === 'finance') {
+        window.renderFinance();
+    }
     if(cleanId === 'clients') {
         window.renderClients();
         window.renderPendingRegistrationsTable();
         window.renderAdminReferralLogsTable();
+    }
+    if(cleanId === 'catalog') {
+        window.renderCatalog();
     }
     if(cleanId === 'recharges') {
         window.renderRechargesTable();
@@ -2838,6 +2849,74 @@ setInterval(() => {
         window.renderClients();
     }
 }, 15000);
+
+// Listener en tiempo real para Cuentas Madre (Cuenta Matriz)
+let masterAccountsSnapshotUnsubscribe = null;
+window.initRealtimeMasterAccountsListener = () => {
+    if (masterAccountsSnapshotUnsubscribe) return;
+    try {
+        masterAccountsSnapshotUnsubscribe = onSnapshot(collection(db, "masterAccounts"), (snapshot) => {
+            const updatedMasters = [];
+            snapshot.forEach(d => updatedMasters.push({ id: d.id, ...d.data() }));
+            appState.masterAccounts = updatedMasters;
+            const masterView = document.getElementById('view-master');
+            if (masterView && !masterView.classList.contains('hidden')) {
+                window.renderMasterAccounts();
+            }
+        });
+    } catch(err) {
+        console.warn("Error en listener de masterAccounts:", err);
+    }
+};
+window.initRealtimeMasterAccountsListener();
+
+// Listener en tiempo real para Catálogo Web
+let catalogSnapshotUnsubscribe = null;
+window.initRealtimeCatalogListener = () => {
+    if (catalogSnapshotUnsubscribe) return;
+    try {
+        catalogSnapshotUnsubscribe = onSnapshot(collection(db, "store_catalog"), (snapshot) => {
+            const updatedCatalog = [];
+            snapshot.forEach(d => {
+                const item = { id: d.id, ...d.data() };
+                if (!item.imageUrl || item.imageUrl.trim() === '') {
+                    item.imageUrl = resolveProductImage(item);
+                }
+                updatedCatalog.push(item);
+            });
+            if (updatedCatalog.length > 0) {
+                appState.catalog = updatedCatalog;
+            }
+            const catalogView = document.getElementById('view-catalog');
+            if (catalogView && !catalogView.classList.contains('hidden')) {
+                window.renderCatalog();
+            }
+        });
+    } catch(err) {
+        console.warn("Error en listener de catalog:", err);
+    }
+};
+window.initRealtimeCatalogListener();
+
+// Listener en tiempo real para Libro Mayor (Finanzas)
+let historySnapshotUnsubscribe = null;
+window.initRealtimeHistoryListener = () => {
+    if (historySnapshotUnsubscribe) return;
+    try {
+        historySnapshotUnsubscribe = onSnapshot(collection(db, "history"), (snapshot) => {
+            const updatedHistory = [];
+            snapshot.forEach(d => updatedHistory.push({ id: d.id, ...d.data() }));
+            appState.history = updatedHistory;
+            const finView = document.getElementById('view-finance');
+            if (finView && !finView.classList.contains('hidden')) {
+                window.renderFinance();
+            }
+        });
+    } catch(err) {
+        console.warn("Error en listener de history:", err);
+    }
+};
+window.initRealtimeHistoryListener();
 
 // =====================================
 // 10.1. GESTIÓN DE SOLICITUDES DE CUENTA GRATIS & CÓDIGO DE REFERIDO VIP (+S/ 0.50)
