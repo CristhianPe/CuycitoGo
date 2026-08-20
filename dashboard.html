@@ -1532,11 +1532,123 @@
 
     <!-- MODAL ASIGNAR CLIENTE A CUENTA RAÍZ -->
     <div id="assignModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-cuycito-dark border border-cuycito-gold rounded-xl p-6 w-full max-w-md space-y-4">
-            <h3 class="text-lg font-black text-cuycito-gold uppercase border-b border-gray-800 pb-2">Asignar Cliente</h3>
-            <p class="text-[11px] text-gray-400">Servicio: <strong id="assignServiceLabel" class="text-white text-xs"></strong></p>
-            <div id="assignList" class="max-h-60 overflow-y-auto space-y-2 custom-scrollbar pr-1"></div>
-            <div class="flex justify-end pt-2"><button onclick="document.getElementById('assignModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-5 py-2.5 rounded hover:bg-gray-700 transition">Cerrar</button></div>
+        <div class="bg-cuycito-dark border border-cuycito-gold rounded-2xl p-6 w-full max-w-lg space-y-4 shadow-2xl">
+            <!-- Header Modal -->
+            <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                <div>
+                    <h3 class="text-base font-black text-cuycito-gold uppercase flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus text-cuycito-gold"></i> Asignar Cliente a Cupo
+                    </h3>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Servicio: <strong id="assignServiceLabel" class="text-white"></strong></p>
+                </div>
+                <button onclick="document.getElementById('assignModal').classList.add('hidden')" class="text-gray-500 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- PASO 1: BUSCADOR Y LISTA DE TODOS LOS CLIENTES -->
+            <div id="assignStep1_SelectClient" class="space-y-3">
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    </span>
+                    <input type="text" id="searchAssignClientInput" oninput="window.filterAssignClients()" placeholder="Buscar cliente por nombre, apodo, teléfono o CLI-XXXX..." class="w-full bg-black border border-gray-700 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-gray-500 outline-none focus:border-cuycito-gold">
+                </div>
+
+                <div class="flex items-center justify-between text-[11px] text-gray-400 px-1">
+                    <span>Selecciona un cliente para conectar a esta cuenta:</span>
+                    <button type="button" onclick="window.openNewClientFromAssign()" class="text-cuycito-gold hover:underline font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-plus text-[10px]"></i> Nuevo Cliente
+                    </button>
+                </div>
+
+                <div id="assignClientsList" class="max-h-72 overflow-y-auto space-y-2 custom-scrollbar pr-1"></div>
+                
+                <div class="flex justify-end pt-2 border-t border-gray-800">
+                    <button type="button" onclick="document.getElementById('assignModal').classList.add('hidden')" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-5 py-2 rounded-lg transition">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+
+            <!-- PASO 2: FORMULARIO DE ACTIVACIÓN (DATOS EXTRAS) -->
+            <div id="assignStep2_ActivationForm" class="hidden space-y-4">
+                <!-- Tarjeta Resumen Cliente Seleccionado -->
+                <div class="bg-black/60 border border-indigo-500/40 rounded-xl p-3 flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span id="assignSelectedClientCode" class="bg-indigo-950 text-indigo-300 border border-indigo-500/40 text-[9px] font-black px-2 py-0.5 rounded">CLI-0000</span>
+                            <h4 id="assignSelectedClientName" class="text-xs font-black text-white">Nombre Cliente</h4>
+                        </div>
+                        <p class="text-[10px] text-gray-400 font-mono mt-0.5">
+                            Teléfono: <span id="assignSelectedClientPhone" class="text-gray-300"></span> | 
+                            Saldo: <strong id="assignSelectedClientBalance" class="text-emerald-400">S/ 0.00</strong>
+                        </p>
+                    </div>
+                    <button type="button" onclick="window.backToAssignClientSelection()" class="text-cuycito-gold hover:underline text-xs font-bold">
+                        Cambiar
+                    </button>
+                </div>
+
+                <!-- Campos de Activación -->
+                <div class="space-y-3 text-xs">
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-300 mb-1">Nombre de Perfil / PIN Asignado:</label>
+                        <input type="text" id="assignPinInput" placeholder="Ej: Perfil 1, PIN 1234, etc." class="w-full bg-black border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-cuycito-gold">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-300 mb-1">Monto a Cobrar:</label>
+                            <input type="number" step="0.01" id="assignAmountInput" value="10.00" class="w-full bg-black border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-cuycito-gold font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-300 mb-1">Moneda:</label>
+                            <select id="assignCurrencySelect" class="w-full bg-black border border-gray-700 rounded-lg p-2 text-white outline-none">
+                                <option value="PEN">Soles (PEN)</option>
+                                <option value="USD">Dólares (USD)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Botones de Duración Rápida -->
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-300 mb-1.5">Duración del Servicio:</label>
+                        <div class="grid grid-cols-3 gap-2 mb-2">
+                            <button type="button" onclick="window.setAssignDurationMonths(1)" id="btnAssignDur1" class="bg-cuycito-gold text-black font-black py-1.5 rounded-lg text-xs transition border border-cuycito-gold">1 Mes (30d)</button>
+                            <button type="button" onclick="window.setAssignDurationMonths(2)" id="btnAssignDur2" class="bg-black hover:bg-gray-900 text-gray-300 font-bold py-1.5 rounded-lg text-xs transition border border-gray-700">2 Meses</button>
+                            <button type="button" onclick="window.setAssignDurationMonths(3)" id="btnAssignDur3" class="bg-black hover:bg-gray-900 text-gray-300 font-bold py-1.5 rounded-lg text-xs transition border border-gray-700">3 Meses</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-300 mb-1">Fecha de Inicio:</label>
+                            <input type="date" id="assignStartDateInput" onchange="window.recalculateAssignEndDate()" class="w-full bg-black border border-gray-700 rounded-lg p-2 text-white outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-300 mb-1">Fecha de Culminación:</label>
+                            <input type="date" id="assignEndDateInput" class="w-full bg-black border border-gray-700 rounded-lg p-2 text-cuycito-gold font-bold outline-none">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 pt-1">
+                        <input type="checkbox" id="assignHidePassCheck" class="w-4 h-4 accent-cuycito-gold bg-black border-gray-700 rounded">
+                        <label for="assignHidePassCheck" class="text-[11px] text-gray-300 font-semibold cursor-pointer">
+                            🔒 Ocultar contraseña al cliente en su portal web (Solo verá estado activo)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-gray-800">
+                    <button type="button" onclick="window.backToAssignClientSelection()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-4 py-2 rounded-lg transition">
+                        Atrás
+                    </button>
+                    <button type="button" onclick="window.executeClientSlotAssignment()" class="bg-gradient-to-r from-cuycito-gold to-yellow-500 hover:from-yellow-400 hover:to-amber-500 text-black font-black text-xs px-5 py-2.5 rounded-lg shadow-lg glow-gold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-bolt"></i> Confirmar y Activar Servicio
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

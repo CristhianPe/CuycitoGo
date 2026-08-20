@@ -892,62 +892,272 @@ window.deleteMasterAccount = async (accId) => {
     }
 };
 
+let selectedAssignClientId = null;
+let currentAssignDurationMonths = 1;
+
 window.openAssignModal = (accId, slotIndex) => {
     currentTargetAcc = accId;
     currentTargetSlot = slotIndex;
+    selectedAssignClientId = null;
+    currentAssignDurationMonths = 1;
+
     const acc = appState.masterAccounts.find(a => a.id === accId);
     if (!acc) return;
-    document.getElementById('assignServiceLabel').innerText = `${acc.service} (Cupo #${slotIndex + 1})`;
     
-    const list = document.getElementById('assignList');
-    list.innerHTML = '';
+    const labelEl = document.getElementById('assignServiceLabel');
+    if (labelEl) labelEl.innerText = `${acc.service} (Cupo #${slotIndex + 1}) - ${acc.email}`;
 
-    const matchingSubs = appState.subscriptions.filter(s => s.service === acc.service && s.type === 'VENTA');
-    if (matchingSubs.length === 0) {
-        list.innerHTML = `<p class="text-xs text-gray-500 italic p-3 text-center">No hay clientes con suscripciones de ${acc.service}.</p>`;
-    } else {
-        matchingSubs.forEach(sub => {
-            list.innerHTML += `
-            <div class="flex justify-between items-center bg-gray-900 border border-gray-700 p-2.5 rounded hover:border-cuycito-gold transition">
-                <div>
-                    <p class="text-xs font-bold text-white">${sub.person}</p>
-                    <p class="text-[10px] text-gray-400 font-mono">PIN: ${sub.pin || '-'} | Vence: ${sub.endDate}</p>
-                </div>
-                <button onclick="window.confirmAssignSlot('${sub.id}')" class="bg-cuycito-gold text-black font-black text-xs px-3 py-1.5 rounded hover:bg-yellow-400">Asignar</button>
-            </div>`;
-        });
-    }
-    document.getElementById('assignModal').classList.remove('hidden');
+    // Resetear a Paso 1 (Buscador y Selección de Clientes)
+    document.getElementById('assignStep1_SelectClient')?.classList.remove('hidden');
+    document.getElementById('assignStep2_ActivationForm')?.classList.add('hidden');
+    
+    const searchInput = document.getElementById('searchAssignClientInput');
+    if (searchInput) searchInput.value = '';
+
+    window.filterAssignClients();
+    document.getElementById('assignModal')?.classList.remove('hidden');
 };
 
-window.confirmAssignSlot = async (subId) => {
+window.filterAssignClients = () => {
+    const list = document.getElementById('assignClientsList');
+    if (!list) return;
+    list.innerHTML = '';
+
+    const searchTerm = (document.getElementById('searchAssignClientInput')?.value || '').toLowerCase().trim();
+
+    const clients = (appState.clients || []).filter(c => {
+        const name = (c.name || '').toLowerCase();
+        const nick = (c.nickname || '').toLowerCase();
+        const phone = (c.phone || '').toLowerCase();
+        const code = (c.clientCode || window.getClientCode(c) || '').toLowerCase();
+        return name.includes(searchTerm) || nick.includes(searchTerm) || phone.includes(searchTerm) || code.includes(searchTerm);
+    });
+
+    if (clients.length === 0) {
+        list.innerHTML = `
+            <div class="p-6 text-center text-gray-500 bg-black/40 rounded-xl border border-gray-800 space-y-2">
+                <i class="fa-solid fa-users-slash text-2xl text-gray-600"></i>
+                <p class="text-xs font-bold text-gray-400">No se encontraron clientes registrados con esa búsqueda.</p>
+                <button type="button" onclick="window.openNewClientFromAssign()" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black text-xs font-black px-4 py-2 rounded-lg transition shadow">
+                    <i class="fa-solid fa-plus mr-1"></i> Crear Cliente Nuevo Ahora
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    list.innerHTML = clients.map(client => {
+        const clientCode = client.clientCode || window.getClientCode(client);
+        const balance = parseFloat(client.balance || 0).toFixed(2);
+        const isOnline = !!client.isOnline;
+        const onlineDot = isOnline 
+            ? '<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse inline-block shadow-[0_0_8px_rgba(52,211,153,0.8)]" title="En línea"></span>' 
+            : '<span class="w-2.5 h-2.5 rounded-full bg-gray-600 inline-block" title="Desconectado"></span>';
+
+        return `
+        <div class="flex items-center justify-between p-3 bg-black/60 border border-gray-800 hover:border-cuycito-gold/60 rounded-xl transition group">
+            <div class="flex items-center gap-3">
+                ${onlineDot}
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="bg-indigo-950 text-indigo-300 border border-indigo-500/40 text-[9px] font-black px-1.5 py-0.5 rounded font-mono">${clientCode}</span>
+                        <h4 class="text-xs font-black text-white group-hover:text-cuycito-gold transition">${client.name}</h4>
+                        ${client.nickname ? `<span class="text-[10px] text-gray-400">(@${client.nickname})</span>` : ''}
+                    </div>
+                    <p class="text-[10px] text-gray-400 font-mono mt-0.5">
+                        📱 ${client.phone || 'Sin cel'} | 💰 Saldo: <span class="text-emerald-400 font-bold">S/ ${balance}</span>
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="window.selectClientForAssign('${client.id}')" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black font-black text-xs px-3.5 py-1.5 rounded-lg transition shadow flex items-center gap-1">
+                <span>Asignar</span> <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </button>
+        </div>`;
+    }).join('');
+};
+
+window.selectClientForAssign = (clientId) => {
+    const client = (appState.clients || []).find(c => c.id === clientId);
+    if (!client) return;
+
+    selectedAssignClientId = clientId;
     const acc = appState.masterAccounts.find(a => a.id === currentTargetAcc);
-    const sub = appState.subscriptions.find(s => s.id === subId);
-    if (!acc || !sub) return;
 
-    acc.profiles[currentTargetSlot] = sub.id;
-    sub.masterAccountId = acc.id;
-    sub.email = acc.email;
-    sub.pass = acc.pass;
-    sub.hidePassword = !!acc.hidePasswordFromClient;
-    sub.hidePasswordFromClient = !!acc.hidePasswordFromClient;
-    sub.showCredentials = !acc.hidePasswordFromClient;
-    sub.showCredentialsToClient = !acc.hidePasswordFromClient;
+    // Actualizar Resumen en Paso 2
+    const codeEl = document.getElementById('assignSelectedClientCode');
+    const nameEl = document.getElementById('assignSelectedClientName');
+    const phoneEl = document.getElementById('assignSelectedClientPhone');
+    const balEl = document.getElementById('assignSelectedClientBalance');
 
+    if (codeEl) codeEl.innerText = client.clientCode || window.getClientCode(client);
+    if (nameEl) nameEl.innerText = `${client.name} ${client.nickname ? '(@' + client.nickname + ')' : ''}`;
+    if (phoneEl) phoneEl.innerText = client.phone || 'Sin celular';
+    if (balEl) balEl.innerText = `S/ ${parseFloat(client.balance || 0).toFixed(2)}`;
+
+    // Precargar Valores de Activación
+    const pinInput = document.getElementById('assignPinInput');
+    if (pinInput) pinInput.value = `Perfil ${currentTargetSlot + 1}`;
+
+    const amountInput = document.getElementById('assignAmountInput');
+    if (amountInput) amountInput.value = (acc && acc.cost ? (parseFloat(acc.cost) / (acc.capacity || 4) * 1.5).toFixed(2) : '10.00');
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const startInput = document.getElementById('assignStartDateInput');
+    if (startInput) startInput.value = todayStr;
+
+    const hidePassCheck = document.getElementById('assignHidePassCheck');
+    if (hidePassCheck && acc) {
+        hidePassCheck.checked = !!acc.hidePasswordFromClient;
+    }
+
+    window.setAssignDurationMonths(1);
+
+    // Cambiar a Paso 2
+    document.getElementById('assignStep1_SelectClient')?.classList.add('hidden');
+    document.getElementById('assignStep2_ActivationForm')?.classList.remove('hidden');
+};
+
+window.backToAssignClientSelection = () => {
+    document.getElementById('assignStep2_ActivationForm')?.classList.add('hidden');
+    document.getElementById('assignStep1_SelectClient')?.classList.remove('hidden');
+};
+
+window.openNewClientFromAssign = () => {
+    document.getElementById('assignModal')?.classList.add('hidden');
+    window.openClientModal();
+};
+
+window.setAssignDurationMonths = (months) => {
+    currentAssignDurationMonths = months;
+    
+    [1, 2, 3].forEach(m => {
+        const btn = document.getElementById(`btnAssignDur${m}`);
+        if (btn) {
+            if (m === months) {
+                btn.className = "bg-cuycito-gold text-black font-black py-1.5 rounded-lg text-xs transition border border-cuycito-gold shadow";
+            } else {
+                btn.className = "bg-black hover:bg-gray-900 text-gray-300 font-bold py-1.5 rounded-lg text-xs transition border border-gray-700";
+            }
+        }
+    });
+
+    window.recalculateAssignEndDate();
+};
+
+window.recalculateAssignEndDate = () => {
+    const startVal = document.getElementById('assignStartDateInput')?.value;
+    if (!startVal) return;
+
+    const startDate = new Date(startVal + 'T00:00:00');
+    const daysToAdd = currentAssignDurationMonths * 30;
+    startDate.setDate(startDate.getDate() + daysToAdd);
+
+    const endStr = startDate.toISOString().split('T')[0];
+    const endInput = document.getElementById('assignEndDateInput');
+    if (endInput) endInput.value = endStr;
+};
+
+window.executeClientSlotAssignment = async () => {
+    const acc = appState.masterAccounts.find(a => a.id === currentTargetAcc);
+    const client = (appState.clients || []).find(c => c.id === selectedAssignClientId);
+
+    if (!acc || !client) {
+        alert("Por favor selecciona un cliente y una cuenta matriz válida.");
+        return;
+    }
+
+    const pin = (document.getElementById('assignPinInput')?.value || `Perfil ${currentTargetSlot + 1}`).trim();
+    const amount = parseFloat(document.getElementById('assignAmountInput')?.value || 10.00);
+    const currency = document.getElementById('assignCurrencySelect')?.value || 'PEN';
+    const startDate = document.getElementById('assignStartDateInput')?.value || new Date().toISOString().split('T')[0];
+    const endDate = document.getElementById('assignEndDateInput')?.value || new Date().toISOString().split('T')[0];
+    const hidePass = !!document.getElementById('assignHidePassCheck')?.checked;
+
+    const clientCode = client.clientCode || window.getClientCode(client);
+    const newSubId = "sub_cuy_" + Date.now();
+
+    const newSub = {
+        id: newSubId,
+        clientId: client.id,
+        clientCode: clientCode,
+        clientPhone: client.phone || '',
+        clientNickname: client.nickname || client.name,
+        person: client.name,
+        service: acc.service,
+        email: acc.email,
+        pass: acc.pass,
+        pin: pin,
+        masterAccountId: acc.id,
+        slotIndex: currentTargetSlot,
+        hidePassword: hidePass,
+        hidePasswordFromClient: hidePass,
+        showCredentials: !hidePass,
+        showCredentialsToClient: !hidePass,
+        amount: amount,
+        price: amount,
+        currency: currency,
+        startDate: startDate,
+        endDate: endDate,
+        status: 'active',
+        type: 'VENTA',
+        createdAt: new Date().toISOString()
+    };
+
+    // 1. Guardar suscripción
+    appState.subscriptions.push(newSub);
+    try {
+        await setDoc(doc(db, "subscriptions", newSubId), newSub);
+    } catch(e) {
+        console.error("Error guardando suscripcion:", e);
+    }
+
+    // 2. Ocupar slot en la cuenta matriz
+    if (!acc.profiles) acc.profiles = [];
+    acc.profiles[currentTargetSlot] = newSubId;
     try {
         await setDoc(doc(db, "masterAccounts", acc.id), acc, { merge: true });
-        await setDoc(doc(db, "subscriptions", sub.id), sub, { merge: true });
-    } catch(e){}
+    } catch(e) {
+        console.error("Error actualizando cuenta matriz:", e);
+    }
 
-    document.getElementById('assignModal').classList.add('hidden');
+    // 3. Registrar venta en Libro Mayor (History)
+    const historyItem = {
+        id: "hist_" + Date.now(),
+        clientId: client.id,
+        clientCode: clientCode,
+        person: client.name,
+        service: acc.service,
+        type: 'VENTA',
+        amount: amount,
+        currency: currency,
+        date: startDate,
+        timestamp: new Date().toISOString()
+    };
+    appState.history.push(historyItem);
+    try {
+        await setDoc(doc(db, "history", historyItem.id), historyItem);
+    } catch(e) {
+        console.error("Error guardando history:", e);
+    }
+
+    saveLocal();
+    document.getElementById('assignModal')?.classList.add('hidden');
     window.renderAll();
+
+    const passText = hidePass ? '🔒 Contraseña Oculta en Portal' : `🔑 Contraseña: ${acc.pass}`;
+    const whatsappMsg = `¡Hola ${client.name}! 🐹✨\n\nTu servicio de *${acc.service}* ha sido *ACTIVADO CON ÉXITO*:\n\n👤 *Perfil / PIN:* ${pin}\n📧 *Correo:* ${acc.email}\n${passText}\n📆 *Vigencia:* Del ${startDate} al ${endDate}\n\nYa puedes acceder a tu panel en https://cuzcitogo.pe/perfil.html para revisar tu servicio. ¡Gracias por tu preferencia! 🙌`;
+
+    if (confirm(`🎉 ¡Cliente "${client.name}" (${clientCode}) conectado exitosamente a ${acc.service} (Cupo #${currentTargetSlot + 1})!\n\n¿Deseas enviar las credenciales y confirmación por WhatsApp ahora?`)) {
+        window.open(`https://wa.me/${(client.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(whatsappMsg)}`, '_blank');
+    }
 };
 
 window.unlinkProfile = async (accId, slotIndex) => {
     const acc = appState.masterAccounts.find(a => a.id === accId);
     if (!acc) return;
     acc.profiles[slotIndex] = null;
-    try { await setDoc(doc(db, "masterAccounts", acc.id), acc); } catch(e){}
+    try { await setDoc(doc(db, "masterAccounts", acc.id), acc, { merge: true }); } catch(e){}
+    saveLocal();
     window.renderAll();
 };
 
