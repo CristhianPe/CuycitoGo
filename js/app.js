@@ -673,32 +673,72 @@ window.openEditModal = (subId) => {
 };
 
 window.saveEditModal = async () => {
-    const id = document.getElementById('editSubId').value;
+    const id = document.getElementById('editSubId')?.value;
+    if(!id) return;
     const sub = appState.subscriptions.find(s => s.id === id);
     if(!sub) return;
 
-    sub.person = document.getElementById('editPerson').value.trim();
-    sub.service = document.getElementById('editService').value;
-    sub.email = document.getElementById('editEmail').value.trim();
-    sub.pass = document.getElementById('editPass').value.trim();
-    sub.pin = document.getElementById('editPin').value.trim();
-    sub.hidePassword = document.getElementById('editHidePass').checked;
+    sub.person = (document.getElementById('editPerson')?.value || sub.person).trim();
+    sub.service = document.getElementById('editService')?.value || sub.service;
+    sub.email = (document.getElementById('editEmail')?.value || '').trim();
+    sub.pass = (document.getElementById('editPass')?.value || '').trim();
+    sub.pin = (document.getElementById('editPin')?.value || '').trim();
+    sub.hidePassword = !!document.getElementById('editHidePass')?.checked;
+    sub.hidePasswordFromClient = sub.hidePassword;
     sub.showCredentials = !sub.hidePassword;
-    sub.amount = parseFloat(document.getElementById('editAmount').value) || 0;
-    sub.currency = document.getElementById('editCurrency').value;
-    sub.endDate = document.getElementById('editEndDate').value;
+    sub.showCredentialsToClient = !sub.hidePassword;
+    sub.amount = parseFloat(document.getElementById('editAmount')?.value) || sub.amount || 0;
+    sub.price = sub.amount;
+    sub.currency = document.getElementById('editCurrency')?.value || sub.currency || 'PEN';
+    sub.endDate = document.getElementById('editEndDate')?.value || sub.endDate;
 
-    try { await setDoc(doc(db, "subscriptions", id), sub); } catch(e){}
-    document.getElementById('editModal').classList.add('hidden');
+    try { 
+        await setDoc(doc(db, "subscriptions", id), sub, { merge: true }); 
+    } catch(e){
+        console.error("Error actualizando suscripción:", e);
+    }
+    saveLocal();
+    document.getElementById('editModal')?.classList.add('hidden');
     window.renderAll();
 };
 
-window.deleteSubscription = async () => {
-    const id = document.getElementById('editSubId').value;
-    if(confirm("¿Eliminar esta suscripción permanentemente?")) {
-        appState.subscriptions = appState.subscriptions.filter(s => s.id !== id);
-        try { await deleteDoc(doc(db, "subscriptions", id)); } catch(e){}
-        document.getElementById('editModal').classList.add('hidden');
+window.deleteSubscription = async (passedId) => {
+    const id = passedId || document.getElementById('editSubId')?.value;
+    if (!id) {
+        alert("No se pudo identificar la suscripción a eliminar.");
+        return;
+    }
+
+    const sub = (appState.subscriptions || []).find(s => s.id === id);
+    const subName = sub ? `"${sub.service}" (${sub.person})` : 'esta suscripción';
+
+    if (confirm(`¿Estás seguro de ELIMINAR permanentemente ${subName}?`)) {
+        // 1. Si estaba vinculada a una cuenta matriz, liberar el cupo / slot
+        if (sub && sub.masterAccountId) {
+            const masterAcc = (appState.masterAccounts || []).find(m => m.id === sub.masterAccountId);
+            if (masterAcc && masterAcc.profiles) {
+                const slotIdx = masterAcc.profiles.findIndex(pId => pId === id);
+                if (slotIdx >= 0) {
+                    masterAcc.profiles[slotIdx] = null;
+                    try {
+                        await setDoc(doc(db, "masterAccounts", masterAcc.id), masterAcc, { merge: true });
+                    } catch(e){}
+                }
+            }
+        }
+
+        // 2. Eliminar de appState y localStorage
+        appState.subscriptions = (appState.subscriptions || []).filter(s => s.id !== id);
+        saveLocal();
+
+        // 3. Eliminar de Firestore
+        try { 
+            await deleteDoc(doc(db, "subscriptions", id)); 
+        } catch(e){
+            console.error("Error eliminando suscripción de Firestore:", e);
+        }
+
+        document.getElementById('editModal')?.classList.add('hidden');
         window.renderAll();
     }
 };

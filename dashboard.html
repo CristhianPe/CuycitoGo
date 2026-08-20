@@ -1666,8 +1666,34 @@
                 <div class="flex items-center gap-2">
                     <input type="checkbox" id="editHidePass" class="w-3.5 h-3.5 accent-cuycito-gold bg-black border-gray-700">
                     <label for="editHidePass" class="text-[10px] text-gray-300 font-semibold cursor-pointer">🔒 Ocultar contraseña al cliente en su portal</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="number" step="0.01" id="editAmount" class="w-full bg-black border border-gray-700 rounded p-2 text-white" placeholder="Monto">
+                    <select id="editCurrency" class="w-full bg-black border border-gray-700 rounded p-2 text-white">
+                        <option value="PEN">PEN (S/)</option>
+                        <option value="USD">USD ($)</option>
+                    </select>
                 </div>
-                <div class="grid grid-cols-2 gap-3"><input type="number" step="0.01" id="editAmount" class="w-full bg-black border border-gray-700 rounded p-2 text-white"><select id="editCurrency" class="w-full bg-black border border-gray-700 rounded p-2 text-white"><option value="PEN">PEN (S/)</option><option value="USD">USD ($)</option></select></div>
+                <div>
+                    <label class="block text-[10px] text-gray-400 mb-1">Fecha de Culminación (Vencimiento):</label>
+                    <input type="date" id="editEndDate" class="w-full bg-black border border-gray-700 rounded p-2 text-cuycito-gold font-bold outline-none">
+                </div>
+                <div class="flex justify-between items-center pt-3 border-t border-gray-800">
+                    <button type="button" onclick="window.deleteSubscription()" class="bg-red-950 hover:bg-red-900 text-red-400 border border-red-500/40 text-xs font-bold px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shadow">
+                        <i class="fa-solid fa-trash"></i> Eliminar
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="document.getElementById('editModal').classList.add('hidden')" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-4 py-2 rounded-lg transition">
+                            Cancelar
+                        </button>
+                        <button type="button" onclick="window.saveEditModal()" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black font-black text-xs px-4 py-2 rounded-lg transition shadow">
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL EDITAR / CREAR NOTICIA DE PORTADA -->
     <div id="newsArticleEditModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-cuycito-dark border border-orange-500/80 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar space-y-4 shadow-2xl">
