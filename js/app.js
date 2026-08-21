@@ -1732,23 +1732,39 @@ window.renderCsmAvailableSubs = () => {
 };
 
 window.unlinkServiceFromClient = async (subId) => {
-    const sub = appState.subscriptions.find(s => s.id === subId);
+    const sub = (appState.subscriptions || []).find(s => s.id === subId);
     if (!sub) return;
 
-    if (confirm(`¿Desvincular "${sub.service}" de ${activeManagingClient.name}? El servicio pasará a estado "Sin Asignar" para que puedas reasignarlo a otro cliente.`)) {
-        sub.person = 'Sin Asignar';
-        sub.clientId = null;
-        sub.clientCode = null;
-        sub.clientPhone = null;
-        try {
-            await setDoc(doc(db, "subscriptions", sub.id), sub);
-            window.renderCsmLinkedList();
-            window.renderCsmAvailableSubs();
-            window.renderClients();
-            window.renderActiveTable();
-        } catch(e) {
-            alert("Error al desvincular servicio.");
+    if (confirm(`¿Desvincular "${sub.service}" de ${activeManagingClient.name}? El servicio será retirado y liberado limpiamente de la base de datos.`)) {
+        // 1. Si pertenecía a una cuenta matriz, liberar el cupo en la matriz
+        if (sub.masterAccountId) {
+            const masterAcc = (appState.masterAccounts || []).find(m => m.id === sub.masterAccountId);
+            if (masterAcc && masterAcc.profiles) {
+                const sIdx = masterAcc.profiles.findIndex(p => p === subId);
+                if (sIdx >= 0) {
+                    masterAcc.profiles[sIdx] = null;
+                    try {
+                        await setDoc(doc(db, "masterAccounts", masterAcc.id), masterAcc, { merge: true });
+                    } catch(e){}
+                }
+            }
         }
+
+        // 2. Eliminar la suscripción desvinculada para no dejar datos muertos en Firestore
+        appState.subscriptions = (appState.subscriptions || []).filter(s => s.id !== subId);
+        try {
+            await deleteDoc(doc(db, "subscriptions", subId));
+            console.log("🗑️ Servicio desvinculado eliminado de Firestore:", subId);
+        } catch(e){
+            console.error("Error eliminando servicio:", e);
+        }
+
+        saveLocal();
+        window.renderCsmLinkedList();
+        window.renderCsmAvailableSubs();
+        window.renderClients();
+        window.renderActiveTable();
+        window.renderMasterAccounts();
     }
 };
 
@@ -3071,43 +3087,61 @@ window.renderMasterAccounts = () => {
 };
 
 // =====================================
-// LIMPIEZA AUTOMÁTICA DE INTEGRIDAD DE BASE DE DATOS (HUÉRFANOS Y DUPLICADOS)
+// LIMPIEZA AUTOMÁTICA DE INTEGRIDAD DE BASE DE DATOS (PURGA DE MUERTOS, HUÉRFANOS Y DUPLICADOS)
 // =====================================
 window.cleanupDatabaseOrphans = async (isManual = false) => {
-    console.log("🧹 Ejecutando verificación de integridad de Base de Datos...");
+    console.log("🧹 Ejecutando purga exhaustiva de datos muertos, huérfanos y corruptos...");
     const masterMap = new Map((appState.masterAccounts || []).map(m => [m.id, m]));
-    let cleanedOrphans = 0;
+    const clientMap = new Map((appState.clients || []).map(c => [c.id, c]));
+
+    let cleanedDeadOrphans = 0;
     let cleanedDuplicates = 0;
     let slotsReset = 0;
 
-    // 1. Limpiar o desvincular suscripciones que apuntan a cuentas matrices eliminadas
     const seenSignatures = new Set();
     const cleanSubscriptions = [];
 
     for (const sub of (appState.subscriptions || [])) {
         if (!sub.id) continue;
 
-        // Comprobar si apunta a una cuenta matriz inexistente
-        if (sub.masterAccountId && !masterMap.has(sub.masterAccountId)) {
-            console.warn(`🗑️ Suscripción huérfana detectada: ${sub.service} (${sub.id}) con matriz eliminada ${sub.masterAccountId}`);
+        const personNorm = (sub.person || '').trim().toLowerCase();
+        const serviceNorm = (sub.service || '').trim().toLowerCase();
+
+        // 1. Condición: Registro muerto o "Sin Asignar" o servicio corrupto/prueba (ej: "777", vacíos)
+        const isDeadName = personNorm === 'sin asignar' || personNorm === 'sin nombre' || personNorm === '' || personNorm === 'null' || personNorm === 'undefined';
+        const isCorruptService = serviceNorm.includes('777') || serviceNorm === '' || serviceNorm === 'null';
+        const isMissingClient = sub.clientId && !clientMap.has(sub.clientId) && isDeadName;
+
+        if (isDeadName || isCorruptService || isMissingClient) {
+            console.warn(`🗑️ Purgando registro muerto de suscripción: ID: ${sub.id}, Person: "${sub.person}", Service: "${sub.service}"`);
             try {
                 await deleteDoc(doc(db, "subscriptions", sub.id));
-                cleanedOrphans++;
+                cleanedDeadOrphans++;
             } catch(e){}
-            continue; // No incluir en la lista activa
+            continue;
         }
 
-        // Comprobar duplicados exactos (mismo cliente, mismo servicio, mismo correo y pin)
+        // 2. Condición: Huérfano de Cuenta Matriz eliminada
+        if (sub.masterAccountId && !masterMap.has(sub.masterAccountId)) {
+            console.warn(`🗑️ Purgando servicio con cuenta matriz eliminada: ${sub.service} (${sub.id}) -> Matriz: ${sub.masterAccountId}`);
+            try {
+                await deleteDoc(doc(db, "subscriptions", sub.id));
+                cleanedDeadOrphans++;
+            } catch(e){}
+            continue;
+        }
+
+        // 3. Condición: Duplicados exactos (mismo cliente + mismo servicio + mismo correo + mismo pin)
         const clientIdentifier = sub.clientId || sub.clientCode || sub.person;
-        const sig = `${clientIdentifier}_${sub.service}_${sub.email || ''}_${sub.pin || ''}`;
+        const sig = `${clientIdentifier}_${sub.service}_${(sub.email || '').trim().toLowerCase()}_${(sub.pin || '').trim()}`;
         
         if (seenSignatures.has(sig)) {
-            console.warn(`🗑️ Suscripción duplicada redundante detectada: ${sig} (${sub.id})`);
+            console.warn(`🗑️ Purgando servicio duplicado redundante: ${sig} (${sub.id})`);
             try {
                 await deleteDoc(doc(db, "subscriptions", sub.id));
                 cleanedDuplicates++;
             } catch(e){}
-            continue; // No incluir duplicado
+            continue;
         }
 
         seenSignatures.add(sig);
@@ -3116,7 +3150,7 @@ window.cleanupDatabaseOrphans = async (isManual = false) => {
 
     appState.subscriptions = cleanSubscriptions;
 
-    // 2. Comprobar slots en cuentas matrices que apunten a suscripciones inexistentes
+    // 4. Limpieza de slots en Cuentas Matrices que apunten a suscripciones inexistentes o purgadas
     const subSet = new Set(cleanSubscriptions.map(s => s.id));
     for (const acc of (appState.masterAccounts || [])) {
         let changed = false;
@@ -3140,11 +3174,11 @@ window.cleanupDatabaseOrphans = async (isManual = false) => {
     saveLocal();
     window.renderAll();
 
-    const totalFixes = cleanedOrphans + cleanedDuplicates + slotsReset;
-    console.log(`✅ Limpieza completada: ${cleanedOrphans} huérfanos, ${cleanedDuplicates} duplicados, ${slotsReset} slots corregidos.`);
+    const totalFixes = cleanedDeadOrphans + cleanedDuplicates + slotsReset;
+    console.log(`✅ Purga finalizada: ${cleanedDeadOrphans} datos muertos/huérfanos eliminados, ${cleanedDuplicates} duplicados eliminados, ${slotsReset} slots de matriz liberados.`);
 
     if (isManual) {
-        alert(`🧹 Limpieza de Base de Datos Completada:\n\n• ${cleanedOrphans} servicios huérfanos de matrices eliminadas retirados.\n• ${cleanedDuplicates} servicios duplicados eliminados.\n• ${slotsReset} cupos de cuentas matrices restablecidos.`);
+        alert(`🧹 Purga de Base de Datos Exitosa:\n\n• ${cleanedDeadOrphans} registros muertos ("Sin Asignar", servicios de prueba "777", huérfanos) eliminados permanentemente de Firestore.\n• ${cleanedDuplicates} servicios duplicados eliminados.\n• ${slotsReset} cupos de cuentas matrices liberados y restablecidos.`);
     }
 };
 
