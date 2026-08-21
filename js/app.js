@@ -695,8 +695,42 @@ window.openEditModal = (subId) => {
     document.getElementById('editHidePass').checked = !!sub.hidePassword;
     document.getElementById('editAmount').value = sub.amount !== undefined ? sub.amount : (sub.price || 0);
     document.getElementById('editCurrency').value = sub.currency || 'PEN';
-    document.getElementById('editEndDate').value = sub.endDate || '';
+    
+    // Fechas e intervalo de meses (1 mes = 30 días)
+    const todayStr = new Date().toISOString().split('T')[0];
+    const startDateVal = sub.startDate || (sub.createdAt ? sub.createdAt.split('T')[0] : todayStr);
+    document.getElementById('editStartDate').value = startDateVal;
+
+    let calcMonths = sub.months || 1;
+    if (sub.startDate && sub.endDate) {
+        const diffMs = new Date(sub.endDate + 'T00:00:00') - new Date(sub.startDate + 'T00:00:00');
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays > 0) {
+            calcMonths = Math.max(1, Math.round(diffDays / 30));
+        }
+    }
+    document.getElementById('editMonths').value = calcMonths;
+
+    if (sub.endDate) {
+        document.getElementById('editEndDate').value = sub.endDate;
+    } else {
+        window.recalculateEditEndDate();
+    }
+
     document.getElementById('editModal').classList.remove('hidden');
+};
+
+window.recalculateEditEndDate = () => {
+    const startVal = document.getElementById('editStartDate')?.value;
+    const monthsVal = Math.max(1, parseInt(document.getElementById('editMonths')?.value) || 1);
+    if (!startVal) return;
+
+    const startDate = new Date(startVal + 'T00:00:00');
+    startDate.setDate(startDate.getDate() + (monthsVal * 30));
+
+    const endStr = startDate.toISOString().split('T')[0];
+    const endInput = document.getElementById('editEndDate');
+    if (endInput) endInput.value = endStr;
 };
 
 window.saveEditModal = async () => {
@@ -719,6 +753,8 @@ window.saveEditModal = async () => {
     sub.amount = parseFloat(document.getElementById('editAmount')?.value) || sub.amount || 0;
     sub.price = sub.amount;
     sub.currency = document.getElementById('editCurrency')?.value || sub.currency || 'PEN';
+    sub.startDate = document.getElementById('editStartDate')?.value || sub.startDate;
+    sub.months = Math.max(1, parseInt(document.getElementById('editMonths')?.value) || 1);
     sub.endDate = document.getElementById('editEndDate')?.value || sub.endDate;
     sub.updatedAt = new Date().toISOString();
 
@@ -1233,15 +1269,21 @@ window.openNewClientFromAssign = () => {
 };
 
 window.setAssignDurationMonths = (months) => {
-    currentAssignDurationMonths = months;
+    const val = Math.max(1, parseInt(months) || 1);
+    currentAssignDurationMonths = val;
     
+    const durationInput = document.getElementById('assignDurationInput');
+    if (durationInput && parseInt(durationInput.value) !== val) {
+        durationInput.value = val;
+    }
+
     [1, 2, 3].forEach(m => {
         const btn = document.getElementById(`btnAssignDur${m}`);
         if (btn) {
-            if (m === months) {
-                btn.className = "bg-cuycito-gold text-black font-black py-1.5 rounded-lg text-xs transition border border-cuycito-gold shadow";
+            if (m === val) {
+                btn.className = "bg-cuycito-gold text-black font-black py-2 rounded-xl text-xs transition border border-cuycito-gold shadow";
             } else {
-                btn.className = "bg-black hover:bg-gray-900 text-gray-300 font-bold py-1.5 rounded-lg text-xs transition border border-gray-700";
+                btn.className = "bg-black hover:bg-gray-900 text-gray-300 font-bold py-2 rounded-xl text-xs transition border border-gray-700";
             }
         }
     });
