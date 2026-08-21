@@ -160,15 +160,15 @@ onAuthStateChanged(auth, async (user) => {
         try {
             const subSnap = await getDocs(collection(db, "subscriptions"));
             appState.subscriptions = []; 
-            subSnap.forEach(d => appState.subscriptions.push(d.data()));
+            subSnap.forEach(d => appState.subscriptions.push({ ...d.data(), id: d.id, _docId: d.id }));
 
             const histSnap = await getDocs(collection(db, "history"));
             appState.history = []; 
-            histSnap.forEach(d => appState.history.push(d.data()));
+            histSnap.forEach(d => appState.history.push({ ...d.data(), id: d.id, _docId: d.id }));
 
             const masterSnap = await getDocs(collection(db, "masterAccounts"));
             appState.masterAccounts = []; 
-            masterSnap.forEach(d => appState.masterAccounts.push(d.data()));
+            masterSnap.forEach(d => appState.masterAccounts.push({ ...d.data(), id: d.id, _docId: d.id }));
 
             const servSnap = await getDocs(collection(db, "services"));
             let cloudServices = []; 
@@ -177,15 +177,31 @@ onAuthStateChanged(auth, async (user) => {
             const clientSnap = await getDocs(collection(db, "users"));
             appState.clients = []; 
             clientSnap.forEach(d => {
-                const data = d.data();
+                const data = { ...d.data(), id: d.id };
                 if (!data.nickname) data.nickname = data.name || 'Cliente';
+                data.clientCode = window.getClientCode(data);
                 appState.clients.push(data);
+            });
+
+            // Saneamiento y auto-asignación de identificador ID en suscripciones heredadas
+            appState.subscriptions.forEach(async (s) => {
+                if (!s.clientId && s.person && s.person !== 'Sin Asignar') {
+                    const matched = appState.clients.find(c => (c.name || '').trim().toLowerCase() === s.person.trim().toLowerCase());
+                    if (matched) {
+                        s.clientId = matched.id;
+                        s.clientCode = matched.clientCode || window.getClientCode(matched);
+                        s.clientPhone = matched.phone || '';
+                        try {
+                            await setDoc(doc(db, "subscriptions", s.id), s, { merge: true });
+                        } catch(e){}
+                    }
+                }
             });
 
             const catalogSnap = await getDocs(collection(db, "store_catalog"));
             appState.catalog = []; 
             catalogSnap.forEach(d => {
-                const item = d.data();
+                const item = { id: d.id, ...d.data() };
                 if (!item.imageUrl || item.imageUrl.trim() === '') {
                     item.imageUrl = resolveProductImage(item);
                 }
@@ -223,6 +239,14 @@ onAuthStateChanged(auth, async (user) => {
             window.calculateEndDate();
             window.renderAll();
             window.initStoreMaintenanceListener();
+            if (typeof window.initRealtimeClientsPresenceListener === 'function') {
+                window.initRealtimeClientsPresenceListener();
+            }
+
+            // Saneamiento e integridad automática de cuentas matrices y servicios huérfanos
+            setTimeout(() => {
+                window.cleanupDatabaseOrphans(false);
+            }, 1000);
         } catch (error) {
             console.error("Error leyendo DB:", error);
             document.getElementById('dbStatus').innerHTML = '<span class="text-red-500">Error Cloud</span>';
@@ -249,9 +273,91 @@ window.setGlobalCurrency = (curr) => {
     window.renderAll();
 };
 
+window.parseDateUniversal = (dateStr) => {
+    if (!dateStr) return null;
+    const str = dateStr.toString().trim();
+    if (!str || str === 'N/A' || str === '-') return null;
+
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(str)) {
+        const parts = str.split('/');
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        const d = new Date(year, month, day, 0, 0, 0);
+        return isNaN(d) ? null : d;
+    }
+
+    if (/^\d{4}-\d{1,2}-\d{1,2}/.test(str)) {
+        const clean = str.split('T')[0];
+        const parts = clean.split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const d = new Date(year, month, day, 0, 0, 0);
+        return isNaN(d) ? null : d;
+    }
+
+    const d = new Date(str);
+    return isNaN(d) ? null : d;
+};
+
+window.formatDateISO = (dateStr) => {
+    const d = window.parseDateUniversal(dateStr);
+    if (!d) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+window.formatDateDDMMYYYY = (dateStr) => {
+    const d = window.parseDateUniversal(dateStr);
+    if (!d) return dateStr || '-';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${day}/${month}/${year}`;
+};
+
 window.getDaysRemaining = (endDateStr) => {
-    const today = new Date(); today.setHours(0,0,0,0);
-    return Math.ceil((new Date(endDateStr) - today) / 86400000);
+    if (!endDateStr) return 0;
+    const dEnd = window.parseDateUniversal(endDateStr);
+    if (!dEnd) return 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    dEnd.setHours(0, 0, 0, 0);
+    return Math.ceil((dEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+window.initDatePickers = () => {
+    if (typeof flatpickr !== 'undefined') {
+        flatpickr(".datepicker-es", {
+            dateFormat: "d/m/Y",
+            locale: flatpickr.l10ns && flatpickr.l10ns.es ? flatpickr.l10ns.es : "es",
+            allowInput: true,
+            onChange: function(selectedDates, dateStr, instance) {
+                const id = instance.element.id;
+                if (id === 'editStartDate' || id === 'editMonths') {
+                    window.recalculateEditEndDate();
+                } else if (id === 'assignStartDateInput') {
+                    window.recalculateAssignEndDate();
+                } else if (id === 'startDate' || id === 'durationMonths') {
+                    window.calculateEndDate();
+                }
+            }
+        });
+    }
+};
+
+window.setDatePickerValue = (id, dateStr) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const formatted = window.formatDateDDMMYYYY(dateStr);
+    if (el._flatpickr) {
+        el._flatpickr.setDate(formatted, false, "d/m/Y");
+    } else {
+        el.value = formatted;
+    }
 };
 
 window.generatePassword = () => {
@@ -272,14 +378,16 @@ window.copyGeneratedPassword = () => {
 window.triggerWhatsApp = (subId) => {
     const sub = appState.subscriptions.find(s => s.id === subId);
     if (!sub) return;
-    const msg = window.getDaysRemaining(sub.endDate) >= 0 ? `¡Hola! 🐹👋 Tu suscripción de ${sub.service} vence el ${sub.endDate}. ¿Deseas renovar?` : `¡Hola! 🐹⚠️ Tu cuenta de ${sub.service} ha vencido. Escríbenos para reactivar.`;
+    const formattedEnd = window.formatDateDDMMYYYY(sub.endDate);
+    const msg = window.getDaysRemaining(sub.endDate) >= 0 ? `¡Hola! 🐹👋 Tu suscripción de ${sub.service} vence el ${formattedEnd}. ¿Deseas renovar?` : `¡Hola! 🐹⚠️ Tu cuenta de ${sub.service} ha vencido. Escríbenos para reactivar.`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
 };
 
 window.triggerInfo = (subId) => {
     const sub = appState.subscriptions.find(s => s.id === subId);
     if (!sub) return;
-    let msg = `✨ *CUENTA ACTIVADA* ✨\n\n🎬 *Servicio:* ${sub.service}\n👤 *Perfil:* ${sub.person}\n📧 *Correo:* ${sub.email}\n🔐 *Pass:* ${sub.pass}\n🔢 *PIN:* ${sub.pin}\n📆 *Vence:* ${sub.endDate}`;
+    const formattedEnd = window.formatDateDDMMYYYY(sub.endDate);
+    let msg = `✨ *CUENTA ACTIVADA* ✨\n\n🎬 *Servicio:* ${sub.service}\n👤 *Perfil:* ${sub.person}\n📧 *Correo:* ${sub.email}\n🔐 *Pass:* ${sub.pass}\n🔢 *PIN:* ${sub.pin}\n📆 *Vence:* ${formattedEnd}`;
     const infoEl = document.getElementById('infoText');
     if(infoEl) infoEl.value = msg; 
     const modal = document.getElementById('infoModal');
@@ -319,11 +427,22 @@ window.switchTab = (tabId) => {
                 : "text-gray-500 hover:text-white border-b-2 border-transparent pb-2 font-black uppercase tracking-wider text-sm transition flex items-center gap-1.5";
         }
     });
-    if(cleanId === 'finance') window.renderFinance();
+    if(cleanId === 'subs') {
+        window.renderActiveTable();
+    }
+    if(cleanId === 'master') {
+        window.renderMasterAccounts();
+    }
+    if(cleanId === 'finance') {
+        window.renderFinance();
+    }
     if(cleanId === 'clients') {
         window.renderClients();
         window.renderPendingRegistrationsTable();
         window.renderAdminReferralLogsTable();
+    }
+    if(cleanId === 'catalog') {
+        window.renderCatalog();
     }
     if(cleanId === 'recharges') {
         window.renderRechargesTable();
@@ -409,9 +528,10 @@ window.calculateEndDate = () => {
     if(!startInput || !startInput.value) return;
     const durationInput = document.getElementById('durationMonths');
     const months = durationInput ? parseInt(durationInput.value) || 1 : 1;
-    const end = new Date(new Date(startInput.value).getTime() + (months * 30 * 86400000));
-    const endDateInput = document.getElementById('endDate');
-    if(endDateInput) endDateInput.value = end.toISOString().split('T')[0];
+    const startDate = window.parseDateUniversal(startInput.value);
+    if (!startDate) return;
+    startDate.setDate(startDate.getDate() + (months * 30));
+    window.setDatePickerValue('endDate', startDate);
 };
 
 // =====================================
@@ -492,11 +612,52 @@ window.handleFormSubmit = async (e) => {
     const amount = parseFloat(document.getElementById('txAmount').value) || 0;
     const currency = document.getElementById('txCurrency').value;
 
-    const newSub = { id, type, person, service, email, pass, pin, hidePassword, showCredentials, amount, currency, startDate, endDate, months };
+    let matchedClientId = null;
+    let matchedClientCode = null;
+    let matchedClientPhone = null;
+    let matchedClientPersonName = person;
+
+    const matchedClient = appState.clients.find(c => {
+        const cName = (c.name || '').trim().toLowerCase();
+        const cNick = (c.nickname || '').trim().toLowerCase();
+        const cPhone = (c.phone || '').trim();
+        const cCode = (c.clientCode || window.getClientCode(c)).trim().toLowerCase();
+        const searchVal = person.toLowerCase();
+        return cCode === searchVal || cName === searchVal || cNick === searchVal || cPhone === person || (person.includes(cCode) && cCode.length > 3);
+    });
+
+    if (matchedClient) {
+        matchedClientId = matchedClient.id;
+        matchedClientCode = matchedClient.clientCode || window.getClientCode(matchedClient);
+        matchedClientPhone = matchedClient.phone;
+        matchedClientPersonName = matchedClient.name;
+    }
+
+    const newSub = { 
+        id, 
+        type, 
+        person: matchedClientPersonName, 
+        clientId: matchedClientId,
+        clientCode: matchedClientCode,
+        clientPhone: matchedClientPhone,
+        service, 
+        email, 
+        pass, 
+        pin, 
+        hidePassword, 
+        hidePasswordFromClient: hidePassword,
+        showCredentials, 
+        showCredentialsToClient: showCredentials,
+        amount, 
+        currency, 
+        startDate, 
+        endDate, 
+        months 
+    };
     appState.subscriptions.push(newSub);
 
     const txId = 'tx_cuy_' + Date.now();
-    const newTx = { id: txId, date: startDate, type, person, service, amount, currency };
+    const newTx = { id: txId, date: startDate, type, person: matchedClientPersonName, service, amount, currency, clientId: matchedClientId, clientCode: matchedClientCode };
     appState.history.push(newTx);
 
     try {
@@ -505,7 +666,7 @@ window.handleFormSubmit = async (e) => {
 
         // Si es una Venta a un cliente con código de referido, registrar compra efectuada
         if (type === 'VENTA') {
-            const client = appState.clients.find(c => (c.name || '').trim().toLowerCase() === person.toLowerCase() || (c.nickname || '').trim().toLowerCase() === person.toLowerCase());
+            const client = matchedClient || appState.clients.find(c => (c.name || '').trim().toLowerCase() === person.toLowerCase() || (c.nickname || '').trim().toLowerCase() === person.toLowerCase());
             if (client && (client.referredCodeUsed || client.referredBy)) {
                 const refCodeUsed = client.referredCodeUsed || client.referredBy;
                 const referrer = appState.clients.find(c => {
@@ -589,49 +750,180 @@ window.renewSubscription = async (subId, inputId) => {
 };
 
 window.openEditModal = (subId) => {
-    const sub = appState.subscriptions.find(s => s.id === subId);
-    if(!sub) return;
-    document.getElementById('editSubId').value = sub.id;
-    document.getElementById('editPerson').value = sub.person;
-    document.getElementById('editService').value = sub.service;
+    const sub = (appState.subscriptions || []).find(s => s.id === subId || s._docId === subId);
+    if (!sub) return;
+
+    if (typeof window.populateServicesDropdowns === 'function') {
+        window.populateServicesDropdowns();
+    }
+
+    document.getElementById('editSubId').value = sub.id || sub._docId;
+    document.getElementById('editPerson').value = sub.person || '';
+
+    const editServiceSelect = document.getElementById('editService');
+    const editServiceCustom = document.getElementById('editServiceCustom');
+    
+    if (editServiceSelect) {
+        const hasOption = Array.from(editServiceSelect.options).some(opt => opt.value === sub.service);
+        if (hasOption) {
+            editServiceSelect.value = sub.service;
+            if (editServiceCustom) editServiceCustom.classList.add('hidden');
+        } else {
+            editServiceSelect.value = 'OTRO';
+            if (editServiceCustom) {
+                editServiceCustom.value = sub.service || '';
+                editServiceCustom.classList.remove('hidden');
+            }
+        }
+    }
+
     document.getElementById('editEmail').value = sub.email || '';
     document.getElementById('editPass').value = sub.pass || '';
     document.getElementById('editPin').value = sub.pin || '';
     document.getElementById('editHidePass').checked = !!sub.hidePassword;
-    document.getElementById('editAmount').value = sub.amount;
-    document.getElementById('editCurrency').value = sub.currency;
-    document.getElementById('editEndDate').value = sub.endDate;
+    document.getElementById('editAmount').value = sub.amount !== undefined ? sub.amount : (sub.price || 0);
+    document.getElementById('editCurrency').value = sub.currency || 'PEN';
+    
+    // Fechas e intervalo de meses (1 mes = 30 días)
+    const todayFormatted = window.formatDateDDMMYYYY(new Date());
+    const startDateVal = sub.startDate ? window.formatDateDDMMYYYY(sub.startDate) : (sub.createdAt ? window.formatDateDDMMYYYY(sub.createdAt) : todayFormatted);
+    window.setDatePickerValue('editStartDate', startDateVal);
+
+    let calcMonths = sub.months || 1;
+    if (sub.startDate && sub.endDate) {
+        const dStart = window.parseDateUniversal(sub.startDate);
+        const dEnd = window.parseDateUniversal(sub.endDate);
+        if (dStart && dEnd) {
+            const diffMs = dEnd.getTime() - dStart.getTime();
+            const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+            if (diffDays > 0) {
+                calcMonths = Math.max(1, Math.round(diffDays / 30));
+            }
+        }
+    }
+    document.getElementById('editMonths').value = calcMonths;
+
+    if (sub.endDate) {
+        window.setDatePickerValue('editEndDate', window.formatDateDDMMYYYY(sub.endDate));
+    } else {
+        window.recalculateEditEndDate();
+    }
+
     document.getElementById('editModal').classList.remove('hidden');
+    window.initDatePickers();
+};
+
+window.recalculateEditEndDate = () => {
+    const startVal = document.getElementById('editStartDate')?.value;
+    const monthsVal = Math.max(1, parseInt(document.getElementById('editMonths')?.value) || 1);
+    if (!startVal) return;
+
+    const startDate = window.parseDateUniversal(startVal);
+    if (!startDate) return;
+    startDate.setDate(startDate.getDate() + (monthsVal * 30));
+
+    window.setDatePickerValue('editEndDate', startDate);
 };
 
 window.saveEditModal = async () => {
-    const id = document.getElementById('editSubId').value;
-    const sub = appState.subscriptions.find(s => s.id === id);
-    if(!sub) return;
+    const id = document.getElementById('editSubId')?.value;
+    if (!id) return;
+    const sub = (appState.subscriptions || []).find(s => s.id === id || s._docId === id);
+    if (!sub) return;
 
-    sub.person = document.getElementById('editPerson').value.trim();
-    sub.service = document.getElementById('editService').value;
-    sub.email = document.getElementById('editEmail').value.trim();
-    sub.pass = document.getElementById('editPass').value.trim();
-    sub.pin = document.getElementById('editPin').value.trim();
-    sub.hidePassword = document.getElementById('editHidePass').checked;
+    const newService = await window.getOrRegisterService('editService', 'editServiceCustom');
+
+    sub.person = (document.getElementById('editPerson')?.value || sub.person).trim();
+    if (newService) sub.service = newService;
+    sub.email = (document.getElementById('editEmail')?.value || '').trim();
+    sub.pass = (document.getElementById('editPass')?.value || '').trim();
+    sub.pin = (document.getElementById('editPin')?.value || '').trim();
+    sub.hidePassword = !!document.getElementById('editHidePass')?.checked;
+    sub.hidePasswordFromClient = sub.hidePassword;
     sub.showCredentials = !sub.hidePassword;
-    sub.amount = parseFloat(document.getElementById('editAmount').value) || 0;
-    sub.currency = document.getElementById('editCurrency').value;
-    sub.endDate = document.getElementById('editEndDate').value;
+    sub.showCredentialsToClient = !sub.hidePassword;
+    sub.amount = parseFloat(document.getElementById('editAmount')?.value) || sub.amount || 0;
+    sub.price = sub.amount;
+    sub.currency = document.getElementById('editCurrency')?.value || sub.currency || 'PEN';
+    sub.startDate = document.getElementById('editStartDate')?.value || sub.startDate;
+    sub.months = Math.max(1, parseInt(document.getElementById('editMonths')?.value) || 1);
+    sub.endDate = document.getElementById('editEndDate')?.value || sub.endDate;
+    sub.updatedAt = new Date().toISOString();
 
-    try { await setDoc(doc(db, "subscriptions", id), sub); } catch(e){}
-    document.getElementById('editModal').classList.add('hidden');
+    try { 
+        await setDoc(doc(db, "subscriptions", id), sub, { merge: true }); 
+    } catch(e){
+        console.error("Error actualizando suscripción:", e);
+    }
+
+    // Sincronizar si estaba ligada a una cuenta matriz
+    if (sub.masterAccountId) {
+        const masterAcc = (appState.masterAccounts || []).find(m => m.id === sub.masterAccountId);
+        if (masterAcc) {
+            masterAcc.email = sub.email;
+            masterAcc.pass = sub.pass;
+            masterAcc.hidePasswordFromClient = sub.hidePassword;
+            masterAcc.showCredentialsToClient = sub.showCredentials;
+            try { await setDoc(doc(db, "masterAccounts", masterAcc.id), masterAcc, { merge: true }); } catch(e){}
+        }
+    }
+
+    saveLocal();
+    document.getElementById('editModal')?.classList.add('hidden');
     window.renderAll();
 };
 
-window.deleteSubscription = async () => {
-    const id = document.getElementById('editSubId').value;
-    if(confirm("¿Eliminar esta suscripción permanentemente?")) {
-        appState.subscriptions = appState.subscriptions.filter(s => s.id !== id);
-        try { await deleteDoc(doc(db, "subscriptions", id)); } catch(e){}
-        document.getElementById('editModal').classList.add('hidden');
-        window.renderAll();
+window.deleteSubscription = async (passedId) => {
+    const id = (passedId || document.getElementById('editSubId')?.value || '').toString().trim();
+    if (!id) {
+        alert("⚠️ No se pudo identificar la suscripción a eliminar.");
+        return;
+    }
+
+    const subIndex = (appState.subscriptions || []).findIndex(s => s.id === id || s._docId === id);
+    const sub = subIndex >= 0 ? appState.subscriptions[subIndex] : null;
+    const subName = sub ? `"${sub.service}" de ${sub.person || 'cliente'}` : `este servicio`;
+
+    if (confirm(`⚠️ ¿Estás seguro de ELIMINAR permanentemente ${subName}?\nEsta acción no se puede deshacer.`)) {
+        // 1. Si estaba vinculada a una cuenta matriz, liberar el cupo / slot
+        if (sub && sub.masterAccountId) {
+            const masterAcc = (appState.masterAccounts || []).find(m => m.id === sub.masterAccountId);
+            if (masterAcc && masterAcc.profiles) {
+                const slotIdx = masterAcc.profiles.findIndex(pId => pId === id || (sub && pId === sub.id));
+                if (slotIdx >= 0) {
+                    masterAcc.profiles[slotIdx] = null;
+                    try {
+                        await setDoc(doc(db, "masterAccounts", masterAcc.id), masterAcc, { merge: true });
+                    } catch(e){
+                        console.warn("Error liberando slot en cuenta matriz:", e);
+                    }
+                }
+            }
+        }
+
+        // 2. Eliminar de Firestore (tanto por id como por sub.id)
+        try { 
+            await deleteDoc(doc(db, "subscriptions", id)); 
+            if (sub && sub.id && sub.id !== id) {
+                await deleteDoc(doc(db, "subscriptions", sub.id));
+            }
+            console.log("🗑️ Suscripción eliminada exitosamente de Firestore:", id);
+        } catch(e){
+            console.error("Error eliminando suscripción de Firestore:", e);
+        }
+
+        // 3. Eliminar de appState y localStorage
+        appState.subscriptions = (appState.subscriptions || []).filter(s => s.id !== id && (!sub || s.id !== sub.id));
+        saveLocal();
+
+        const editModal = document.getElementById('editModal');
+        if (editModal) editModal.classList.add('hidden');
+
+        // 4. Re-renderizar interfaces
+        window.renderActiveTable();
+        window.renderMasterAccounts();
+        window.renderClients();
+        window.renderNotifications();
     }
 };
 
@@ -686,10 +978,21 @@ window.saveBulkAccounts = async () => {
 // =====================================
 // 6. CUENTAS RAÍZ (MATRIZ) & VISIBILIDAD
 // =====================================
+window.getMasterCode = (acc) => {
+    if (!acc) return 'MAT-000';
+    if (acc.masterCode) return acc.masterCode;
+    if (acc.id) {
+        const cleanId = acc.id.toString().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        return `MAT-${cleanId.slice(-4)}`;
+    }
+    return `MAT-${Math.floor(1000 + Math.random() * 9000)}`;
+};
+
 window.saveMasterAccount = async () => {
     const service = await window.getOrRegisterService('mService', 'mServiceCustom');
     if (!service) return;
     const id = 'master_' + Date.now();
+    const masterCode = 'MAT-' + Math.floor(1000 + Math.random() * 9000);
     const provider = document.getElementById('mProvider').value.trim();
     const capacity = parseInt(document.getElementById('mCapacity').value) || 5;
     const cost = parseFloat(document.getElementById('mCost').value) || 0;
@@ -702,7 +1005,23 @@ window.saveMasterAccount = async () => {
     const showCredentialsToClient = !hidePasswordFromClient;
     const end = new Date(new Date(startDate).getTime() + (months * 30 * 86400000)).toISOString().split('T')[0];
 
-    const newAcc = { id, service, provider, capacity, cost, currency, startDate, endDate: end, email, pass, hidePasswordFromClient, showCredentialsToClient, profiles: new Array(capacity).fill(null) };
+    const newAcc = { 
+        id, 
+        masterCode,
+        service, 
+        provider, 
+        capacity, 
+        cost, 
+        currency, 
+        startDate, 
+        endDate: end, 
+        email, 
+        pass, 
+        hidePasswordFromClient, 
+        showCredentialsToClient, 
+        profiles: new Array(capacity).fill(null),
+        createdAt: new Date().toISOString()
+    };
     appState.masterAccounts.push(newAcc);
 
     const txId = 'tx_mas_' + Date.now();
@@ -712,34 +1031,52 @@ window.saveMasterAccount = async () => {
     try {
         await setDoc(doc(db, "masterAccounts", id), newAcc);
         await setDoc(doc(db, "history", txId), newTx);
-    } catch(e){}
+    } catch(e){
+        console.error("Error guardando cuenta matriz:", e);
+    }
 
     document.getElementById('masterModal').classList.add('hidden');
     window.renderAll();
 };
 
 window.toggleMasterCredentialsVisibility = async (accId) => {
-    const acc = appState.masterAccounts.find(a => a.id === accId);
+    const acc = (appState.masterAccounts || []).find(a => a.id === accId);
     if (!acc) return;
 
     acc.showCredentialsToClient = !acc.showCredentialsToClient;
     acc.hidePasswordFromClient = !acc.showCredentialsToClient;
 
-    // Sincronizar todas las suscripciones de esta Cuenta Raíz (por perfiles, masterAccountId o email)
+    // Sincronizar ÚNICAMENTE las suscripciones que pertenecen estrictamente a este ID de Cuenta Raíz
     appState.subscriptions.forEach(async (sub) => {
-        const isLinkedByProfile = acc.profiles && acc.profiles.includes(sub.id);
+        const isLinkedByProfile = acc.profiles && Array.isArray(acc.profiles) && acc.profiles.includes(sub.id);
         const isLinkedById = sub.masterAccountId === acc.id;
-        const isLinkedByEmail = sub.email && acc.email && sub.email.trim().toLowerCase() === acc.email.trim().toLowerCase();
 
-        if (isLinkedByProfile || isLinkedById || isLinkedByEmail) {
+        if (isLinkedByProfile || isLinkedById) {
+            sub.masterAccountId = acc.id;
             sub.hidePassword = acc.hidePasswordFromClient;
+            sub.hidePasswordFromClient = acc.hidePasswordFromClient;
             sub.showCredentials = acc.showCredentialsToClient;
-            try { await setDoc(doc(db, "subscriptions", sub.id), sub, { merge: true }); } catch(e){}
+            sub.showCredentialsToClient = acc.showCredentialsToClient;
+            try { 
+                await setDoc(doc(db, "subscriptions", sub.id), {
+                    hidePassword: acc.hidePasswordFromClient,
+                    hidePasswordFromClient: acc.hidePasswordFromClient,
+                    showCredentials: acc.showCredentialsToClient,
+                    showCredentialsToClient: acc.showCredentialsToClient,
+                    masterAccountId: acc.id,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true }); 
+            } catch(e){}
         }
     });
 
     try {
-        await setDoc(doc(db, "masterAccounts", acc.id), acc, { merge: true });
+        await setDoc(doc(db, "masterAccounts", acc.id), {
+            ...acc,
+            hidePasswordFromClient: acc.hidePasswordFromClient,
+            showCredentialsToClient: acc.showCredentialsToClient,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
     } catch(e) { console.error(e); }
 
     window.renderMasterAccounts();
@@ -748,7 +1085,7 @@ window.toggleMasterCredentialsVisibility = async (accId) => {
 window.toggleMasterPasswordVisibility = window.toggleMasterCredentialsVisibility;
 
 window.openEditMasterModal = (accId) => {
-    const acc = appState.masterAccounts.find(a => a.id === accId);
+    const acc = (appState.masterAccounts || []).find(a => a.id === accId);
     if(!acc) return;
     document.getElementById('editMasterId').value = acc.id;
     document.getElementById('editMasterEmail').value = acc.email;
@@ -760,7 +1097,7 @@ window.openEditMasterModal = (accId) => {
 
 window.saveEditMasterModal = async () => {
     const id = document.getElementById('editMasterId').value;
-    const acc = appState.masterAccounts.find(a => a.id === id);
+    const acc = (appState.masterAccounts || []).find(a => a.id === id);
     if(!acc) return;
     const newEmail = document.getElementById('editMasterEmail').value.trim();
     const newPass = document.getElementById('editMasterPass').value.trim();
@@ -780,17 +1117,27 @@ window.saveEditMasterModal = async () => {
     }
     acc.capacity = newCapacity;
 
+    // Sincronizar credenciales solo en suscripciones que pertenecen estrictamente a este ID de Cuenta Raíz
     appState.subscriptions.forEach(async (sub) => {
         const isLinkedByProfile = acc.profiles && acc.profiles.includes(sub.id);
         const isLinkedById = sub.masterAccountId === acc.id;
-        const isLinkedByEmail = sub.email && acc.email && sub.email.trim().toLowerCase() === acc.email.trim().toLowerCase();
 
-        if (isLinkedByProfile || isLinkedById || isLinkedByEmail) {
+        if (isLinkedByProfile || isLinkedById) {
             sub.email = acc.email;
             sub.pass = acc.pass;
             sub.hidePassword = acc.hidePasswordFromClient;
             sub.showCredentials = acc.showCredentialsToClient;
-            try { await setDoc(doc(db, "subscriptions", sub.id), sub, { merge: true }); } catch(e){}
+            try { 
+                await setDoc(doc(db, "subscriptions", sub.id), {
+                    email: acc.email,
+                    pass: acc.pass,
+                    hidePassword: acc.hidePasswordFromClient,
+                    hidePasswordFromClient: acc.hidePasswordFromClient,
+                    showCredentials: acc.showCredentialsToClient,
+                    showCredentialsToClient: acc.showCredentialsToClient,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true }); 
+            } catch(e){}
         }
     });
 
@@ -800,67 +1147,391 @@ window.saveEditMasterModal = async () => {
 };
 
 window.deleteMasterAccount = async (accId) => {
-    if(confirm("¿Eliminar Cuenta Raíz?")) {
+    const acc = (appState.masterAccounts || []).find(a => a.id === accId);
+    const accCode = acc ? (acc.masterCode || window.getMasterCode(acc)) : '';
+    const accName = acc ? `"${acc.service}" [${accCode}] (${acc.email || ''})` : 'esta cuenta matriz';
+
+    const linkedSubs = (appState.subscriptions || []).filter(s => 
+        s.masterAccountId === accId || (acc && acc.profiles && Array.isArray(acc.profiles) && acc.profiles.includes(s.id))
+    );
+
+    let msg = `¿Estás seguro de ELIMINAR la Cuenta Raíz ${accName}?`;
+    if (linkedSubs.length > 0) {
+        msg += `\n\n⚠️ Esta cuenta tiene ${linkedSubs.length} servicio(s) asignado(s) a clientes.\nAl eliminarla, se eliminarán también estos servicios activos para evitar cuentas duplicadas o huérfanas en los perfiles de los clientes.`;
+    }
+
+    if (confirm(msg)) {
+        // 1. Eliminar suscripciones hijas asociadas
+        for (const sub of linkedSubs) {
+            appState.subscriptions = appState.subscriptions.filter(s => s.id !== sub.id);
+            try {
+                await deleteDoc(doc(db, "subscriptions", sub.id));
+                console.log("🗑️ Suscripción hija eliminada:", sub.id);
+            } catch(e){
+                console.error("Error eliminando sub vinculada:", e);
+            }
+        }
+
+        // 2. Eliminar la cuenta matriz de Firestore y del estado
         appState.masterAccounts = appState.masterAccounts.filter(a => a.id !== accId);
-        try { await deleteDoc(doc(db, "masterAccounts", accId)); } catch(e){}
+        try { 
+            await deleteDoc(doc(db, "masterAccounts", accId)); 
+            console.log("🗑️ Cuenta matriz eliminada de Firestore:", accId);
+        } catch(e){
+            console.error("Error eliminando cuenta matriz:", e);
+        }
+
+        saveLocal();
         window.renderAll();
+        alert(`✅ Cuenta Raíz ${accCode} y sus ${linkedSubs.length} servicios asociados fueron eliminados limpiamente.`);
     }
 };
+
+let selectedAssignClientId = null;
+let currentAssignDurationMonths = 1;
 
 window.openAssignModal = (accId, slotIndex) => {
-    currentTargetAcc = accId;
-    currentTargetSlot = slotIndex;
-    const acc = appState.masterAccounts.find(a => a.id === accId);
-    if (!acc) return;
-    document.getElementById('assignServiceLabel').innerText = `${acc.service} (Cupo #${slotIndex + 1})`;
-    
-    const list = document.getElementById('assignList');
-    list.innerHTML = '';
+    currentTargetSlot = parseInt(slotIndex) || 0;
+    selectedAssignClientId = null;
+    currentAssignDurationMonths = 1;
 
-    const matchingSubs = appState.subscriptions.filter(s => s.service === acc.service && s.type === 'VENTA');
-    if (matchingSubs.length === 0) {
-        list.innerHTML = `<p class="text-xs text-gray-500 italic p-3 text-center">No hay clientes con suscripciones de ${acc.service}.</p>`;
-    } else {
-        matchingSubs.forEach(sub => {
-            list.innerHTML += `
-            <div class="flex justify-between items-center bg-gray-900 border border-gray-700 p-2.5 rounded hover:border-cuycito-gold transition">
-                <div>
-                    <p class="text-xs font-bold text-white">${sub.person}</p>
-                    <p class="text-[10px] text-gray-400 font-mono">PIN: ${sub.pin || '-'} | Vence: ${sub.endDate}</p>
-                </div>
-                <button onclick="window.confirmAssignSlot('${sub.id}')" class="bg-cuycito-gold text-black font-black text-xs px-3 py-1.5 rounded hover:bg-yellow-400">Asignar</button>
-            </div>`;
-        });
+    let acc = (appState.masterAccounts || []).find(a => 
+        (a.id && a.id.toString() === (accId || '').toString()) ||
+        (a.email && a.email === accId)
+    );
+
+    if (!acc && typeof accId === 'number' && appState.masterAccounts[accId]) {
+        acc = appState.masterAccounts[accId];
     }
-    document.getElementById('assignModal').classList.remove('hidden');
+    if (!acc && appState.masterAccounts.length > 0) {
+        acc = appState.masterAccounts[0];
+    }
+    if (!acc) {
+        alert("No se encontró la cuenta matriz seleccionada.");
+        return;
+    }
+    currentTargetAcc = acc.id || accId;
+    
+    const labelEl = document.getElementById('assignServiceLabel');
+    if (labelEl) labelEl.innerText = `${acc.service || 'Servicio'} (Cupo #${currentTargetSlot + 1}) - ${acc.email || ''}`;
+
+    // Resetear a Paso 1 (Buscador y Selección de Clientes)
+    document.getElementById('assignStep1_SelectClient')?.classList.remove('hidden');
+    document.getElementById('assignStep2_ActivationForm')?.classList.add('hidden');
+    
+    const searchInput = document.getElementById('searchAssignClientInput');
+    if (searchInput) searchInput.value = '';
+
+    window.filterAssignClients();
+    
+    const modal = document.getElementById('assignModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
 };
 
-window.confirmAssignSlot = async (subId) => {
+window.filterAssignClients = () => {
+    const list = document.getElementById('assignClientsList');
+    if (!list) return;
+    list.innerHTML = '';
+
+    // Si appState.clients está vacío, intentar recuperar de localStorage
+    if (!appState.clients || appState.clients.length === 0) {
+        try {
+            appState.clients = JSON.parse(localStorage.getItem("cuycito_clients") || "[]");
+        } catch(e){}
+    }
+
+    const searchTerm = (document.getElementById('searchAssignClientInput')?.value || '').toLowerCase().trim();
+
+    const clients = (appState.clients || []).filter(c => {
+        const name = (c.name || '').toLowerCase();
+        const nick = (c.nickname || '').toLowerCase();
+        const phone = (c.phone || '').toLowerCase();
+        const code = (c.clientCode || window.getClientCode(c) || '').toLowerCase();
+        return name.includes(searchTerm) || nick.includes(searchTerm) || phone.includes(searchTerm) || code.includes(searchTerm);
+    });
+
+    if (clients.length === 0) {
+        list.innerHTML = `
+            <div class="p-6 text-center text-gray-500 bg-black/40 rounded-xl border border-gray-800 space-y-2">
+                <i class="fa-solid fa-users-slash text-2xl text-gray-600"></i>
+                <p class="text-xs font-bold text-gray-400">No se encontraron clientes registrados con esa búsqueda.</p>
+                <button type="button" onclick="window.openNewClientFromAssign()" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black text-xs font-black px-4 py-2 rounded-lg transition shadow">
+                    <i class="fa-solid fa-plus mr-1"></i> Crear Cliente Nuevo Ahora
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    list.innerHTML = clients.map((client, idx) => {
+        const cId = client.id || client.phone || `client_${idx}`;
+        const clientCode = client.clientCode || window.getClientCode(client);
+        const balance = parseFloat(client.balance || 0).toFixed(2);
+        const isOnline = !!client.isOnline;
+        const onlineDot = isOnline 
+            ? '<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse inline-block shadow-[0_0_8px_rgba(52,211,153,0.8)]" title="En línea"></span>' 
+            : '<span class="w-2.5 h-2.5 rounded-full bg-gray-600 inline-block" title="Desconectado"></span>';
+
+        return `
+        <div class="flex items-center justify-between p-3 bg-black/60 border border-gray-800 hover:border-cuycito-gold/60 rounded-xl transition group">
+            <div class="flex items-center gap-3">
+                ${onlineDot}
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="bg-indigo-950 text-indigo-300 border border-indigo-500/40 text-[9px] font-black px-1.5 py-0.5 rounded font-mono">${clientCode}</span>
+                        <h4 class="text-xs font-black text-white group-hover:text-cuycito-gold transition">${client.name}</h4>
+                        ${client.nickname ? `<span class="text-[10px] text-gray-400">(@${client.nickname})</span>` : ''}
+                    </div>
+                    <p class="text-[10px] text-gray-400 font-mono mt-0.5">
+                        📱 ${client.phone || 'Sin cel'} | 💰 Saldo: <span class="text-emerald-400 font-bold">S/ ${balance}</span>
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="window.selectClientForAssign('${cId}')" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black font-black text-xs px-3.5 py-1.5 rounded-lg transition shadow flex items-center gap-1">
+                <span>Asignar</span> <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </button>
+        </div>`;
+    }).join('');
+};
+
+window.selectClientForAssign = (clientId) => {
+    let client = (appState.clients || []).find(c => 
+        c.id === clientId || 
+        (c.id && c.id.toString() === (clientId || '').toString()) ||
+        (c.phone && c.phone.toString() === (clientId || '').toString()) ||
+        (c.clientCode && c.clientCode === clientId)
+    );
+
+    if (!client) {
+        alert("No se pudo seleccionar el cliente.");
+        return;
+    }
+
+    selectedAssignClientId = client.id || clientId;
+    let acc = (appState.masterAccounts || []).find(a => 
+        a.id === currentTargetAcc || 
+        (a.id && a.id.toString() === (currentTargetAcc || '').toString()) ||
+        (a.email && a.email === currentTargetAcc)
+    );
+
+    // Actualizar Resumen en Paso 2
+    const codeEl = document.getElementById('assignSelectedClientCode');
+    const nameEl = document.getElementById('assignSelectedClientName');
+    const phoneEl = document.getElementById('assignSelectedClientPhone');
+    const balEl = document.getElementById('assignSelectedClientBalance');
+
+    if (codeEl) codeEl.innerText = client.clientCode || window.getClientCode(client);
+    if (nameEl) nameEl.innerText = `${client.name} ${client.nickname ? '(@' + client.nickname + ')' : ''}`;
+    if (phoneEl) phoneEl.innerText = client.phone || 'Sin celular';
+    if (balEl) balEl.innerText = `S/ ${parseFloat(client.balance || 0).toFixed(2)}`;
+
+    // Precargar Valores de Activación
+    const pinInput = document.getElementById('assignPinInput');
+    if (pinInput) pinInput.value = `Perfil ${currentTargetSlot + 1}`;
+
+    const amountInput = document.getElementById('assignAmountInput');
+    if (amountInput) amountInput.value = (acc && acc.cost ? (parseFloat(acc.cost) / (acc.capacity || 4) * 1.5).toFixed(2) : '10.00');
+
+    const todayFormatted = window.formatDateDDMMYYYY(new Date());
+    window.setDatePickerValue('assignStartDateInput', todayFormatted);
+
+    const hidePassCheck = document.getElementById('assignHidePassCheck');
+    if (hidePassCheck && acc) {
+        hidePassCheck.checked = !!acc.hidePasswordFromClient;
+    }
+
+    window.setAssignDurationMonths(1);
+    window.initDatePickers();
+
+    // Cambiar a Paso 2
+    document.getElementById('assignStep1_SelectClient')?.classList.add('hidden');
+    document.getElementById('assignStep2_ActivationForm')?.classList.remove('hidden');
+};
+
+window.backToAssignClientSelection = () => {
+    document.getElementById('assignStep2_ActivationForm')?.classList.add('hidden');
+    document.getElementById('assignStep1_SelectClient')?.classList.remove('hidden');
+};
+
+window.openNewClientFromAssign = () => {
+    document.getElementById('assignModal')?.classList.add('hidden');
+    window.openClientModal();
+};
+
+window.setAssignDurationMonths = (months) => {
+    const val = Math.max(1, parseInt(months) || 1);
+    currentAssignDurationMonths = val;
+    
+    const durationInput = document.getElementById('assignDurationInput');
+    if (durationInput && parseInt(durationInput.value) !== val) {
+        durationInput.value = val;
+    }
+
+    [1, 2, 3].forEach(m => {
+        const btn = document.getElementById(`btnAssignDur${m}`);
+        if (btn) {
+            if (m === val) {
+                btn.className = "bg-cuycito-gold text-black font-black py-2 rounded-xl text-xs transition border border-cuycito-gold shadow";
+            } else {
+                btn.className = "bg-black hover:bg-gray-900 text-gray-300 font-bold py-2 rounded-xl text-xs transition border border-gray-700";
+            }
+        }
+    });
+
+    window.recalculateAssignEndDate();
+};
+
+window.recalculateAssignEndDate = () => {
+    const startVal = document.getElementById('assignStartDateInput')?.value;
+    if (!startVal) return;
+
+    const startDate = window.parseDateUniversal(startVal);
+    if (!startDate) return;
+
+    const daysToAdd = currentAssignDurationMonths * 30;
+    startDate.setDate(startDate.getDate() + daysToAdd);
+
+    window.setDatePickerValue('assignEndDateInput', startDate);
+};
+
+window.executeClientSlotAssignment = async () => {
     const acc = appState.masterAccounts.find(a => a.id === currentTargetAcc);
-    const sub = appState.subscriptions.find(s => s.id === subId);
-    if (!acc || !sub) return;
+    const client = (appState.clients || []).find(c => c.id === selectedAssignClientId);
 
-    acc.profiles[currentTargetSlot] = sub.id;
-    sub.email = acc.email;
-    sub.pass = acc.pass;
-    sub.hidePassword = !!acc.hidePasswordFromClient;
-    sub.showCredentials = !!acc.showCredentialsToClient;
+    if (!acc || !client) {
+        alert("Por favor selecciona un cliente y una cuenta matriz válida.");
+        return;
+    }
 
+    const pin = (document.getElementById('assignPinInput')?.value || `Perfil ${currentTargetSlot + 1}`).trim();
+    const amount = parseFloat(document.getElementById('assignAmountInput')?.value || 10.00);
+    const currency = document.getElementById('assignCurrencySelect')?.value || 'PEN';
+    const startDate = document.getElementById('assignStartDateInput')?.value || new Date().toISOString().split('T')[0];
+    const endDate = document.getElementById('assignEndDateInput')?.value || new Date().toISOString().split('T')[0];
+    const hidePass = !!document.getElementById('assignHidePassCheck')?.checked;
+
+    const clientCode = client.clientCode || window.getClientCode(client);
+    const masterCode = acc.masterCode || window.getMasterCode(acc);
+    const newSubId = "sub_cuy_" + Date.now();
+
+    // 0. Si el slot ya tenía una suscripción asignada previa, eliminarla de Firestore para no dejar huérfanos
+    if (acc.profiles && acc.profiles[currentTargetSlot]) {
+        const prevSubId = acc.profiles[currentTargetSlot];
+        if (prevSubId && prevSubId !== newSubId) {
+            appState.subscriptions = (appState.subscriptions || []).filter(s => s.id !== prevSubId);
+            try {
+                await deleteDoc(doc(db, "subscriptions", prevSubId));
+                console.log("🗑️ Reemplazada suscripción previa del slot:", prevSubId);
+            } catch(e){}
+        }
+    }
+
+    const newSub = {
+        id: newSubId,
+        clientId: client.id,
+        clientCode: clientCode,
+        clientPhone: client.phone || '',
+        clientNickname: client.nickname || client.name,
+        person: client.name,
+        service: acc.service,
+        email: acc.email,
+        pass: acc.pass,
+        pin: pin,
+        masterAccountId: acc.id,
+        masterCode: masterCode,
+        slotIndex: currentTargetSlot,
+        hidePassword: hidePass,
+        hidePasswordFromClient: hidePass,
+        showCredentials: !hidePass,
+        showCredentialsToClient: !hidePass,
+        amount: amount,
+        price: amount,
+        currency: currency,
+        startDate: startDate,
+        endDate: endDate,
+        status: 'active',
+        type: 'VENTA',
+        createdAt: new Date().toISOString()
+    };
+
+    // 1. Guardar suscripción
+    appState.subscriptions.push(newSub);
     try {
-        await setDoc(doc(db, "masterAccounts", acc.id), acc);
-        await setDoc(doc(db, "subscriptions", sub.id), sub);
-    } catch(e){}
+        await setDoc(doc(db, "subscriptions", newSubId), newSub);
+    } catch(e) {
+        console.error("Error guardando suscripcion:", e);
+    }
 
-    document.getElementById('assignModal').classList.add('hidden');
+    // 2. Ocupar slot en la cuenta matriz
+    if (!acc.profiles) acc.profiles = [];
+    acc.profiles[currentTargetSlot] = newSubId;
+    try {
+        await setDoc(doc(db, "masterAccounts", acc.id), acc, { merge: true });
+    } catch(e) {
+        console.error("Error actualizando cuenta matriz:", e);
+    }
+
+    // 3. Registrar venta en Libro Mayor (History)
+    const historyItem = {
+        id: "hist_" + Date.now(),
+        clientId: client.id,
+        clientCode: clientCode,
+        person: client.name,
+        service: acc.service,
+        type: 'VENTA',
+        amount: amount,
+        currency: currency,
+        date: startDate,
+        timestamp: new Date().toISOString()
+    };
+    appState.history.push(historyItem);
+    try {
+        await setDoc(doc(db, "history", historyItem.id), historyItem);
+    } catch(e) {
+        console.error("Error guardando history:", e);
+    }
+
+    saveLocal();
+    document.getElementById('assignModal')?.classList.add('hidden');
     window.renderAll();
+
+    const passText = hidePass ? '🔒 Contraseña Oculta en Portal' : `🔑 Contraseña: ${acc.pass}`;
+    const whatsappMsg = `¡Hola ${client.name}! 🐹✨\n\nTu servicio de *${acc.service}* ha sido *ACTIVADO CON ÉXITO*:\n\n👤 *Perfil / PIN:* ${pin}\n📧 *Correo:* ${acc.email}\n${passText}\n📆 *Vigencia:* Del ${startDate} al ${endDate}\n\nYa puedes acceder a tu panel en https://cuzcitogo.pe/perfil.html para revisar tu servicio. ¡Gracias por tu preferencia! 🙌`;
+
+    if (confirm(`🎉 ¡Cliente "${client.name}" (${clientCode}) conectado exitosamente a ${acc.service} (Cupo #${currentTargetSlot + 1})!\n\n¿Deseas enviar las credenciales y confirmación por WhatsApp ahora?`)) {
+        window.open(`https://wa.me/${(client.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(whatsappMsg)}`, '_blank');
+    }
 };
 
 window.unlinkProfile = async (accId, slotIndex) => {
-    const acc = appState.masterAccounts.find(a => a.id === accId);
+    const acc = (appState.masterAccounts || []).find(a => a.id === accId);
     if (!acc) return;
-    acc.profiles[slotIndex] = null;
-    try { await setDoc(doc(db, "masterAccounts", acc.id), acc); } catch(e){}
-    window.renderAll();
+    const oldSubId = acc.profiles ? acc.profiles[slotIndex] : null;
+
+    if (confirm(`¿Desvincular y liberar el cupo #${slotIndex + 1} de "${acc.service}"?`)) {
+        if (oldSubId) {
+            // Eliminar la suscripción desvinculada de Firestore y del estado para evitar duplicados en el perfil del cliente
+            appState.subscriptions = (appState.subscriptions || []).filter(s => s.id !== oldSubId);
+            try { 
+                await deleteDoc(doc(db, "subscriptions", oldSubId));
+                console.log("🗑️ Suscripción desvinculada eliminada de Firestore:", oldSubId);
+            } catch(e){
+                console.error("Error eliminando suscripción desvinculada:", e);
+            }
+        }
+
+        if (acc.profiles) {
+            acc.profiles[slotIndex] = null;
+        }
+        try { 
+            await setDoc(doc(db, "masterAccounts", acc.id), acc, { merge: true }); 
+        } catch(e){}
+
+        saveLocal();
+        window.renderAll();
+    }
 };
 
 // =====================================
@@ -941,19 +1612,37 @@ window.renderPendingClientsList = () => {
 window.autoCreateClientAccess = async (personName) => {
     const randomPhone = '9' + Math.floor(10000000 + Math.random() * 90000000);
     const randomPass = Math.random().toString(36).slice(-8);
-    const defaultNickname = personName; // Por defecto el Nickname es igual al Nombre
+    const defaultNickname = personName;
     const id = 'user_' + Date.now();
+    const clientCode = window.getClientCode({ id, phone: randomPhone, name: personName });
 
     const newClient = {
         id,
+        clientCode,
         name: personName,
         nickname: defaultNickname,
         phone: randomPhone,
         pass: randomPass,
-        email: ''
+        email: '',
+        balance: 0.00,
+        isOnline: false,
+        lastSeen: new Date().toISOString(),
+        createdAt: new Date().toISOString()
     };
 
     appState.clients.push(newClient);
+
+    // Auto-vincular inmediatamente todas las suscripciones de esta persona a su nuevo ID
+    appState.subscriptions.forEach(async (s) => {
+        if (!s.clientId && s.person && s.person.trim().toLowerCase() === personName.trim().toLowerCase()) {
+            s.clientId = id;
+            s.clientCode = clientCode;
+            s.clientPhone = randomPhone;
+            try {
+                await setDoc(doc(db, "subscriptions", s.id), s, { merge: true });
+            } catch(e){}
+        }
+    });
 
     try {
         await setDoc(doc(db, "users", id), newClient);
@@ -998,37 +1687,50 @@ window.generateRandomClientPhoneAndPass = () => {
 };
 
 window.openClientModal = (clientId = null) => {
-    const banner = document.getElementById('newAccessGeneratedBanner');
-    if (banner) banner.classList.add('hidden');
+    try {
+        const banner = document.getElementById('newAccessGeneratedBanner');
+        if (banner) banner.classList.add('hidden');
 
-    const dataList = document.getElementById('clientNamesList');
-    dataList.innerHTML = '';
-    const uniqueNames = [...new Set(appState.subscriptions.map(s => s.person))].filter(Boolean);
-    uniqueNames.forEach(name => { dataList.innerHTML += `<option value="${name}">`; });
+        const dataList = document.getElementById('clientNamesList');
+        if (dataList) {
+            dataList.innerHTML = '';
+            const uniqueNames = [...new Set(appState.subscriptions.map(s => s.person))].filter(Boolean);
+            uniqueNames.forEach(name => { dataList.innerHTML += `<option value="${name}">`; });
+        }
 
-    if(!clientId) {
-        document.getElementById('cId').value = 'user_' + Date.now();
-        document.getElementById('cName').value = '';
-        document.getElementById('cNickname').value = '';
-        document.getElementById('cPhone').value = '';
-        document.getElementById('cEmail').value = '';
-        document.getElementById('cPass').value = Math.random().toString(36).slice(-8);
-        window.switchClientModalTab('pending');
-    } else {
-        const c = appState.clients.find(x => x.id === clientId);
-        document.getElementById('cId').value = c.id;
-        document.getElementById('cName').value = c.name;
-        document.getElementById('cNickname').value = c.nickname || c.name;
-        document.getElementById('cPhone').value = c.phone;
-        document.getElementById('cEmail').value = c.email || '';
-        document.getElementById('cPass').value = c.pass;
-        window.switchClientModalTab('manual');
+        if(!clientId) {
+            if (document.getElementById('cId')) document.getElementById('cId').value = 'user_' + Date.now();
+            if (document.getElementById('cName')) document.getElementById('cName').value = '';
+            if (document.getElementById('cNickname')) document.getElementById('cNickname').value = '';
+            if (document.getElementById('cPhone')) document.getElementById('cPhone').value = '';
+            if (document.getElementById('cEmail')) document.getElementById('cEmail').value = '';
+            if (document.getElementById('cPass')) document.getElementById('cPass').value = Math.random().toString(36).slice(-8);
+            window.switchClientModalTab('pending');
+        } else {
+            const c = appState.clients.find(x => x.id === clientId || (x.id && x.id.toString() === clientId.toString()) || x.phone === clientId || x.name === clientId);
+            if (!c) {
+                console.error("Cliente no encontrado en appState.clients para edición:", clientId);
+                alert("No se encontró el registro del cliente.");
+                return;
+            }
+            if (document.getElementById('cId')) document.getElementById('cId').value = c.id;
+            if (document.getElementById('cName')) document.getElementById('cName').value = c.name || '';
+            if (document.getElementById('cNickname')) document.getElementById('cNickname').value = c.nickname || c.name || '';
+            if (document.getElementById('cPhone')) document.getElementById('cPhone').value = c.phone || '';
+            if (document.getElementById('cEmail')) document.getElementById('cEmail').value = c.email || '';
+            if (document.getElementById('cPass')) document.getElementById('cPass').value = c.pass || '';
+            window.switchClientModalTab('manual');
+        }
+        const modal = document.getElementById('clientModal');
+        if (modal) modal.classList.remove('hidden');
+    } catch(err) {
+        console.error("Error abriendo modal de cliente:", err);
+        alert("Error al abrir modal de edición: " + err.message);
     }
-    document.getElementById('clientModal').classList.remove('hidden');
 };
 
 window.saveClient = async () => {
-    const id = document.getElementById('cId').value;
+    const id = document.getElementById('cId').value || ('user_' + Date.now());
     const name = document.getElementById('cName').value.trim();
     const nickname = document.getElementById('cNickname').value.trim() || name;
     const phone = document.getElementById('cPhone').value.trim();
@@ -1040,16 +1742,33 @@ window.saveClient = async () => {
     const existing = appState.clients.find(c => c.phone === phone && c.id !== id);
     if (existing) return alert("Este número ya está registrado como acceso de otro cliente.");
 
-    const newClient = { id, name, nickname, email, pass, phone };
+    const oldClient = appState.clients.find(c => c.id === id) || {};
+    const newClient = { 
+        ...oldClient,
+        id, 
+        name, 
+        nickname, 
+        email, 
+        pass, 
+        phone,
+        clientCode: oldClient.clientCode || window.getClientCode({ id, phone, name }),
+        updatedAt: new Date().toISOString()
+    };
+
     const index = appState.clients.findIndex(c => c.id === id);
     if(index > -1) appState.clients[index] = newClient;
     else appState.clients.push(newClient);
 
     try {
-        await setDoc(doc(db, "users", id), newClient);
-        document.getElementById('clientModal').classList.add('hidden');
+        await setDoc(doc(db, "users", id), newClient, { merge: true });
+        const modal = document.getElementById('clientModal');
+        if (modal) modal.classList.add('hidden');
         window.renderClients();
-    } catch(e) { alert("Error guardando cliente."); }
+        alert("✅ Datos del cliente actualizados y guardados con éxito.");
+    } catch(e) { 
+        console.error("Error guardando cliente:", e);
+        alert("Error guardando cliente: " + e.message); 
+    }
 };
 
 window.deleteClient = async () => {
@@ -1120,7 +1839,16 @@ window.renderCsmLinkedList = () => {
     if (!container) return;
 
     const clientNameNorm = (activeManagingClient.name || '').trim().toLowerCase();
-    const linked = appState.subscriptions.filter(s => s.person && s.person.trim().toLowerCase() === clientNameNorm);
+    const clientPhoneNorm = (activeManagingClient.phone || '').toString().replace(/\D/g, '');
+    const clientCode = window.getClientCode(activeManagingClient);
+
+    const linked = appState.subscriptions.filter(s => {
+        if (s.clientId && activeManagingClient.id && s.clientId === activeManagingClient.id) return true;
+        if (s.clientCode && clientCode && s.clientCode === clientCode) return true;
+        const sPhone = (s.clientPhone || s.phone || '').toString().replace(/\D/g, '');
+        if (sPhone && clientPhoneNorm && sPhone.length >= 7 && sPhone === clientPhoneNorm) return true;
+        return false;
+    });
 
     if (badge) badge.innerText = `${linked.length} servicios`;
 
@@ -1174,7 +1902,7 @@ window.renderCsmAvailableSubs = () => {
     const clientNameNorm = (activeManagingClient.name || '').trim().toLowerCase();
 
     const available = appState.subscriptions.filter(s => {
-        const isNotSame = !s.person || s.person.trim().toLowerCase() !== clientNameNorm;
+        const isNotSame = s.clientId !== activeManagingClient.id && (!s.person || s.person.trim().toLowerCase() !== clientNameNorm);
         const match = (s.service || '').toLowerCase().includes(searchTerm) ||
                       (s.email || '').toLowerCase().includes(searchTerm) ||
                       (s.person || '').toLowerCase().includes(searchTerm);
@@ -1189,20 +1917,39 @@ window.renderCsmAvailableSubs = () => {
 };
 
 window.unlinkServiceFromClient = async (subId) => {
-    const sub = appState.subscriptions.find(s => s.id === subId);
+    const sub = (appState.subscriptions || []).find(s => s.id === subId);
     if (!sub) return;
 
-    if (confirm(`¿Desvincular "${sub.service}" de ${activeManagingClient.name}? El servicio pasará a estado "Sin Asignar" para que puedas reasignarlo a otro cliente.`)) {
-        sub.person = 'Sin Asignar';
-        try {
-            await setDoc(doc(db, "subscriptions", sub.id), sub);
-            window.renderCsmLinkedList();
-            window.renderCsmAvailableSubs();
-            window.renderClients();
-            window.renderActiveTable();
-        } catch(e) {
-            alert("Error al desvincular servicio.");
+    if (confirm(`¿Desvincular "${sub.service}" de ${activeManagingClient.name}? El servicio será retirado y liberado limpiamente de la base de datos.`)) {
+        // 1. Si pertenecía a una cuenta matriz, liberar el cupo en la matriz
+        if (sub.masterAccountId) {
+            const masterAcc = (appState.masterAccounts || []).find(m => m.id === sub.masterAccountId);
+            if (masterAcc && masterAcc.profiles) {
+                const sIdx = masterAcc.profiles.findIndex(p => p === subId);
+                if (sIdx >= 0) {
+                    masterAcc.profiles[sIdx] = null;
+                    try {
+                        await setDoc(doc(db, "masterAccounts", masterAcc.id), masterAcc, { merge: true });
+                    } catch(e){}
+                }
+            }
         }
+
+        // 2. Eliminar la suscripción desvinculada para no dejar datos muertos en Firestore
+        appState.subscriptions = (appState.subscriptions || []).filter(s => s.id !== subId);
+        try {
+            await deleteDoc(doc(db, "subscriptions", subId));
+            console.log("🗑️ Servicio desvinculado eliminado de Firestore:", subId);
+        } catch(e){
+            console.error("Error eliminando servicio:", e);
+        }
+
+        saveLocal();
+        window.renderCsmLinkedList();
+        window.renderCsmAvailableSubs();
+        window.renderClients();
+        window.renderActiveTable();
+        window.renderMasterAccounts();
     }
 };
 
@@ -1234,10 +1981,13 @@ window.linkSelectedSubToClient = async () => {
     if (!sub) return;
 
     sub.person = activeManagingClient.name;
+    sub.clientId = activeManagingClient.id;
+    sub.clientCode = activeManagingClient.clientCode || window.getClientCode(activeManagingClient);
+    sub.clientPhone = activeManagingClient.phone;
 
     try {
         await setDoc(doc(db, "subscriptions", sub.id), sub);
-        alert(`✅ ¡Servicio "${sub.service}" vinculado exitosamente a ${activeManagingClient.name}!`);
+        alert(`✅ ¡Servicio "${sub.service}" vinculado exitosamente a ${activeManagingClient.name} (ID: ${sub.clientCode})!`);
         window.renderCsmLinkedList();
         window.renderCsmAvailableSubs();
         window.renderClients();
@@ -1271,13 +2021,18 @@ window.createAndLinkDirectSub = async () => {
 
     const newSub = {
         id: 'sub_cuy_' + Date.now(),
+        clientId: activeManagingClient.id,
+        clientCode: activeManagingClient.clientCode || window.getClientCode(activeManagingClient),
+        clientPhone: activeManagingClient.phone,
         person: activeManagingClient.name,
         service: service,
         email: email,
         pass: pass,
         pin: pin,
         hidePassword,
+        hidePasswordFromClient: hidePassword,
         showCredentials,
+        showCredentialsToClient: showCredentials,
         amount: amount,
         currency: 'PEN',
         startDate: startStr,
@@ -2050,30 +2805,18 @@ window.renderFinance = () => {
 // ==========================================================================
 // CONTROL DE ACCESO A TIENDA & MODO MANTENIMIENTO DE EMERGENCIA
 // ==========================================================================
-window.isStoreMaintenanceActive = localStorage.getItem('cuycito_store_maintenance') === 'true';
+window.isStoreMaintenanceActive = false;
 
 window.initStoreMaintenanceListener = () => {
-    // 1. Cargar estado local inmediato
-    const localVal = localStorage.getItem('cuycito_store_maintenance') === 'true';
-    window.isStoreMaintenanceActive = localVal;
-    window.updateStoreMaintenanceUI(localVal);
-
-    // 2. Listener Storage Cross-Tab
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'cuycito_store_maintenance') {
-            window.isStoreMaintenanceActive = e.newValue === 'true';
-            window.updateStoreMaintenanceUI(window.isStoreMaintenanceActive);
-        }
-    });
-
-    // 3. Listener Cloud Firestore
     try {
         onSnapshot(doc(db, "system_config", "store_settings"), (docSnap) => {
             if (docSnap.exists()) {
-                const isM = docSnap.data().maintenanceMode === true;
-                localStorage.setItem('cuycito_store_maintenance', isM ? 'true' : 'false');
-                window.isStoreMaintenanceActive = isM;
-                window.updateStoreMaintenanceUI(isM);
+                const data = docSnap.data();
+                window.isStoreMaintenanceActive = data.maintenanceMode === true;
+                window.updateStoreMaintenanceUI(window.isStoreMaintenanceActive);
+            } else {
+                window.isStoreMaintenanceActive = false;
+                window.updateStoreMaintenanceUI(false);
             }
         });
     } catch(err) {
@@ -2082,102 +2825,56 @@ window.initStoreMaintenanceListener = () => {
 };
 
 window.updateStoreMaintenanceUI = (isMaintenance) => {
-    // 1. Switches
-    const switchElHeader = document.getElementById('headerStoreMaintenanceToggle');
+    // 1. Interruptor Maestro Único en Header
     const switchElGlobal = document.getElementById('globalStoreMaintenanceToggle');
-    const switchEl1 = document.getElementById('storeMaintenanceSwitch');
-    const switchEl2 = document.getElementById('storeMaintenanceSwitchCatalog');
-    const switchElClientsRow = document.getElementById('storeMaintenanceSwitchClientsRow');
-    if (switchElHeader) switchElHeader.checked = isMaintenance;
     if (switchElGlobal) switchElGlobal.checked = isMaintenance;
-    if (switchEl1) switchEl1.checked = isMaintenance;
-    if (switchEl2) switchEl2.checked = isMaintenance;
-    if (switchElClientsRow) switchElClientsRow.checked = isMaintenance;
 
-    // 2. Badges e Indicadores en Header, Tab 4, Tab 5 y Barra Global
-    const badges = document.querySelectorAll('.store-status-badge');
-    badges.forEach(b => {
+    const labelEl = document.getElementById('topHeaderStoreSwitchLabel');
+    if (labelEl) {
+        labelEl.innerText = isMaintenance ? "MANTENIMIENTO" : "TIENDA OPERATIVA";
+        labelEl.className = isMaintenance ? "block text-[11px] font-black uppercase text-red-400 animate-pulse" : "block text-[11px] font-black uppercase text-emerald-400";
+    }
+
+    const subLabelEl = document.getElementById('topHeaderStoreSwitchSublabel');
+    if (subLabelEl) {
+        subLabelEl.innerText = isMaintenance ? "Acceso clientes bloqueado" : "Clientes con acceso";
+    }
+
+    const containerEl = document.getElementById('topHeaderStoreSwitchContainer');
+    if (containerEl) {
         if (isMaintenance) {
-            b.className = "store-status-badge bg-red-950 text-red-300 border border-red-500/60 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 animate-pulse";
-            b.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400 animate-ping"></span> Clientes Desactivados (En Mantenimiento)';
+            containerEl.classList.remove('border-gray-800');
+            containerEl.classList.add('border-red-500/80', 'glow-red');
         } else {
-            b.className = "store-status-badge bg-emerald-950 text-emerald-300 border border-emerald-500/60 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1";
-            b.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Clientes Activados (Tienda Operativa)';
+            containerEl.classList.remove('border-red-500/80', 'glow-red');
+            containerEl.classList.add('border-gray-800');
         }
-    });
-
-    // 3. Textos y Cards
-    const descEls = document.querySelectorAll('.store-status-desc');
-    descEls.forEach(d => {
-        if (isMaintenance) {
-            d.innerHTML = '<strong class="text-red-400">MODO CRÍTICO ACTIVO:</strong> El acceso a la tienda y login está pausado para los clientes. Al entrar verán el mensaje "Estamos en mantenimiento".';
-        } else {
-            d.innerHTML = 'Acceso por login habilitado para todos los clientes. Compras y tienda operativas.';
-        }
-    });
-
-    const labelEls = document.querySelectorAll('.store-switch-label');
-    labelEls.forEach(l => {
-        l.innerText = isMaintenance ? "MANTENIMIENTO" : "TIENDA OPERATIVA";
-        l.className = isMaintenance ? "store-switch-label block text-xs font-black uppercase text-red-400" : "store-switch-label block text-xs font-black uppercase text-emerald-400";
-    });
-
-    const subLabelEls = document.querySelectorAll('.store-switch-sublabel');
-    subLabelEls.forEach(sl => {
-        sl.innerText = isMaintenance ? "Acceso Clientes Bloqueado" : "Acceso Clientes OK";
-    });
-
-    const cardEls = document.querySelectorAll('.store-maintenance-card');
-    cardEls.forEach(c => {
-        if (isMaintenance) {
-            c.classList.remove('border-emerald-500/60', 'border-emerald-500/50');
-            c.classList.add('border-red-500/80', 'shadow-[0_0_25px_rgba(239,68,68,0.3)]');
-        } else {
-            c.classList.remove('border-red-500/80', 'shadow-[0_0_25px_rgba(239,68,68,0.3)]');
-            c.classList.add('border-emerald-500/60');
-        }
-    });
-
-    const headerBoxEls = document.querySelectorAll('.store-maintenance-header-box');
-    headerBoxEls.forEach(hb => {
-        if (isMaintenance) {
-            hb.classList.remove('border-emerald-500/70', 'glow-gold');
-            hb.classList.add('border-red-500/90', 'glow-red');
-        } else {
-            hb.classList.remove('border-red-500/90', 'glow-red');
-            hb.classList.add('border-emerald-500/70', 'glow-gold');
-        }
-    });
-
-    const iconBoxEls = document.querySelectorAll('.store-control-icon-box');
-    iconBoxEls.forEach(ib => {
-        if (isMaintenance) {
-            ib.className = "store-control-icon-box w-11 h-11 rounded-xl bg-red-500/20 text-red-400 border border-red-500/50 flex items-center justify-center text-xl shadow shrink-0 animate-bounce";
-            ib.innerHTML = '<i class="fa-solid fa-store-slash"></i>';
-        } else {
-            ib.className = "store-control-icon-box w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xl shadow shrink-0";
-            ib.innerHTML = '<i class="fa-solid fa-store"></i>';
-        }
-    });
+    }
 };
 
 // Iniciar listener de mantenimiento inmediatamente
 window.initStoreMaintenanceListener();
 
 window.handleStoreMaintenanceToggle = async (isChecked) => {
-    localStorage.setItem('cuycito_store_maintenance', isChecked ? 'true' : 'false');
-    window.isStoreMaintenanceActive = isChecked;
-    window.updateStoreMaintenanceUI(isChecked);
-
     try {
         await setDoc(doc(db, "system_config", "store_settings"), {
             maintenanceMode: isChecked,
+            is_store_open: !isChecked,
             status: isChecked ? 'disabled' : 'active',
             updatedAt: new Date().toISOString(),
             updatedBy: 'Dashboard Admin'
         }, { merge: true });
+
+        window.updateStoreMaintenanceUI(isChecked);
+        
+        if (isChecked) {
+            alert("🛑 MODO MANTENIMIENTO ACTIVADO\n\nEl acceso por login y a la tienda ha sido inhabilitado para los clientes. Al ingresar serán redirigidos a la página de mantenimiento.");
+        } else {
+            alert("✅ TIENDA OPERATIVA\n\nEl acceso por login y la tienda se encuentran nuevamente habilitados para todos los clientes.");
+        }
     } catch(err) {
-        console.warn("Sincronización Firestore en Mantenimiento (guardado local OK):", err);
+        console.error("Error al actualizar modo mantenimiento de tienda:", err);
+        alert("Error al actualizar configuración en la nube: " + err.message);
     }
 };
 
@@ -2276,6 +2973,10 @@ window.renderActiveTable = () => {
                             <span>Activar Servicio</span>
                         </button>
 
+                        <button onclick="window.notifyClientOrderWhatsApp('${sub.id}')" class="bg-[#25D366] hover:bg-emerald-500 text-black font-bold text-xs p-2.5 rounded-xl transition flex items-center justify-center gap-1 shrink-0" title="Avisar al cliente por WhatsApp">
+                            <i class="fa-brands fa-whatsapp text-sm"></i>
+                        </button>
+
                         <button onclick="window.deletePendingActivation('${sub.id}')" class="bg-red-950/80 hover:bg-red-900 text-red-300 hover:text-white border border-red-500/40 font-bold text-xs p-2.5 rounded-xl transition flex items-center justify-center gap-1 shrink-0" title="Eliminar / Rechazar Solicitud">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
@@ -2288,22 +2989,40 @@ window.renderActiveTable = () => {
     // 2. RENDERIZAR TABLA GENERAL DE SERVICIOS
     if(!tbody) return;
     tbody.innerHTML = '';
-    const search = document.getElementById('searchActive') ? document.getElementById('searchActive').value.toLowerCase() : '';
-    const serviceFilter = document.getElementById('filterActiveService') ? document.getElementById('filterActiveService').value : '';
-    const statusFilter = document.getElementById('filterActiveStatus') ? document.getElementById('filterActiveStatus').value : 'VIGENTE';
+    const search = (document.getElementById('searchActive')?.value || '').toLowerCase().trim();
+    const serviceFilter = document.getElementById('filterActiveService')?.value || '';
+    const statusFilter = document.getElementById('filterActiveStatus')?.value || 'VIGENTE';
 
     let list = (appState.subscriptions || []).filter(sub => {
-        let matchSearch = (sub.person && sub.person.toLowerCase().includes(search)) || 
-                          (sub.service && sub.service.toLowerCase().includes(search)) || 
-                          (sub.phone && sub.phone.toLowerCase().includes(search));
-        let matchService = serviceFilter === '' || sub.service === serviceFilter;
-        let matchStatus = true;
-        let isExpired = window.getDaysRemaining(sub.endDate) < 0;
-        let isPending = sub.status === 'pending_activation' || sub.status === 'pending' || !!sub.tvQrImage;
+        const pNorm = (sub.person || '').toLowerCase().trim();
+        const sNorm = (sub.service || '').toLowerCase().trim();
 
+        // Si es un registro muerto ("Sin Asignar" o servicio corrupto/prueba), no mostrarlo y purgarlo de Firestore
+        if (pNorm.includes('sin asignar') || pNorm.startsWith('sin ') || pNorm === '' || sNorm.includes('disney premium 7') || sNorm.includes('777')) {
+            if (sub.id) {
+                deleteDoc(doc(db, "subscriptions", sub.id)).catch(()=>{});
+            }
+            return false;
+        }
+
+        let matchSearch = !search ||
+                          (sub.person && sub.person.toLowerCase().includes(search)) || 
+                          (sub.service && sub.service.toLowerCase().includes(search)) || 
+                          (sub.phone && sub.phone.toLowerCase().includes(search)) ||
+                          (sub.clientPhone && sub.clientPhone.toLowerCase().includes(search)) ||
+                          (sub.clientCode && sub.clientCode.toLowerCase().includes(search)) ||
+                          (sub.clientNickname && sub.clientNickname.toLowerCase().includes(search)) ||
+                          (sub.email && sub.email.toLowerCase().includes(search));
+
+        let matchService = serviceFilter === '' || sub.service === serviceFilter;
+        let isExpired = window.getDaysRemaining(sub.endDate) < 0;
+        let isPending = sub.status === 'pending_activation' || sub.status === 'pending' || sub.status === 'esperando_proveedor' || !!sub.tvQrImage;
+
+        let matchStatus = true;
         if(statusFilter === 'VIGENTE') matchStatus = !isExpired && !isPending;
-        if(statusFilter === 'VENCIDO') matchStatus = isExpired && !isPending;
-        if(statusFilter === 'PENDING') matchStatus = isPending;
+        else if(statusFilter === 'VENCIDO') matchStatus = isExpired && !isPending;
+        else if(statusFilter === 'PENDING') matchStatus = isPending;
+        else if(statusFilter === 'ALL' || statusFilter === 'TODOS') matchStatus = true;
 
         return matchSearch && matchService && matchStatus;
     });
@@ -2311,39 +3030,99 @@ window.renderActiveTable = () => {
     const activeCountBadge = document.getElementById('activeCountBadge');
     if (activeCountBadge) activeCountBadge.innerText = list.length;
 
-    tbody.innerHTML = list.map(sub => {
-        let isExp = window.getDaysRemaining(sub.endDate) < 0;
-        let isPending = sub.status === 'pending_activation' || sub.status === 'pending' || !!sub.tvQrImage;
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500 italic">No se encontraron servicios activos con esos filtros.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = list.map((sub, idx) => {
+        const subId = sub.id || `sub_${idx}`;
+        let days = window.getDaysRemaining(sub.endDate);
+        let isExp = days < 0;
+        let isPending = sub.status === 'pending_activation' || sub.status === 'pending' || sub.status === 'esperando_proveedor' || !!sub.tvQrImage;
+        
         let statusBadge = isPending 
-            ? `<span class="bg-yellow-950 text-yellow-300 border border-yellow-500/40 text-[10px] font-black px-2 py-0.5 rounded animate-pulse">⏳ Pendiente</span>`
+            ? `<span class="bg-yellow-950 text-yellow-300 border border-yellow-500/40 text-[10px] font-black px-2 py-0.5 rounded animate-pulse">⏳ ${sub.status === 'esperando_proveedor' ? 'Espera Proveedor' : 'Pendiente'}</span>`
             : isExp 
                 ? `<span class="bg-red-950 text-red-400 border border-red-500/40 text-[10px] font-black px-2 py-0.5 rounded">🔴 Vencido</span>` 
                 : `<span class="bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded">🟢 Activo</span>`;
 
+        const clientCodeBadge = '';
+
+        const daysRemainingLabel = isExp 
+            ? `<span class="text-red-400 font-bold block text-[10px]">Expiró</span>` 
+            : `<span class="text-gray-400 text-[10px] block">(${days} días restantes)</span>`;
+
         return `
         <tr class="hover:bg-gray-900/50 transition">
-            <td class="p-4 font-bold text-white">${sub.person}</td>
-            <td class="p-4 font-black text-cuycito-gold">${sub.service}</td>
-            <td class="p-4 font-mono text-[11px] text-gray-400">${sub.email || 'Sin correo asignado'}</td>
-            <td class="p-4 font-mono text-[11px] text-gray-300">${sub.endDate}</td>
+            <td class="p-4">
+                <div class="font-bold text-white text-xs">${sub.person || 'Sin nombre'}</div>
+                ${clientCodeBadge}
+            </td>
+            <td class="p-4 font-black text-cuycito-gold">${sub.service || 'Servicio'}</td>
+            <td class="p-4 font-mono text-[11px] text-gray-400">
+                <div>${sub.email || 'Sin correo'}</div>
+                ${sub.pin ? `<div class="text-cuycito-gold text-[10px]">PIN: ${sub.pin}</div>` : ''}
+            </td>
+            <td class="p-4 font-mono text-[11px] text-gray-300">
+                <div>${window.formatDateDDMMYYYY(sub.endDate)}</div>
+                ${daysRemainingLabel}
+            </td>
             <td class="p-4 text-center">${statusBadge}</td>
             <td class="p-4 text-center">
                 <div class="flex items-center justify-center gap-1 bg-black p-1 rounded-lg border border-gray-800">
-                    <input type="number" id="renew_${sub.id}" value="1" min="1" class="w-10 bg-transparent text-center text-cuycito-gold font-bold outline-none">
-                    <button onclick="window.renewSubscription('${sub.id}', 'renew_${sub.id}')" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black px-2 py-1 rounded font-black transition">
+                    <input type="number" id="renew_${subId}" value="1" min="1" class="w-10 bg-transparent text-center text-cuycito-gold font-bold outline-none">
+                    <button onclick="window.renewSubscription('${subId}', 'renew_${subId}')" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black px-2 py-1 rounded font-black transition">
                         <i class="fa-solid fa-rotate-right"></i>
                     </button>
                 </div>
             </td>
             <td class="p-4 text-center">
-                <div class="flex items-center justify-center gap-2">
-                    <button onclick="window.openEditModal('${sub.id}')" class="bg-blue-950 hover:bg-blue-900 text-blue-300 p-2 rounded-lg transition" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                    <button onclick="window.deleteSubscription('${sub.id}')" class="bg-red-950 hover:bg-red-900 text-red-400 p-2 rounded-lg transition" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                <div class="flex items-center justify-center gap-1.5">
+                    <button onclick="window.notifyClientOrderWhatsApp('${subId}')" class="bg-[#25D366] hover:bg-emerald-500 text-black p-2 rounded-lg transition" title="Avisar al cliente por WhatsApp"><i class="fa-brands fa-whatsapp text-xs font-bold"></i></button>
+                    <button onclick="window.openEditModal('${subId}')" class="bg-blue-950 hover:bg-blue-900 text-blue-300 p-2 rounded-lg transition" title="Editar"><i class="fa-solid fa-pen text-xs"></i></button>
+                    <button onclick="event.stopPropagation(); window.deleteSubscription('${subId}')" class="bg-red-950 hover:bg-red-900 text-red-400 p-2 rounded-lg transition shadow" title="Eliminar"><i class="fa-solid fa-trash text-xs"></i></button>
                 </div>
             </td>
         </tr>
         `;
     }).join('');
+};
+
+window.notifyClientOrderWhatsApp = (subId) => {
+    const sub = (appState.subscriptions || []).find(s => s.id === subId);
+    if (!sub) return alert("Servicio no encontrado.");
+
+    let clientPhone = sub.phone || '';
+    if (!clientPhone) {
+        const client = (appState.clients || []).find(c => 
+            (c.name && c.name.trim().toLowerCase() === (sub.person || '').trim().toLowerCase()) ||
+            (c.nickname && c.nickname.trim().toLowerCase() === (sub.person || '').trim().toLowerCase())
+        );
+        if (client) clientPhone = client.phone || '';
+    }
+
+    const cleanPhone = clientPhone.replace(/\D/g, '');
+    const serviceName = sub.service || 'Servicio Streaming VIP';
+    const email = sub.email || sub.accountEmail || '';
+    const pass = sub.pass || sub.accountPassword || '';
+    const pin = sub.pin || '';
+    const endDate = window.formatDateDDMMYYYY(sub.endDate) || '30 días';
+
+    let msg = `¡Hola *${sub.person || 'Cliente VIP'}*! 🐹🍿\n\n`;
+    msg += `Tu pedido de *${serviceName}* en *CuycitoGO* ya está listo y activado:\n\n`;
+    if (email) msg += `📧 *Correo / Usuario:* ${email}\n`;
+    if (pass) msg += `🔑 *Contraseña:* ${pass}\n`;
+    if (pin) msg += `👤 *Perfil / PIN:* ${pin}\n`;
+    msg += `📅 *Vencimiento:* ${endDate}\n\n`;
+    msg += `💡 _Disfruta de tu contenido en 4K Ultra HD sin cortes. Cualquier consulta estamos a tu completa disposición._ 🚀`;
+
+    const encodedMsg = encodeURIComponent(msg);
+    const waUrl = cleanPhone 
+        ? `https://wa.me/${cleanPhone.startsWith('51') ? cleanPhone : '51' + cleanPhone}?text=${encodedMsg}`
+        : `https://wa.me/?text=${encodedMsg}`;
+
+    window.open(waUrl, '_blank');
 };
 
 window.deletePendingActivation = async (subId) => {
@@ -2374,9 +3153,9 @@ window.openFullscreenQrModal = (subId) => {
     const btnAct = document.getElementById('fullscreenBtnActivate');
 
     if (sName) sName.innerText = `Código QR de ${sub.service}`;
-    if (cName) cName.innerText = `Cliente: ${sub.person} | ${sub.email || ''}`;
+    if (cName) cName.innerText = `Cliente: ${sub.person}`;
     if (img) img.src = sub.tvQrImage;
-    if (btnAct) btnAct.onclick = () => window.activatePendingTvQr(subId);
+    if (btnAct) btnAct.setAttribute('onclick', `window.activatePendingTvQr('${sub.id}'); document.getElementById('tvQrFullscreenModal').classList.add('hidden');`);
 
     if (modal) modal.classList.remove('hidden');
 };
@@ -2385,24 +3164,14 @@ window.activatePendingTvQr = async (subId) => {
     const sub = (appState.subscriptions || []).find(s => s.id === subId);
     if (!sub) return;
 
-    if (!confirm(`¿Confirmas la activación de ${sub.service} para el cliente "${sub.person}"?`)) return;
-
     sub.status = 'active';
     delete sub.tvQrImage;
 
     try {
-        await setDoc(doc(db, "subscriptions", subId), {
-            status: 'active',
-            tvQrImage: null,
-            activatedAt: new Date().toISOString()
-        }, { merge: true });
+        await setDoc(doc(db, "subscriptions", subId), sub, { merge: true });
     } catch(e) {}
 
     saveLocal();
-
-    const modal = document.getElementById('tvQrFullscreenModal');
-    if (modal) modal.classList.add('hidden');
-
     window.renderActiveTable();
     alert(`🎉 ¡Servicio Activado!\n\nEl servicio ${sub.service} para ${sub.person} ha quedado marcado como ACTIVO exitosamente.`);
 };
@@ -2411,7 +3180,13 @@ window.renderMasterAccounts = () => {
     const grid = document.getElementById('masterGrid'); if(!grid) return;
     grid.innerHTML = '';
     
-    appState.masterAccounts.forEach(acc => {
+    appState.masterAccounts.forEach((acc, accIdx) => {
+        if (!acc.id) {
+            acc.id = `master_${acc.email ? acc.email.replace(/[^a-zA-Z0-9]/g, '_') : accIdx}`;
+        }
+        const masterCode = acc.masterCode || window.getMasterCode(acc);
+        acc.masterCode = masterCode;
+
         let occupied = (acc.profiles || []).filter(p => p !== null).length;
         let freeSlots = Math.max(0, acc.capacity - occupied);
         let occColor = occupied === acc.capacity ? 'text-cuycito-red border-cuycito-red' : 'text-emerald-400 border-emerald-400/50';
@@ -2438,12 +3213,15 @@ window.renderMasterAccounts = () => {
         <div class="bg-[#111] border border-gray-800 rounded-xl overflow-hidden shadow-lg flex flex-col">
             <div class="p-3 bg-black border-b border-gray-800 flex justify-between items-center">
                 <div>
-                    <h4 class="font-black text-white text-sm uppercase">${acc.service}</h4>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-amber-950 text-cuycito-gold border border-amber-500/40 text-[9px] font-black px-1.5 py-0.5 rounded font-mono">${masterCode}</span>
+                        <h4 class="font-black text-white text-sm uppercase">${acc.service}</h4>
+                    </div>
                     <p class="text-[10px] text-cuycito-gold font-mono">${acc.email}</p>
                 </div>
                 <div class="flex flex-col items-end gap-1">
                     <div class="text-center border px-2 py-0.5 rounded ${occColor} bg-black text-[10px] font-black tracking-widest">${occupied}/${acc.capacity} Lleno (${freeSlots} libres)</div>
-                    <span class="text-[9px] text-gray-500">Vence: ${acc.endDate || 'N/A'}</span>
+                    <span class="text-[9px] text-gray-500">Vence: ${window.formatDateDDMMYYYY(acc.endDate)}</span>
                 </div>
             </div>
             
@@ -2477,7 +3255,7 @@ window.renderMasterAccounts = () => {
                     <div class="flex justify-between items-center bg-gray-900 border border-gray-700 rounded p-2">
                         <div>
                             <p class="text-xs font-bold text-white">${sub.person} <span class="text-[10px] text-cuycito-gold">(${sub.pin || '-'})</span></p>
-                            <p class="text-[10px] ${dColor} font-mono">Vence: ${sub.endDate} | Cobra: ${subSym}${sub.amount}</p>
+                            <p class="text-[10px] ${dColor} font-mono">Vence: ${window.formatDateDDMMYYYY(sub.endDate)} | Cobra: ${subSym}${sub.amount}</p>
                         </div>
                         <button onclick="window.unlinkProfile('${acc.id}', ${i})" class="text-gray-500 hover:text-cuycito-red transition text-xs p-1" title="Desvincular"><i class="fa-solid fa-xmark"></i></button>
                     </div>`;
@@ -2492,6 +3270,157 @@ window.renderMasterAccounts = () => {
     });
 };
 
+// =====================================
+// LIMPIEZA AUTOMÁTICA DE INTEGRIDAD DE BASE DE DATOS (PURGA DE MUERTOS, HUÉRFANOS Y DUPLICADOS)
+// =====================================
+window.cleanupDatabaseOrphans = async (isManual = false) => {
+    console.log("🧹 Ejecutando purga exhaustiva de datos muertos, huérfanos y corruptos...");
+    const masterMap = new Map((appState.masterAccounts || []).map(m => [m.id, m]));
+    const clientMap = new Map((appState.clients || []).map(c => [c.id, c]));
+
+    let cleanedDeadOrphans = 0;
+    let cleanedDuplicates = 0;
+    let slotsReset = 0;
+
+    const seenSignatures = new Set();
+    const cleanSubscriptions = [];
+
+    for (const sub of (appState.subscriptions || [])) {
+        if (!sub.id) continue;
+
+        const personNorm = (sub.person || '').trim().toLowerCase();
+        const serviceNorm = (sub.service || '').trim().toLowerCase();
+
+        // 1. Condición: Registro muerto o "Sin Asignar" o servicio corrupto/prueba (ej: "777", "disney premium 7", vacíos)
+        const isDeadName = personNorm.includes('sin asignar') || personNorm.includes('sin nombre') || personNorm.startsWith('sin ') || personNorm === '' || personNorm === 'null' || personNorm === 'undefined' || !sub.person;
+        const isCorruptService = serviceNorm.includes('777') || serviceNorm.includes('disney premium 7') || serviceNorm === '' || serviceNorm === 'null';
+        const isMissingClient = sub.clientId && !clientMap.has(sub.clientId) && isDeadName;
+
+        if (isDeadName || isCorruptService || isMissingClient) {
+            console.warn(`🗑️ Purgando registro muerto de suscripción: ID: ${sub.id}, Person: "${sub.person}", Service: "${sub.service}"`);
+            try {
+                await deleteDoc(doc(db, "subscriptions", sub.id));
+                cleanedDeadOrphans++;
+            } catch(e){}
+            continue;
+        }
+
+        // 2. Condición: Huérfano de Cuenta Matriz eliminada
+        if (sub.masterAccountId && !masterMap.has(sub.masterAccountId)) {
+            console.warn(`🗑️ Purgando servicio con cuenta matriz eliminada: ${sub.service} (${sub.id}) -> Matriz: ${sub.masterAccountId}`);
+            try {
+                await deleteDoc(doc(db, "subscriptions", sub.id));
+                cleanedDeadOrphans++;
+            } catch(e){}
+            continue;
+        }
+
+        // 3. Condición: Duplicados exactos (mismo cliente + mismo servicio + mismo correo + mismo pin)
+        const clientIdentifier = sub.clientId || sub.clientCode || sub.person;
+        const sig = `${clientIdentifier}_${sub.service}_${(sub.email || '').trim().toLowerCase()}_${(sub.pin || '').trim()}`;
+        
+        if (seenSignatures.has(sig)) {
+            console.warn(`🗑️ Purgando servicio duplicado redundante: ${sig} (${sub.id})`);
+            try {
+                await deleteDoc(doc(db, "subscriptions", sub.id));
+                cleanedDuplicates++;
+            } catch(e){}
+            continue;
+        }
+
+        // 4. Auto-sellar el clientId y clientCode único para vincular unívocamente con el cliente real
+        if (sub.person) {
+            const matchedClient = (appState.clients || []).find(c => 
+                (c.id && sub.clientId && c.id === sub.clientId) ||
+                (c.name && c.name.trim().toLowerCase() === personNorm) ||
+                (c.nickname && c.nickname.trim().toLowerCase() === personNorm)
+            );
+            if (matchedClient) {
+                const cCode = matchedClient.clientCode || window.getClientCode(matchedClient);
+                if (sub.clientId !== matchedClient.id || sub.clientCode !== cCode) {
+                    sub.clientId = matchedClient.id;
+                    sub.clientCode = cCode;
+                    sub.clientPhone = matchedClient.phone || sub.clientPhone || '';
+                    try {
+                        await setDoc(doc(db, "subscriptions", sub.id), {
+                            clientId: sub.clientId,
+                            clientCode: sub.clientCode,
+                            clientPhone: sub.clientPhone
+                        }, { merge: true });
+                    } catch(e){}
+                }
+            }
+        }
+
+        seenSignatures.add(sig);
+        cleanSubscriptions.push(sub);
+    }
+
+    appState.subscriptions = cleanSubscriptions;
+
+    // 4. Limpieza de slots en Cuentas Matrices que apunten a suscripciones inexistentes o purgadas
+    const subSet = new Set(cleanSubscriptions.map(s => s.id));
+    for (const acc of (appState.masterAccounts || [])) {
+        let changed = false;
+        if (acc.profiles && Array.isArray(acc.profiles)) {
+            for (let i = 0; i < acc.profiles.length; i++) {
+                const sId = acc.profiles[i];
+                if (sId && !subSet.has(sId)) {
+                    acc.profiles[i] = null;
+                    changed = true;
+                    slotsReset++;
+                }
+            }
+        }
+        if (changed) {
+            try {
+                await setDoc(doc(db, "masterAccounts", acc.id), acc, { merge: true });
+            } catch(e){}
+        }
+    }
+
+    saveLocal();
+    window.renderAll();
+
+    const totalFixes = cleanedDeadOrphans + cleanedDuplicates + slotsReset;
+    console.log(`✅ Purga finalizada: ${cleanedDeadOrphans} datos muertos/huérfanos eliminados, ${cleanedDuplicates} duplicados eliminados, ${slotsReset} slots de matriz liberados.`);
+
+    if (isManual) {
+        alert(`🧹 Purga de Base de Datos Exitosa:\n\n• ${cleanedDeadOrphans} registros muertos ("Sin Asignar", servicios de prueba "777", huérfanos) eliminados permanentemente de Firestore.\n• ${cleanedDuplicates} servicios duplicados eliminados.\n• ${slotsReset} cupos de cuentas matrices liberados y restablecidos.`);
+    }
+};
+
+window.getClientCode = (client) => {
+    if (!client) return 'CLI-000';
+    if (client.clientCode) return client.clientCode;
+    if (client.phone) {
+        const cleanDigits = client.phone.toString().replace(/\D/g, '');
+        if (cleanDigits.length >= 4) {
+            return `CLI-${cleanDigits.slice(-4)}`;
+        }
+    }
+    if (client.id) {
+        const cleanId = client.id.toString().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        return `CLI-${cleanId.slice(-4)}`;
+    }
+    return 'CLI-1001';
+};
+
+window.updateClientsDatalist = () => {
+    const datalist = document.getElementById('clientsDatalist');
+    if (!datalist) return;
+    let optionsHTML = '';
+    appState.clients.forEach(c => {
+        const code = window.getClientCode(c);
+        optionsHTML += `<option value="${code}">[${code}] ${c.name} (@${c.nickname || c.name}) - ${c.phone}</option>`;
+        optionsHTML += `<option value="${c.name}">[${code}] ${c.name} - ${c.phone}</option>`;
+    });
+    datalist.innerHTML = optionsHTML;
+};
+
+// =====================================
+// 10. RENDERIZADO DE ACCESOS TIENDA (CLIENTES)
+// =====================================
 window.renderClients = () => {
     const tbody = document.getElementById('clientsTableBody');
     if(!tbody) return;
@@ -2503,26 +3432,40 @@ window.renderClients = () => {
         const cName = (c.name || '').toLowerCase();
         const cNick = (c.nickname || '').toLowerCase();
         const cPhone = (c.phone || '').toLowerCase();
+        const cCode = (c.clientCode || window.getClientCode(c)).toLowerCase();
         
         const hasMatchingService = appState.subscriptions.some(s => 
-            s.person && s.person.trim().toLowerCase() === cName && 
+            ((s.clientId && c.id && s.clientId === c.id) || (s.person && s.person.trim().toLowerCase() === cName)) && 
             (s.service || '').toLowerCase().includes(search)
         );
 
-        return cName.includes(search) || cNick.includes(search) || cPhone.includes(search) || hasMatchingService;
+        return cName.includes(search) || cNick.includes(search) || cPhone.includes(search) || cCode.includes(search) || hasMatchingService;
     });
 
     const badge = document.getElementById('clientsCountBadge');
     if(badge) badge.innerText = `${filteredClients.length} Clientes`;
 
+    window.updateClientsDatalist();
+
     if (filteredClients.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 italic">No se encontraron accesos de clientes.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500 italic">No se encontraron accesos de clientes.</td></tr>`;
         return;
     }
     
     filteredClients.forEach(c => {
+        const clientCode = window.getClientCode(c);
+        c.clientCode = clientCode;
         const clientNameNorm = (c.name || '').trim().toLowerCase();
-        const linkedSubs = appState.subscriptions.filter(s => s.person && s.person.trim().toLowerCase() === clientNameNorm);
+        const clientPhoneNorm = (c.phone || '').toString().replace(/\D/g, '');
+
+        // VINCULACIÓN UNÍVOCA Y ESTRICTA: Evita confundir clientes con nombres similares
+        const linkedSubs = appState.subscriptions.filter(s => {
+            if (s.clientId && c.id && s.clientId === c.id) return true;
+            if (s.clientCode && clientCode && s.clientCode === clientCode) return true;
+            const sPhone = (s.clientPhone || s.phone || '').toString().replace(/\D/g, '');
+            if (sPhone && clientPhoneNorm && sPhone.length >= 7 && sPhone === clientPhoneNorm) return true;
+            return false;
+        });
         
         let servicesHTML = '';
         if (linkedSubs.length === 0) {
@@ -2554,11 +3497,42 @@ window.renderClients = () => {
             servicesHTML += `</div>`;
         }
 
+        const currencySymbol = appState.globalCurrency === 'PEN' ? 'S/' : '$';
+
+        let lastSeenMs = 0;
+        if (c.lastSeen) {
+            if (typeof c.lastSeen.toMillis === 'function') {
+                lastSeenMs = c.lastSeen.toMillis();
+            } else if (typeof c.lastSeen === 'number') {
+                lastSeenMs = c.lastSeen;
+            } else {
+                const parsed = new Date(c.lastSeen).getTime();
+                if (!isNaN(parsed)) lastSeenMs = parsed;
+            }
+        }
+        const now = Date.now();
+        const isOnline = (c.isOnline === true) && (lastSeenMs > 0) && ((now - lastSeenMs) < (1000 * 120));
+
+        const statusIndicatorHTML = isOnline
+            ? `<span class="relative flex h-3.5 w-3.5 shrink-0" title="🟢 Conectado en tiempo real en su cuenta (En línea)">
+                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                 <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,1)]"></span>
+               </span>`
+            : `<span class="inline-flex rounded-full h-3 w-3 bg-gray-600 border border-gray-500/70 shrink-0 shadow-sm opacity-80" title="⚪ Desconectado / Sin sesión activa"></span>`;
+
         tbody.innerHTML += `
         <tr class="hover:bg-gray-800/60 transition">
             <td class="p-4">
-                <div class="font-black text-white text-xs">${c.name}</div>
-                <div class="text-[10px] text-gray-500 font-mono">${c.email || 'Sin correo'}</div>
+                <div class="flex items-center gap-3">
+                    ${statusIndicatorHTML}
+                    <div>
+                        <div class="font-black text-white text-xs flex items-center gap-1.5 flex-wrap">
+                            <span>${c.name}</span>
+                            ${isOnline ? `<span class="text-[9px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-1.5 py-0.2 rounded font-sans flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> En línea</span>` : `<span class="text-[9px] text-gray-500 font-mono">Desconectado</span>`}
+                        </div>
+                        <div class="text-[10px] text-gray-500 font-mono">${c.email || 'Sin correo'}</div>
+                    </div>
+                </div>
             </td>
             <td class="p-4">
                 <span class="bg-cuycito-gold/20 text-cuycito-gold text-[11px] font-extrabold px-2.5 py-1 rounded-lg border border-cuycito-gold/40">
@@ -2567,10 +3541,21 @@ window.renderClients = () => {
             </td>
             <td class="p-4 font-mono text-blue-400 font-bold text-xs"><i class="fa-solid fa-mobile-screen mr-1"></i> ${c.phone}</td>
             <td class="p-4 font-mono text-cuycito-gold text-xs">${c.pass}</td>
-            <td class="p-4 font-mono font-black text-emerald-400 text-xs">$ ${(c.balance || 0).toFixed(2)}</td>
+            <td class="p-4">
+                <div class="flex items-center gap-1 bg-black/90 border border-emerald-500/40 hover:border-emerald-400 rounded-xl p-1.5 w-max shadow transition">
+                    <span class="text-xs font-black text-emerald-400 font-mono pl-1">${currencySymbol}</span>
+                    <input type="number" step="0.50" id="client_bal_${c.id}" value="${(c.balance || 0).toFixed(2)}" class="w-16 bg-transparent text-emerald-300 font-mono font-black text-xs outline-none focus:text-white text-right pr-1">
+                    <button onclick="window.updateClientBalanceDirectly('${c.id}', 'client_bal_${c.id}')" class="bg-emerald-500 hover:bg-emerald-400 text-black px-2 py-1 rounded-lg text-xs font-black transition shadow flex items-center gap-1" title="Guardar nuevo saldo">
+                        <i class="fa-solid fa-check"></i>
+                    </button>
+                </div>
+            </td>
             <td class="p-4">${servicesHTML}</td>
             <td class="p-4 text-center">
                 <div class="flex items-center justify-center gap-1.5">
+                    <button onclick="window.impersonateAndOpenProfile('${c.id}')" class="bg-gradient-to-r from-purple-900 to-indigo-800 hover:from-purple-700 hover:to-indigo-600 text-white font-black p-2 px-2.5 rounded-lg transition shadow text-xs flex items-center gap-1" title="Entrar y supervisar el perfil de este cliente como Administrador">
+                        <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i> <span class="hidden xl:inline">Supervisar</span>
+                    </button>
                     <button onclick="window.openClientServicesModal('${c.id}')" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black font-black p-2 px-2.5 rounded-lg transition shadow text-xs flex items-center gap-1" title="Gestionar y Enlazar Servicios">
                         <i class="fa-solid fa-link"></i> <span class="hidden lg:inline">Enlazar</span>
                     </button>
@@ -2588,6 +3573,280 @@ window.renderClients = () => {
         </tr>`;
     });
 };
+
+// =====================================
+// 10.0. MODO SUPERVISIÓN DE PERFILES DE CLIENTES (ADMINISTRADOR)
+// =====================================
+window.openSuperviseClientModal = () => {
+    const modal = document.getElementById('superviseClientModal');
+    if (!modal) return;
+
+    const searchInput = document.getElementById('searchSuperviseInput');
+    if (searchInput) searchInput.value = '';
+
+    window.filterSuperviseClients();
+    modal.classList.remove('hidden');
+};
+
+window.filterSuperviseClients = () => {
+    const container = document.getElementById('superviseClientsList');
+    const countText = document.getElementById('superviseClientsCountText');
+    if (!container) return;
+
+    const search = (document.getElementById('searchSuperviseInput')?.value || '').toLowerCase().trim();
+
+    const filtered = (appState.clients || []).filter(c => {
+        const name = (c.name || '').toLowerCase();
+        const nick = (c.nickname || '').toLowerCase();
+        const phone = (c.phone || '').toLowerCase();
+        const email = (c.email || '').toLowerCase();
+        const code = (c.clientCode || window.getClientCode(c)).toLowerCase();
+
+        return !search || name.includes(search) || nick.includes(search) || phone.includes(search) || email.includes(search) || code.includes(search);
+    });
+
+    if (countText) {
+        countText.innerText = `${filtered.length} cliente${filtered.length === 1 ? '' : 's'} disponible${filtered.length === 1 ? '' : 's'}`;
+    }
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="p-8 text-center text-gray-500 bg-black/40 rounded-xl border border-gray-800 space-y-2">
+                <i class="fa-solid fa-users-slash text-2xl text-gray-600"></i>
+                <p class="text-xs font-bold text-gray-400">No se encontraron clientes con esa búsqueda.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = filtered.map(c => {
+        const clientCode = c.clientCode || window.getClientCode(c);
+        const balance = parseFloat(c.balance || 0).toFixed(2);
+        const now = Date.now();
+        const lastSeenMs = c.lastSeen ? new Date(c.lastSeen).getTime() : 0;
+        const isOnline = (c.isOnline === true) && ((now - lastSeenMs) < (1000 * 90));
+
+        const onlineDot = isOnline 
+            ? '<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse inline-block shadow-[0_0_8px_rgba(52,211,153,0.8)]" title="En línea"></span>' 
+            : '<span class="w-2.5 h-2.5 rounded-full bg-gray-600 inline-block" title="Desconectado"></span>';
+
+        return `
+        <div class="flex items-center justify-between p-3 bg-black/60 border border-gray-800 hover:border-indigo-500/70 rounded-xl transition group">
+            <div class="flex items-center gap-3">
+                ${onlineDot}
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="bg-indigo-950 text-indigo-300 border border-indigo-500/40 text-[9px] font-black px-1.5 py-0.5 rounded font-mono">${clientCode}</span>
+                        <h4 class="text-xs font-black text-white group-hover:text-indigo-300 transition">${c.name}</h4>
+                        ${c.nickname ? `<span class="text-[10px] text-gray-400">(@${c.nickname})</span>` : ''}
+                    </div>
+                    <p class="text-[10px] text-gray-400 font-mono mt-0.5">
+                        📱 ${c.phone || 'Sin cel'} | 💰 Saldo: <span class="text-emerald-400 font-bold">S/ ${balance}</span>
+                        ${c.email ? ` | 📧 ${c.email}` : ''}
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="window.impersonateAndOpenProfile('${c.id}')" class="bg-gradient-to-r from-purple-900 to-indigo-800 hover:from-purple-700 hover:to-indigo-600 text-white font-black text-xs px-3.5 py-1.5 rounded-lg transition shadow flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                <span>Supervisar</span>
+            </button>
+        </div>
+        `;
+    }).join('');
+};
+
+window.impersonateAndOpenProfile = (clientId) => {
+    let client = (appState.clients || []).find(c => 
+        c.id === clientId || 
+        (c.id && c.id.toString() === (clientId || '').toString()) ||
+        (c.phone && c.phone.toString() === (clientId || '').toString())
+    );
+
+    if (!client) {
+        alert("No se pudo encontrar el cliente seleccionado.");
+        return;
+    }
+
+    // Configurar sesión supervisada
+    const clientSession = {
+        id: client.id,
+        name: client.name,
+        nickname: client.nickname || client.name,
+        phone: client.phone || '',
+        email: client.email || '',
+        pass: client.pass || '',
+        balance: parseFloat(client.balance || 0),
+        clientCode: client.clientCode || window.getClientCode(client),
+        isSupervisedByAdmin: true,
+        supervisedAt: new Date().toISOString()
+    };
+
+    localStorage.setItem("cuycitoClient", JSON.stringify(clientSession));
+    
+    // Cerrar modal si estuviera abierto
+    document.getElementById('superviseClientModal')?.classList.add('hidden');
+
+    // Abrir perfil en una nueva pestaña
+    const targetUrl = `perfil.html?userId=${encodeURIComponent(client.id)}&adminSupervision=true`;
+    window.open(targetUrl, '_blank');
+};
+
+window.updateClientBalanceDirectly = async (clientId, inputId) => {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const newBal = parseFloat(input.value);
+    if (isNaN(newBal) || newBal < 0) {
+        return alert("Por favor ingresa un monto de saldo válido (mayor o igual a 0).");
+    }
+
+    const client = appState.clients.find(c => c.id === clientId);
+    if (!client) return alert("Cliente no encontrado.");
+
+    const oldBal = client.balance || 0;
+    client.balance = newBal;
+
+    try {
+        await setDoc(doc(db, "users", clientId), { 
+            balance: newBal,
+            name: client.name,
+            nickname: client.nickname || client.name,
+            phone: client.phone || '',
+            email: client.email || '',
+            pass: client.pass || '',
+            updatedAt: new Date().toISOString() 
+        }, { merge: true });
+
+        saveLocal();
+        window.notifyAutoSave(`Saldo de ${client.name || client.nickname} actualizado a S/ ${newBal.toFixed(2)}`);
+        window.renderClients();
+        alert(`✅ Saldo de "${client.name || client.nickname}" actualizado con éxito:\n\nNuevo Saldo: S/ ${newBal.toFixed(2)}\n(Saldo anterior: S/ ${oldBal.toFixed(2)})`);
+    } catch(err) {
+        console.error("Error al actualizar saldo de cliente:", err);
+        alert("❌ Error al guardar el saldo en la nube: " + err.message);
+    }
+};
+
+// Listener en tiempo real para estado de conexión de clientes (Online / Offline)
+let clientsPresenceSnapshotUnsubscribe = null;
+window.initRealtimeClientsPresenceListener = () => {
+    if (clientsPresenceSnapshotUnsubscribe) return;
+    try {
+        clientsPresenceSnapshotUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+            const updatedClients = [];
+            snapshot.forEach(d => {
+                const data = { ...d.data(), id: d.id };
+                if (!data.nickname) data.nickname = data.name || 'Cliente';
+                data.clientCode = window.getClientCode(data);
+                updatedClients.push(data);
+            });
+            appState.clients = updatedClients;
+            window.renderClients();
+        });
+    } catch(err) {
+        console.warn("Error en listener de clientes en vivo:", err);
+    }
+};
+window.initRealtimeClientsPresenceListener();
+
+// Auto-refresco de estado de presencia cada 15 segundos
+setInterval(() => {
+    const clientsView = document.getElementById('view-clients');
+    if (clientsView && !clientsView.classList.contains('hidden')) {
+        window.renderClients();
+    }
+}, 15000);
+
+// Listener en tiempo real para Cuentas Madre (Cuenta Matriz)
+let masterAccountsSnapshotUnsubscribe = null;
+window.initRealtimeMasterAccountsListener = () => {
+    if (masterAccountsSnapshotUnsubscribe) return;
+    try {
+        masterAccountsSnapshotUnsubscribe = onSnapshot(collection(db, "masterAccounts"), (snapshot) => {
+            const updatedMasters = [];
+            snapshot.forEach(d => updatedMasters.push({ id: d.id, ...d.data() }));
+            appState.masterAccounts = updatedMasters;
+            const masterView = document.getElementById('view-master');
+            if (masterView && !masterView.classList.contains('hidden')) {
+                window.renderMasterAccounts();
+            }
+        });
+    } catch(err) {
+        console.warn("Error en listener de masterAccounts:", err);
+    }
+};
+window.initRealtimeMasterAccountsListener();
+
+// Listener en tiempo real para Catálogo Web
+let catalogSnapshotUnsubscribe = null;
+window.initRealtimeCatalogListener = () => {
+    if (catalogSnapshotUnsubscribe) return;
+    try {
+        catalogSnapshotUnsubscribe = onSnapshot(collection(db, "store_catalog"), (snapshot) => {
+            const updatedCatalog = [];
+            snapshot.forEach(d => {
+                const item = { id: d.id, ...d.data() };
+                if (!item.imageUrl || item.imageUrl.trim() === '') {
+                    item.imageUrl = resolveProductImage(item);
+                }
+                updatedCatalog.push(item);
+            });
+            if (updatedCatalog.length > 0) {
+                appState.catalog = updatedCatalog;
+            }
+            const catalogView = document.getElementById('view-catalog');
+            if (catalogView && !catalogView.classList.contains('hidden')) {
+                window.renderCatalog();
+            }
+        });
+    } catch(err) {
+        console.warn("Error en listener de catalog:", err);
+    }
+};
+window.initRealtimeCatalogListener();
+
+// Listener en tiempo real para Libro Mayor (Finanzas)
+let historySnapshotUnsubscribe = null;
+window.initRealtimeHistoryListener = () => {
+    if (historySnapshotUnsubscribe) return;
+    try {
+        historySnapshotUnsubscribe = onSnapshot(collection(db, "history"), (snapshot) => {
+            const updatedHistory = [];
+            snapshot.forEach(d => updatedHistory.push({ id: d.id, ...d.data() }));
+            appState.history = updatedHistory;
+            const finView = document.getElementById('view-finance');
+            if (finView && !finView.classList.contains('hidden')) {
+                window.renderFinance();
+            }
+        });
+    } catch(err) {
+        console.warn("Error en listener de history:", err);
+    }
+};
+window.initRealtimeHistoryListener();
+
+// Listener en tiempo real para Suscripciones (Servicios Activos)
+let subscriptionsSnapshotUnsubscribe = null;
+window.initRealtimeSubscriptionsListener = () => {
+    if (subscriptionsSnapshotUnsubscribe) return;
+    try {
+        subscriptionsSnapshotUnsubscribe = onSnapshot(collection(db, "subscriptions"), (snapshot) => {
+            const updatedSubs = [];
+            snapshot.forEach(d => {
+                const data = d.data();
+                updatedSubs.push({ ...data, id: d.id });
+            });
+            appState.subscriptions = updatedSubs;
+            const subsView = document.getElementById('view-subs');
+            if (subsView && !subsView.classList.contains('hidden')) {
+                window.renderActiveTable();
+            }
+            window.renderNotifications();
+        });
+    } catch(err) {
+        console.warn("Error en listener de subscriptions:", err);
+    }
+};
+window.initRealtimeSubscriptionsListener();
 
 // =====================================
 // 10.1. GESTIÓN DE SOLICITUDES DE CUENTA GRATIS & CÓDIGO DE REFERIDO VIP (+S/ 0.50)
@@ -2871,8 +4130,10 @@ window.approveRegistrationRequest = async (reqId) => {
     }
 
     // 2. Crear usuario en Firebase y appState con S/ 1.00 de Crédito de Bienvenida
+    const clientCode = window.getClientCode({ id: newUserId, phone: req.phone, name: req.name });
     const newUser = {
         id: newUserId,
+        clientCode: clientCode,
         name: req.name,
         nickname: req.name.split(' ')[0],
         phone: req.phone,
@@ -2880,6 +4141,8 @@ window.approveRegistrationRequest = async (reqId) => {
         pass: defaultPass,
         balance: 1.00, // 🎉 S/ 1.00 Sol de Regalo de Apertura
         referredCodeUsed: req.referralCode || '',
+        isOnline: false,
+        lastSeen: new Date().toISOString(),
         createdAt: new Date().toISOString()
     };
 
@@ -3123,22 +4386,107 @@ window.renderCatalog = () => {
 };
 
 window.renderNotifications = () => {
-    const cont = document.getElementById('notificationsContainer'); if(!cont) return;
+    const cont = document.getElementById('notificationsContainer'); 
+    if(!cont) return;
     cont.innerHTML = '';
-    const exp = appState.subscriptions.filter(s => window.getDaysRemaining(s.endDate) <= 3 && window.getDaysRemaining(s.endDate) >= 0);
+
+    // 1. Cuentas Matrices por vencer (Aviso a partir de 1 semana = 7 días o menos)
+    const expiringMasters = (appState.masterAccounts || []).filter(acc => {
+        if (!acc.endDate) return false;
+        const days = window.getDaysRemaining(acc.endDate);
+        return days <= 7;
+    }).map(acc => {
+        const days = window.getDaysRemaining(acc.endDate);
+        return {
+            type: 'MASTER',
+            id: acc.id,
+            title: acc.service,
+            subtitle: acc.email,
+            endDate: acc.endDate,
+            days: days,
+            isExpired: days < 0,
+            badge: '👑 Matriz'
+        };
+    });
+
+    // 2. Suscripciones de Clientes por vencer (Aviso a partir de 3 días o menos)
+    const expiringSubs = (appState.subscriptions || []).filter(s => {
+        if (!s.endDate || s.status === 'pending_activation') return false;
+        const days = window.getDaysRemaining(s.endDate);
+        return days <= 3 && days >= 0;
+    }).map(s => {
+        const days = window.getDaysRemaining(s.endDate);
+        return {
+            type: 'CLIENT_SUB',
+            id: s.id,
+            title: s.person || 'Cliente',
+            subtitle: `${s.service} ${s.pin ? '(' + s.pin + ')' : ''}`,
+            endDate: s.endDate,
+            days: days,
+            isExpired: days < 0,
+            badge: '👤 Cliente'
+        };
+    });
+
+    // Unificar y ordenar por urgencia (menor cantidad de días primero)
+    const allAlerts = [...expiringMasters, ...expiringSubs].sort((a, b) => a.days - b.days);
+
     const alertCount = document.getElementById('alertCount');
-    if(alertCount) alertCount.innerText = exp.length;
+    if(alertCount) alertCount.innerText = allAlerts.length;
     const mobileAlertBadge = document.getElementById('mobileAlertCountBadge');
-    if(mobileAlertBadge) mobileAlertBadge.innerText = exp.length;
+    if(mobileAlertBadge) mobileAlertBadge.innerText = allAlerts.length;
     
-    if (exp.length === 0) {
-        cont.innerHTML = `<div class="p-3 bg-black/40 border border-gray-800/80 rounded-xl text-center text-gray-500 text-xs italic"><i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> No hay cuentas por vencer</div>`;
+    if (allAlerts.length === 0) {
+        cont.innerHTML = `<div class="p-3 bg-black/40 border border-gray-800/80 rounded-xl text-center text-gray-500 text-xs italic"><i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> No hay cuentas matrices ni clientes por vencer</div>`;
         return;
     }
 
-    exp.forEach(s => {
-        const days = window.getDaysRemaining(s.endDate);
-        cont.innerHTML += `<div class="p-3 bg-[#0a0a0a] border-l-4 ${days===0?'border-cuycito-red':'border-cuycito-gold'} shadow-lg rounded-r-xl"><div class="flex justify-between items-start font-bold mb-1"><span class="text-white text-xs">${s.person}</span><span class="${days===0?'text-cuycito-red_light':'text-cuycito-gold'} font-black text-[10px] px-2 rounded bg-black">${days===0?'HOY':days+' d'}</span></div><div class="text-gray-400 text-[11px]">${s.service}</div></div>`;
+    allAlerts.forEach(item => {
+        const isMaster = item.type === 'MASTER';
+        const isToday = item.days === 0;
+        const isExpired = item.days < 0;
+
+        let borderClass = 'border-cuycito-gold';
+        let badgeBgClass = 'bg-black text-cuycito-gold';
+        let timeLabel = `${item.days} d`;
+
+        if (isExpired) {
+            borderClass = 'border-red-600 bg-red-950/20';
+            badgeBgClass = 'bg-red-950 text-red-400 border border-red-500/50';
+            timeLabel = 'EXPIRÓ';
+        } else if (isToday) {
+            borderClass = 'border-cuycito-red animate-pulse';
+            badgeBgClass = 'bg-cuycito-red text-white';
+            timeLabel = 'HOY';
+        } else if (isMaster) {
+            borderClass = 'border-purple-500 bg-purple-950/20';
+            badgeBgClass = 'bg-purple-900/90 text-purple-200 border border-purple-400/50';
+        }
+
+        const tagHTML = isMaster
+            ? `<span class="bg-purple-950 text-purple-300 border border-purple-500/50 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
+                 <i class="fa-solid fa-crown text-[8px] text-yellow-400"></i> Matriz Proveedor
+               </span>`
+            : `<span class="bg-blue-950/80 text-blue-300 border border-blue-500/40 text-[9px] font-bold px-1.5 py-0.5 rounded">
+                 👤 Cliente
+               </span>`;
+
+        cont.innerHTML += `
+        <div class="p-3 bg-[#0a0a0a] border-l-4 ${borderClass} shadow-lg rounded-r-xl space-y-1 hover:bg-[#111] transition">
+            <div class="flex justify-between items-start font-bold gap-2">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    ${tagHTML}
+                    <span class="text-white text-xs font-black">${item.title}</span>
+                </div>
+                <span class="${badgeBgClass} font-black text-[10px] px-2 py-0.5 rounded shadow shrink-0">
+                    ${timeLabel}
+                </span>
+            </div>
+            <div class="flex justify-between items-center text-[11px] text-gray-400 font-mono">
+                <span class="truncate max-w-[150px]">${item.subtitle}</span>
+                <span class="text-[10px] text-gray-500">Vence: ${item.endDate}</span>
+            </div>
+        </div>`;
     });
 };
 
@@ -3224,7 +4572,7 @@ window.renderRechargesTable = async () => {
     // 2. Renderizar tabla de historial
     if (completedBody) {
         if (completedOrders.length === 0) {
-            completedBody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 font-sans">Aún no hay recargas procesadas registradas.</td></tr>`;
+            completedBody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500 font-sans">Aún no hay recargas procesadas registradas.</td></tr>`;
         } else {
             let html = '';
             completedOrders.forEach(order => {
@@ -3242,12 +4590,38 @@ window.renderRechargesTable = async () => {
                     <td class="p-3">${typeBadge}</td>
                     <td class="p-3 font-mono text-[11px] text-gray-400 truncate max-w-[150px]">${order.transferReference || 'N/A'}</td>
                     <td class="p-3 text-center">
-                        <span class="bg-emerald-950 text-emerald-400 border border-emerald-500/50 text-[10px] font-black px-2 py-0.5 rounded">🟢 Acreditado</span>
+                        <span class="bg-emerald-950 text-emerald-400 border border-emerald-500/50 text-[10px] font-black px-2.5 py-1 rounded-lg">🟢 Acreditado</span>
+                    </td>
+                    <td class="p-3 text-center">
+                        <button onclick="window.deleteCompletedRecharge('${order.id}')" class="bg-red-950/80 hover:bg-red-700 text-red-300 hover:text-white border border-red-500/40 px-2.5 py-1 rounded-lg transition text-xs font-bold flex items-center justify-center gap-1 mx-auto shadow" title="Eliminar este registro permanentemente">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                            <span class="text-[10px] uppercase tracking-wider font-extrabold">Eliminar</span>
+                        </button>
                     </td>
                 </tr>`;
             });
             completedBody.innerHTML = html;
         }
+    }
+};
+
+window.deleteCompletedRecharge = async (orderId) => {
+    const order = appState.recharges.find(r => r.id === orderId);
+    const clientName = order ? (order.userName || order.userNickname || order.userId || 'Cliente') : 'Cliente';
+    const amount = order ? (order.creditedAmount || order.exactAmount || order.baseAmount || 0) : 0;
+    
+    if (!confirm(`¿Estás seguro de eliminar este registro de recarga procesada de S/ ${amount.toFixed(2)} del cliente "${clientName}"?\n\nEsta acción eliminará el registro del historial permanentemente.`)) {
+        return;
+    }
+
+    try {
+        await deleteDoc(doc(db, "recharge_orders", orderId));
+        appState.recharges = appState.recharges.filter(r => r.id !== orderId);
+        window.renderRechargesTable();
+        alert("✅ Registro de recarga procesada eliminado con éxito.");
+    } catch (err) {
+        console.error("Error al eliminar registro de recarga:", err);
+        alert("❌ Error al eliminar el registro: " + err.message);
     }
 };
 
@@ -3363,7 +4737,7 @@ window.filterRechargesHistory = () => {
     ));
 
     if (filtered.length === 0) {
-        completedBody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 font-sans">No se encontraron recargas con "${query}".</td></tr>`;
+        completedBody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500 font-sans">No se encontraron recargas con "${query}".</td></tr>`;
         return;
     }
 
@@ -3379,11 +4753,17 @@ window.filterRechargesHistory = () => {
         <tr class="hover:bg-black/50 transition">
             <td class="p-3 text-[11px] text-gray-400 font-mono">${dateStr}</td>
             <td class="p-3 font-bold text-white">${order.userName || order.userId}</td>
-            <td class="p-3 font-black text-emerald-400">$ ${(order.creditedAmount || order.exactAmount || order.baseAmount || 0).toFixed(2)} ${order.currency || 'USD'}</td>
+            <td class="p-3 font-black text-emerald-400">S/ ${(order.creditedAmount || order.exactAmount || order.baseAmount || 0).toFixed(2)}</td>
             <td class="p-3">${typeBadge}</td>
             <td class="p-3 font-mono text-[11px] text-gray-400 truncate max-w-[150px]">${order.transferReference || 'N/A'}</td>
             <td class="p-3 text-center">
-                <span class="bg-emerald-950 text-emerald-400 border border-emerald-500/50 text-[10px] font-black px-2 py-0.5 rounded">🟢 Acreditado</span>
+                <span class="bg-emerald-950 text-emerald-400 border border-emerald-500/50 text-[10px] font-black px-2.5 py-1 rounded-lg">🟢 Acreditado</span>
+            </td>
+            <td class="p-3 text-center">
+                <button onclick="window.deleteCompletedRecharge('${order.id}')" class="bg-red-950/80 hover:bg-red-700 text-red-300 hover:text-white border border-red-500/40 px-2.5 py-1 rounded-lg transition text-xs font-bold flex items-center justify-center gap-1 mx-auto shadow" title="Eliminar este registro permanentemente">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                    <span class="text-[10px] uppercase tracking-wider font-extrabold">Eliminar</span>
+                </button>
             </td>
         </tr>`;
     });

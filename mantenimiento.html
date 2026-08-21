@@ -94,7 +94,7 @@
 
     <!-- Header Mínimo -->
     <header class="py-5 px-6 border-b border-gray-900 bg-black/80 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between">
-        <a href="/" class="flex items-center gap-3 group">
+        <a href="index.html" class="flex items-center gap-3 group">
             <img src="assets/img/logo.png" alt="CuycitoGO" class="h-10 sm:h-12 object-contain drop-shadow-[0_0_15px_rgba(255,183,3,0.35)] group-hover:scale-105 transition">
             <div>
                 <h1 class="text-xl sm:text-2xl font-black tracking-widest text-cuycito-gold leading-none" style="font-family: impact, sans-serif;">CuycitoGO</h1>
@@ -107,7 +107,7 @@
                 <i class="fa-brands fa-whatsapp text-emerald-400"></i>
                 <span class="hidden sm:inline">Canal WhatsApp</span>
             </a>
-            <a href="/" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow">
+            <a href="index.html" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow">
                 <i class="fa-solid fa-house text-cuycito-gold"></i>
                 <span>Inicio</span>
             </a>
@@ -163,7 +163,7 @@
 
             <!-- Botones de Acción -->
             <div class="flex items-center justify-center">
-                <a href="/" class="w-full sm:w-auto bg-gradient-to-r from-red-600 via-amber-500 to-yellow-400 hover:from-red-500 hover:to-yellow-300 text-black font-black text-xs px-8 py-3.5 rounded-xl transition-all shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider">
+                <a href="index.html" class="w-full sm:w-auto bg-gradient-to-r from-red-600 via-amber-500 to-yellow-400 hover:from-red-500 hover:to-yellow-300 text-black font-black text-xs px-8 py-3.5 rounded-xl transition-all shadow-xl glow-gold flex items-center justify-center gap-2 uppercase tracking-wider">
                     <i class="fa-solid fa-house text-base"></i>
                     <span>Volver a la Portada Principal</span>
                 </a>
@@ -177,8 +177,10 @@
         © 2026 CuycitoGO • Todos los derechos reservados.
     </footer>
 
-    <!-- Script de Control del Modal -->
-    <script>
+    <!-- Script de Control del Modal y Escucha de Reactivación -->
+    <script type="module">
+        import { db, doc, onSnapshot } from "./js/firebase-config.js";
+
         window.openWhatsAppModal = () => {
             const modal = document.getElementById('whatsappChannelModal');
             const card = document.getElementById('whatsappModalCard');
@@ -201,17 +203,28 @@
             }
         };
 
-        // Cerrar al hacer clic fuera de la tarjeta
         document.getElementById('whatsappChannelModal').addEventListener('click', (e) => {
             if (e.target.id === 'whatsappChannelModal') {
                 window.closeWhatsAppModal();
             }
         });
 
-        // Abrir popup automáticamente tras 400ms
         setTimeout(() => {
             window.openWhatsAppModal();
         }, 400);
+
+        // Si el administrador apaga el mantenimiento, volver a la tienda/login automáticamente
+        try {
+            onSnapshot(doc(db, "system_config", "store_settings"), (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.is_store_open === true && data.maintenanceMode === false) {
+                        console.log("Tienda reactivada por el administrador. Redirigiendo...");
+                        window.location.replace('login-cliente.html');
+                    }
+                }
+            });
+        } catch(e) {}
     </script>
 
 </body>
