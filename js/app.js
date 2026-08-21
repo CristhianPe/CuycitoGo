@@ -662,29 +662,53 @@ window.renewSubscription = async (subId, inputId) => {
 };
 
 window.openEditModal = (subId) => {
-    const sub = appState.subscriptions.find(s => s.id === subId);
-    if(!sub) return;
-    document.getElementById('editSubId').value = sub.id;
-    document.getElementById('editPerson').value = sub.person;
-    document.getElementById('editService').value = sub.service;
+    const sub = (appState.subscriptions || []).find(s => s.id === subId || s._docId === subId);
+    if (!sub) return;
+
+    if (typeof window.populateServicesDropdowns === 'function') {
+        window.populateServicesDropdowns();
+    }
+
+    document.getElementById('editSubId').value = sub.id || sub._docId;
+    document.getElementById('editPerson').value = sub.person || '';
+
+    const editServiceSelect = document.getElementById('editService');
+    const editServiceCustom = document.getElementById('editServiceCustom');
+    
+    if (editServiceSelect) {
+        const hasOption = Array.from(editServiceSelect.options).some(opt => opt.value === sub.service);
+        if (hasOption) {
+            editServiceSelect.value = sub.service;
+            if (editServiceCustom) editServiceCustom.classList.add('hidden');
+        } else {
+            editServiceSelect.value = 'OTRO';
+            if (editServiceCustom) {
+                editServiceCustom.value = sub.service || '';
+                editServiceCustom.classList.remove('hidden');
+            }
+        }
+    }
+
     document.getElementById('editEmail').value = sub.email || '';
     document.getElementById('editPass').value = sub.pass || '';
     document.getElementById('editPin').value = sub.pin || '';
     document.getElementById('editHidePass').checked = !!sub.hidePassword;
-    document.getElementById('editAmount').value = sub.amount;
-    document.getElementById('editCurrency').value = sub.currency;
-    document.getElementById('editEndDate').value = sub.endDate;
+    document.getElementById('editAmount').value = sub.amount !== undefined ? sub.amount : (sub.price || 0);
+    document.getElementById('editCurrency').value = sub.currency || 'PEN';
+    document.getElementById('editEndDate').value = sub.endDate || '';
     document.getElementById('editModal').classList.remove('hidden');
 };
 
 window.saveEditModal = async () => {
     const id = document.getElementById('editSubId')?.value;
-    if(!id) return;
-    const sub = appState.subscriptions.find(s => s.id === id);
-    if(!sub) return;
+    if (!id) return;
+    const sub = (appState.subscriptions || []).find(s => s.id === id || s._docId === id);
+    if (!sub) return;
+
+    const newService = await window.getOrRegisterService('editService', 'editServiceCustom');
 
     sub.person = (document.getElementById('editPerson')?.value || sub.person).trim();
-    sub.service = document.getElementById('editService')?.value || sub.service;
+    if (newService) sub.service = newService;
     sub.email = (document.getElementById('editEmail')?.value || '').trim();
     sub.pass = (document.getElementById('editPass')?.value || '').trim();
     sub.pin = (document.getElementById('editPin')?.value || '').trim();
@@ -696,12 +720,26 @@ window.saveEditModal = async () => {
     sub.price = sub.amount;
     sub.currency = document.getElementById('editCurrency')?.value || sub.currency || 'PEN';
     sub.endDate = document.getElementById('editEndDate')?.value || sub.endDate;
+    sub.updatedAt = new Date().toISOString();
 
     try { 
         await setDoc(doc(db, "subscriptions", id), sub, { merge: true }); 
     } catch(e){
         console.error("Error actualizando suscripción:", e);
     }
+
+    // Sincronizar si estaba ligada a una cuenta matriz
+    if (sub.masterAccountId) {
+        const masterAcc = (appState.masterAccounts || []).find(m => m.id === sub.masterAccountId);
+        if (masterAcc) {
+            masterAcc.email = sub.email;
+            masterAcc.pass = sub.pass;
+            masterAcc.hidePasswordFromClient = sub.hidePassword;
+            masterAcc.showCredentialsToClient = sub.showCredentials;
+            try { await setDoc(doc(db, "masterAccounts", masterAcc.id), masterAcc, { merge: true }); } catch(e){}
+        }
+    }
+
     saveLocal();
     document.getElementById('editModal')?.classList.add('hidden');
     window.renderAll();

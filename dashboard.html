@@ -1664,38 +1664,77 @@
 
     <!-- MODAL EDICIÓN SUSCRIPCIÓN -->
     <div id="editModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-cuycito-dark border border-cuycito-red rounded-xl p-6 w-full max-w-md space-y-4">
-            <h3 class="text-lg font-black text-cuycito-gold uppercase border-b border-gray-800 pb-2"><i class="fa-solid fa-pen-to-square"></i> Edición Manual</h3>
+        <div class="bg-cuycito-dark border border-cuycito-gold rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+                <h3 class="text-base font-black text-cuycito-gold uppercase flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square"></i> Edición Manual de Servicio
+                </h3>
+                <button type="button" onclick="document.getElementById('editModal').classList.add('hidden')" class="text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
             <input type="hidden" id="editSubId">
             <div class="space-y-3 text-xs font-medium">
-                <input type="text" id="editPerson" class="w-full bg-black border border-gray-700 rounded p-2 text-white" placeholder="Persona">
-                <select id="editService" onchange="window.handleServiceSelectChange('editService', 'editServiceCustom')" class="w-full bg-black border border-gray-700 rounded p-2 text-white mb-2"></select>
-                <input type="text" id="editServiceCustom" class="hidden w-full bg-black border border-cuycito-gold rounded p-2 text-white mb-2">
-                <input type="text" id="editEmail" class="w-full bg-black border border-gray-700 rounded p-2 text-white" placeholder="Correo">
-                <div class="grid grid-cols-2 gap-3"><input type="text" id="editPass" class="w-full bg-black border border-gray-700 rounded p-2 text-white" placeholder="Contraseña"><input type="text" id="editPin" class="w-full bg-black border border-gray-700 rounded p-2 text-white" placeholder="PIN/Perfil"></div>
-                <div class="flex items-center gap-2">
-                    <input type="checkbox" id="editHidePass" class="w-3.5 h-3.5 accent-cuycito-gold bg-black border-gray-700">
-                    <label for="editHidePass" class="text-[10px] text-gray-300 font-semibold cursor-pointer">🔒 Ocultar contraseña al cliente en su portal</label>
-                <div class="grid grid-cols-2 gap-3">
-                    <input type="number" step="0.01" id="editAmount" class="w-full bg-black border border-gray-700 rounded p-2 text-white" placeholder="Monto">
-                    <select id="editCurrency" class="w-full bg-black border border-gray-700 rounded p-2 text-white">
-                        <option value="PEN">PEN (S/)</option>
-                        <option value="USD">USD ($)</option>
-                    </select>
-                </div>
                 <div>
-                    <label class="block text-[10px] text-gray-400 mb-1">Fecha de Culminación (Vencimiento):</label>
-                    <input type="date" id="editEndDate" class="w-full bg-black border border-gray-700 rounded p-2 text-cuycito-gold font-bold outline-none">
+                    <label class="block text-[10px] text-gray-400 mb-1 font-bold">Cliente / Titular:</label>
+                    <input type="text" id="editPerson" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white outline-none focus:border-cuycito-gold" placeholder="Nombre del Cliente">
                 </div>
+
+                <div>
+                    <label class="block text-[10px] text-gray-400 mb-1 font-bold">Servicio:</label>
+                    <select id="editService" onchange="window.handleServiceSelectChange('editService', 'editServiceCustom')" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white outline-none focus:border-cuycito-gold"></select>
+                    <input type="text" id="editServiceCustom" class="hidden w-full bg-black border border-cuycito-gold rounded-xl p-2.5 text-white mt-1" placeholder="Escribe el nombre del servicio">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-gray-400 mb-1 font-bold">Correo de Acceso:</label>
+                    <input type="text" id="editEmail" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white font-mono outline-none focus:border-cuycito-gold" placeholder="Correo electrónico">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] text-gray-400 mb-1 font-bold">Contraseña:</label>
+                        <input type="text" id="editPass" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white font-mono outline-none focus:border-cuycito-gold" placeholder="Contraseña">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-400 mb-1 font-bold">Perfil / PIN:</label>
+                        <input type="text" id="editPin" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white outline-none focus:border-cuycito-gold" placeholder="PIN/Perfil">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 pt-1 pb-1">
+                    <input type="checkbox" id="editHidePass" class="w-4 h-4 accent-cuycito-gold bg-black border-gray-700 rounded cursor-pointer">
+                    <label for="editHidePass" class="text-[11px] text-gray-300 font-semibold cursor-pointer select-none">🔒 Ocultar contraseña al cliente en su portal</label>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] text-gray-400 mb-1 font-bold">Monto de Cobro:</label>
+                        <input type="number" step="0.01" id="editAmount" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white outline-none focus:border-cuycito-gold" placeholder="Monto">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-400 mb-1 font-bold">Moneda:</label>
+                        <select id="editCurrency" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-white outline-none focus:border-cuycito-gold">
+                            <option value="PEN">PEN (S/)</option>
+                            <option value="USD">USD ($)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-gray-400 mb-1 font-bold">Fecha de Culminación (Vencimiento):</label>
+                    <input type="date" id="editEndDate" class="w-full bg-black border border-gray-700 rounded-xl p-2.5 text-cuycito-gold font-bold outline-none">
+                </div>
+
                 <div class="flex justify-between items-center pt-3 border-t border-gray-800">
-                    <button type="button" onclick="window.deleteSubscription()" class="bg-red-950 hover:bg-red-900 text-red-400 border border-red-500/40 text-xs font-bold px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shadow">
+                    <button type="button" onclick="window.deleteSubscription()" class="bg-red-950 hover:bg-red-900 text-red-400 border border-red-500/40 text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow">
                         <i class="fa-solid fa-trash"></i> Eliminar
                     </button>
                     <div class="flex items-center gap-2">
-                        <button type="button" onclick="document.getElementById('editModal').classList.add('hidden')" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-4 py-2 rounded-lg transition">
+                        <button type="button" onclick="document.getElementById('editModal').classList.add('hidden')" class="bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition">
                             Cancelar
                         </button>
-                        <button type="button" onclick="window.saveEditModal()" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black font-black text-xs px-4 py-2 rounded-lg transition shadow">
+                        <button type="button" onclick="window.saveEditModal()" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black font-black text-xs px-4 py-2 rounded-xl transition shadow">
                             Guardar Cambios
                         </button>
                     </div>
