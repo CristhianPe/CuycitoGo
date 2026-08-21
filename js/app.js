@@ -239,6 +239,9 @@ onAuthStateChanged(auth, async (user) => {
             window.calculateEndDate();
             window.renderAll();
             window.initStoreMaintenanceListener();
+            if (typeof window.initRealtimeClientsPresenceListener === 'function') {
+                window.initRealtimeClientsPresenceListener();
+            }
 
             // Saneamiento e integridad automática de cuentas matrices y servicios huérfanos
             setTimeout(() => {
@@ -3498,16 +3501,26 @@ window.renderClients = () => {
 
         const currencySymbol = appState.globalCurrency === 'PEN' ? 'S/' : '$';
 
+        let lastSeenMs = 0;
+        if (c.lastSeen) {
+            if (typeof c.lastSeen.toMillis === 'function') {
+                lastSeenMs = c.lastSeen.toMillis();
+            } else if (typeof c.lastSeen === 'number') {
+                lastSeenMs = c.lastSeen;
+            } else {
+                const parsed = new Date(c.lastSeen).getTime();
+                if (!isNaN(parsed)) lastSeenMs = parsed;
+            }
+        }
         const now = Date.now();
-        const lastSeenMs = c.lastSeen ? new Date(c.lastSeen).getTime() : 0;
-        const isOnline = (c.isOnline === true) && ((now - lastSeenMs) < (1000 * 90));
+        const isOnline = (c.isOnline === true) && (lastSeenMs > 0) && ((now - lastSeenMs) < (1000 * 120));
 
         const statusIndicatorHTML = isOnline
-            ? `<span class="relative flex h-3 w-3 shrink-0" title="🟢 Conectado ahora en su cuenta (En línea)">
+            ? `<span class="relative flex h-3.5 w-3.5 shrink-0" title="🟢 Conectado en tiempo real en su cuenta (En línea)">
                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                 <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]"></span>
+                 <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,1)]"></span>
                </span>`
-            : `<span class="inline-flex rounded-full h-3 w-3 bg-gray-600 border border-gray-500/60 shrink-0 shadow-sm" title="⚪ Desconectado / Sin sesión activa"></span>`;
+            : `<span class="inline-flex rounded-full h-3 w-3 bg-gray-600 border border-gray-500/70 shrink-0 shadow-sm opacity-80" title="⚪ Desconectado / Sin sesión activa"></span>`;
 
         tbody.innerHTML += `
         <tr class="hover:bg-gray-800/60 transition">
@@ -3518,7 +3531,7 @@ window.renderClients = () => {
                         <div class="font-black text-white text-xs flex items-center gap-1.5 flex-wrap">
                             <span>${c.name}</span>
                             <span class="bg-indigo-950/90 text-indigo-300 border border-indigo-500/40 text-[10px] font-black px-1.5 py-0.2 rounded font-mono" title="Identificador Único del Cliente">ID: ${clientCode}</span>
-                            ${isOnline ? `<span class="text-[9px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-1.5 py-0.2 rounded font-sans">En línea</span>` : ''}
+                            ${isOnline ? `<span class="text-[9px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-1.5 py-0.2 rounded font-sans flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> En línea</span>` : `<span class="text-[9px] text-gray-500 font-mono">Desconectado</span>`}
                         </div>
                         <div class="text-[10px] text-gray-500 font-mono">${c.email || 'Sin correo'}</div>
                     </div>
