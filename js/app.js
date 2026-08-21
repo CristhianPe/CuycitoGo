@@ -160,15 +160,15 @@ onAuthStateChanged(auth, async (user) => {
         try {
             const subSnap = await getDocs(collection(db, "subscriptions"));
             appState.subscriptions = []; 
-            subSnap.forEach(d => appState.subscriptions.push({ id: d.id, ...d.data() }));
+            subSnap.forEach(d => appState.subscriptions.push({ ...d.data(), id: d.id, _docId: d.id }));
 
             const histSnap = await getDocs(collection(db, "history"));
             appState.history = []; 
-            histSnap.forEach(d => appState.history.push({ id: d.id, ...d.data() }));
+            histSnap.forEach(d => appState.history.push({ ...d.data(), id: d.id, _docId: d.id }));
 
             const masterSnap = await getDocs(collection(db, "masterAccounts"));
             appState.masterAccounts = []; 
-            masterSnap.forEach(d => appState.masterAccounts.push({ id: d.id, ...d.data() }));
+            masterSnap.forEach(d => appState.masterAccounts.push({ ...d.data(), id: d.id, _docId: d.id }));
 
             const servSnap = await getDocs(collection(db, "services"));
             let cloudServices = []; 
@@ -708,43 +708,56 @@ window.saveEditModal = async () => {
 };
 
 window.deleteSubscription = async (passedId) => {
-    const id = passedId || document.getElementById('editSubId')?.value;
+    const id = (passedId || document.getElementById('editSubId')?.value || '').toString().trim();
     if (!id) {
-        alert("No se pudo identificar la suscripción a eliminar.");
+        alert("⚠️ No se pudo identificar la suscripción a eliminar.");
         return;
     }
 
-    const sub = (appState.subscriptions || []).find(s => s.id === id);
-    const subName = sub ? `"${sub.service}" (${sub.person})` : 'esta suscripción';
+    const subIndex = (appState.subscriptions || []).findIndex(s => s.id === id || s._docId === id);
+    const sub = subIndex >= 0 ? appState.subscriptions[subIndex] : null;
+    const subName = sub ? `"${sub.service}" de ${sub.person || 'cliente'}` : `este servicio`;
 
-    if (confirm(`¿Estás seguro de ELIMINAR permanentemente ${subName}?`)) {
+    if (confirm(`⚠️ ¿Estás seguro de ELIMINAR permanentemente ${subName}?\nEsta acción no se puede deshacer.`)) {
         // 1. Si estaba vinculada a una cuenta matriz, liberar el cupo / slot
         if (sub && sub.masterAccountId) {
             const masterAcc = (appState.masterAccounts || []).find(m => m.id === sub.masterAccountId);
             if (masterAcc && masterAcc.profiles) {
-                const slotIdx = masterAcc.profiles.findIndex(pId => pId === id);
+                const slotIdx = masterAcc.profiles.findIndex(pId => pId === id || (sub && pId === sub.id));
                 if (slotIdx >= 0) {
                     masterAcc.profiles[slotIdx] = null;
                     try {
                         await setDoc(doc(db, "masterAccounts", masterAcc.id), masterAcc, { merge: true });
-                    } catch(e){}
+                    } catch(e){
+                        console.warn("Error liberando slot en cuenta matriz:", e);
+                    }
                 }
             }
         }
 
-        // 2. Eliminar de appState y localStorage
-        appState.subscriptions = (appState.subscriptions || []).filter(s => s.id !== id);
-        saveLocal();
-
-        // 3. Eliminar de Firestore
+        // 2. Eliminar de Firestore (tanto por id como por sub.id)
         try { 
             await deleteDoc(doc(db, "subscriptions", id)); 
+            if (sub && sub.id && sub.id !== id) {
+                await deleteDoc(doc(db, "subscriptions", sub.id));
+            }
+            console.log("🗑️ Suscripción eliminada exitosamente de Firestore:", id);
         } catch(e){
             console.error("Error eliminando suscripción de Firestore:", e);
         }
 
-        document.getElementById('editModal')?.classList.add('hidden');
-        window.renderAll();
+        // 3. Eliminar de appState y localStorage
+        appState.subscriptions = (appState.subscriptions || []).filter(s => s.id !== id && (!sub || s.id !== sub.id));
+        saveLocal();
+
+        const editModal = document.getElementById('editModal');
+        if (editModal) editModal.classList.add('hidden');
+
+        // 4. Re-renderizar interfaces
+        window.renderActiveTable();
+        window.renderMasterAccounts();
+        window.renderClients();
+        window.renderNotifications();
     }
 };
 
@@ -2898,7 +2911,7 @@ window.renderActiveTable = () => {
                 <div class="flex items-center justify-center gap-1.5">
                     <button onclick="window.notifyClientOrderWhatsApp('${subId}')" class="bg-[#25D366] hover:bg-emerald-500 text-black p-2 rounded-lg transition" title="Avisar al cliente por WhatsApp"><i class="fa-brands fa-whatsapp text-xs font-bold"></i></button>
                     <button onclick="window.openEditModal('${subId}')" class="bg-blue-950 hover:bg-blue-900 text-blue-300 p-2 rounded-lg transition" title="Editar"><i class="fa-solid fa-pen text-xs"></i></button>
-                    <button onclick="window.deleteSubscription('${subId}')" class="bg-red-950 hover:bg-red-900 text-red-400 p-2 rounded-lg transition shadow" title="Eliminar"><i class="fa-solid fa-trash text-xs"></i></button>
+                    <button onclick="event.stopPropagation(); window.deleteSubscription('${subId}')" class="bg-red-950 hover:bg-red-900 text-red-400 p-2 rounded-lg transition shadow" title="Eliminar"><i class="fa-solid fa-trash text-xs"></i></button>
                 </div>
             </td>
         </tr>
