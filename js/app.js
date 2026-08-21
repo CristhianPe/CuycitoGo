@@ -3047,9 +3047,7 @@ window.renderActiveTable = () => {
                 ? `<span class="bg-red-950 text-red-400 border border-red-500/40 text-[10px] font-black px-2 py-0.5 rounded">🔴 Vencido</span>` 
                 : `<span class="bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded">🟢 Activo</span>`;
 
-        const clientCodeBadge = sub.clientCode 
-            ? `<span class="bg-indigo-950/90 text-indigo-300 border border-indigo-500/40 text-[9px] font-black px-1.5 py-0.2 rounded font-mono block w-max mt-0.5">${sub.clientCode}</span>` 
-            : '';
+        const clientCodeBadge = '';
 
         const daysRemainingLabel = isExp 
             ? `<span class="text-red-400 font-bold block text-[10px]">Expiró</span>` 
@@ -3530,7 +3528,6 @@ window.renderClients = () => {
                     <div>
                         <div class="font-black text-white text-xs flex items-center gap-1.5 flex-wrap">
                             <span>${c.name}</span>
-                            <span class="bg-indigo-950/90 text-indigo-300 border border-indigo-500/40 text-[10px] font-black px-1.5 py-0.2 rounded font-mono" title="Identificador Único del Cliente">ID: ${clientCode}</span>
                             ${isOnline ? `<span class="text-[9px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-1.5 py-0.2 rounded font-sans flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> En línea</span>` : `<span class="text-[9px] text-gray-500 font-mono">Desconectado</span>`}
                         </div>
                         <div class="text-[10px] text-gray-500 font-mono">${c.email || 'Sin correo'}</div>

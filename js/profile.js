@@ -324,7 +324,7 @@ async function initProfilePage() {
         const superviseCode = document.getElementById('adminSuperviseClientCode');
         if (supervisorBanner && currentClientUser) {
             if (superviseName) superviseName.innerText = `${currentClientUser.name} (@${currentClientUser.nickname || currentClientUser.name})`;
-            if (superviseCode) superviseCode.innerText = `ID: ${getClientCode(currentClientUser)}`;
+            if (superviseCode) superviseCode.classList.add('hidden');
             supervisorBanner.classList.remove('hidden');
         }
     }
@@ -564,9 +564,8 @@ function updateProfileUI() {
     if (rouletteBal) rouletteBal.innerText = `S/ ${balance}`;
     if (avatar && nickname) avatar.innerText = nickname.charAt(0).toUpperCase();
 
-    const clientCode = getClientCode(currentClientUser);
     const codeBadge = document.getElementById('profileClientCodeBadge');
-    if (codeBadge) codeBadge.innerText = `ID: ${clientCode}`;
+    if (codeBadge) codeBadge.classList.add('hidden');
 
     // Rellenar modal de edición
     const editReal = document.getElementById('editRealName');
