@@ -11,10 +11,13 @@
     <script>
         tailwind.config = { theme: { extend: { colors: { cuycito: { black: '#0a0a0a', dark: '#141414', red: '#850000', red_light: '#b91c1c', gold: '#ffb703', gold_light: '#ffc333' } } } } }
     </script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Flatpickr DatePicker (Formato DD/MM/AAAA Universal en Español) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
 </head>
 <body class="h-full flex flex-col font-sans selection:bg-cuycito-gold selection:text-black hidden" id="mainBody">
 
@@ -190,12 +193,12 @@
                 </div>
                 
                 <div class="grid grid-cols-2 gap-2">
-                    <div><label class="block text-gray-400 mb-1">Fecha Inicio</label><input type="date" id="startDate" required onchange="window.calculateEndDate()" class="w-full bg-black border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold text-[10px]"></div>
+                    <div><label class="block text-gray-400 mb-1">Fecha Inicio (DD/MM/AAAA)</label><input type="text" id="startDate" required placeholder="DD/MM/AAAA" onchange="window.calculateEndDate()" class="datepicker-es w-full bg-black border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold text-[10px]"></div>
                     <div><label class="block text-gray-400 mb-1">Meses (30d)</label><input type="number" min="1" value="1" id="durationMonths" required onchange="window.calculateEndDate()" class="w-full bg-black border border-gray-800 rounded p-2 text-white outline-none focus:border-cuycito-gold"></div>
                 </div>
                 <div>
-                    <label class="block text-gray-400 mb-1 font-bold text-[10px]">VENCIMIENTO CALCULADO</label>
-                    <input type="date" id="endDate" readonly class="w-full bg-cuycito-red/10 border border-cuycito-red/50 rounded p-2 text-cuycito-gold font-black outline-none cursor-not-allowed">
+                    <label class="block text-gray-400 mb-1 font-bold text-[10px]">VENCIMIENTO CALCULADO (DD/MM/AAAA)</label>
+                    <input type="text" id="endDate" readonly placeholder="DD/MM/AAAA" class="datepicker-es w-full bg-cuycito-red/10 border border-cuycito-red/50 rounded p-2 text-cuycito-gold font-black outline-none cursor-not-allowed">
                 </div>
                 <button type="submit" class="w-full bg-cuycito-red hover:bg-cuycito-red_light text-white font-black p-3 rounded transition glow-red uppercase tracking-widest border border-red-500/30">
                     Guardar Operación
@@ -1510,7 +1513,7 @@
                 <div><label class="block text-gray-400 mb-1">Plataforma</label><select id="mService" onchange="window.handleServiceSelectChange('mService', 'mServiceCustom')" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none"></select><input type="text" id="mServiceCustom" class="hidden w-full bg-black border border-emerald-400 rounded p-2 text-white mt-2"></div>
                 <div class="grid grid-cols-2 gap-3"><div><label class="block text-gray-400 mb-1">Proveedor</label><input type="text" id="mProvider" class="w-full bg-black border border-gray-700 rounded p-2 text-white"></div><div><label class="block text-cuycito-gold mb-1 font-bold">Límite</label><input type="number" id="mCapacity" value="5" min="1" class="w-full bg-black border border-cuycito-gold rounded p-2 text-cuycito-gold font-bold text-center"></div></div>
                 <div class="grid grid-cols-2 gap-3"><div><label class="block text-gray-400 mb-1">Costo</label><input type="number" step="0.01" id="mCost" class="w-full bg-black border border-gray-700 rounded p-2 text-white"></div><div><label class="block text-gray-400 mb-1">Moneda</label><select id="mCurrency" class="w-full bg-black border border-gray-700 rounded p-2 text-white"><option value="PEN">PEN (S/)</option><option value="USD">USD ($)</option></select></div></div>
-                <div class="grid grid-cols-2 gap-3"><div><label class="block text-gray-400 mb-1">Fecha</label><input type="date" id="mStartDate" class="w-full bg-black border border-gray-700 rounded p-2 text-white"></div><div><label class="block text-gray-400 mb-1">Meses</label><input type="number" min="1" value="1" id="mMonths" class="w-full bg-black border border-gray-700 rounded p-2 text-white"></div></div>
+                <div class="grid grid-cols-2 gap-3"><div><label class="block text-gray-400 mb-1">Fecha (DD/MM/AAAA)</label><input type="text" id="mStartDate" placeholder="DD/MM/AAAA" class="datepicker-es w-full bg-black border border-gray-700 rounded p-2 text-white"></div><div><label class="block text-gray-400 mb-1">Meses</label><input type="number" min="1" value="1" id="mMonths" class="w-full bg-black border border-gray-700 rounded p-2 text-white"></div></div>
                 <div><label class="block text-gray-400 mb-1">Correo Principal</label><input type="text" id="mEmail" class="w-full bg-black border border-gray-700 rounded p-2 text-white"></div>
                 <div><label class="block text-gray-400 mb-1">Contraseña</label><input type="text" id="mPass" class="w-full bg-black border border-gray-700 rounded p-2 text-white"></div>
                 <div class="flex items-center gap-2 pt-1">
@@ -1643,12 +1646,12 @@
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-300 mb-1">Fecha de Inicio:</label>
-                            <input type="date" id="assignStartDateInput" onchange="window.recalculateAssignEndDate()" class="w-full bg-black border border-gray-700 rounded-xl p-2 text-white outline-none focus:border-cuycito-gold">
+                            <label class="block text-[11px] font-bold text-gray-300 mb-1">Fecha de Inicio (DD/MM/AAAA):</label>
+                            <input type="text" id="assignStartDateInput" placeholder="DD/MM/AAAA" onchange="window.recalculateAssignEndDate()" class="datepicker-es w-full bg-black border border-gray-700 rounded-xl p-2 text-white outline-none focus:border-cuycito-gold">
                         </div>
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-300 mb-1">Fecha de Culminación:</label>
-                            <input type="date" id="assignEndDateInput" class="w-full bg-black border border-gray-700 rounded-xl p-2 text-cuycito-gold font-bold outline-none">
+                            <label class="block text-[11px] font-bold text-gray-300 mb-1">Fecha de Culminación (DD/MM/AAAA):</label>
+                            <input type="text" id="assignEndDateInput" placeholder="DD/MM/AAAA" class="datepicker-es w-full bg-black border border-gray-700 rounded-xl p-2 text-cuycito-gold font-bold outline-none">
                         </div>
                     </div>
 
@@ -1735,8 +1738,8 @@
                 <div class="bg-black/40 border border-gray-800 rounded-xl p-3 space-y-2">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-[10px] text-gray-400 mb-1 font-bold">Fecha de Inicio:</label>
-                            <input type="date" id="editStartDate" onchange="window.recalculateEditEndDate()" class="w-full bg-black border border-gray-700 rounded-xl p-2 text-white outline-none focus:border-cuycito-gold">
+                            <label class="block text-[10px] text-gray-400 mb-1 font-bold">Fecha de Inicio (DD/MM/AAAA):</label>
+                            <input type="text" id="editStartDate" placeholder="DD/MM/AAAA" onchange="window.recalculateEditEndDate()" class="datepicker-es w-full bg-black border border-gray-700 rounded-xl p-2 text-white outline-none focus:border-cuycito-gold">
                         </div>
                         <div>
                             <label class="block text-[10px] text-gray-400 mb-1 font-bold">Meses Contratados:</label>
@@ -1745,10 +1748,10 @@
                     </div>
                     <div>
                         <label class="block text-[10px] text-gray-400 mb-1 font-bold flex justify-between">
-                            <span>Fecha de Culminación:</span>
+                            <span>Fecha de Culminación (DD/MM/AAAA):</span>
                             <span class="text-[9px] text-cuycito-gold font-normal">Calculado (Inicio + Meses x 30d)</span>
                         </label>
-                        <input type="date" id="editEndDate" class="w-full bg-black border border-gray-700 rounded-xl p-2 text-cuycito-gold font-bold outline-none focus:border-cuycito-gold">
+                        <input type="text" id="editEndDate" placeholder="DD/MM/AAAA" class="datepicker-es w-full bg-black border border-gray-700 rounded-xl p-2 text-cuycito-gold font-bold outline-none focus:border-cuycito-gold">
                     </div>
                 </div>
 

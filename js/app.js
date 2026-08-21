@@ -326,6 +326,37 @@ window.getDaysRemaining = (endDateStr) => {
     return Math.ceil((dEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 };
 
+window.initDatePickers = () => {
+    if (typeof flatpickr !== 'undefined') {
+        flatpickr(".datepicker-es", {
+            dateFormat: "d/m/Y",
+            locale: flatpickr.l10ns && flatpickr.l10ns.es ? flatpickr.l10ns.es : "es",
+            allowInput: true,
+            onChange: function(selectedDates, dateStr, instance) {
+                const id = instance.element.id;
+                if (id === 'editStartDate' || id === 'editMonths') {
+                    window.recalculateEditEndDate();
+                } else if (id === 'assignStartDateInput') {
+                    window.recalculateAssignEndDate();
+                } else if (id === 'startDate' || id === 'durationMonths') {
+                    window.calculateEndDate();
+                }
+            }
+        });
+    }
+};
+
+window.setDatePickerValue = (id, dateStr) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const formatted = window.formatDateDDMMYYYY(dateStr);
+    if (el._flatpickr) {
+        el._flatpickr.setDate(formatted, false, "d/m/Y");
+    } else {
+        el.value = formatted;
+    }
+};
+
 window.generatePassword = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*?";
     let pwd = chars[Math.floor(Math.random()*26)] + chars[26+Math.floor(Math.random()*26)] + chars[52+Math.floor(Math.random()*10)] + chars[62+Math.floor(Math.random()*8)];
@@ -497,8 +528,7 @@ window.calculateEndDate = () => {
     const startDate = window.parseDateUniversal(startInput.value);
     if (!startDate) return;
     startDate.setDate(startDate.getDate() + (months * 30));
-    const endDateInput = document.getElementById('endDate');
-    if(endDateInput) endDateInput.value = window.formatDateISO(startDate);
+    window.setDatePickerValue('endDate', startDate);
 };
 
 // =====================================
@@ -752,9 +782,9 @@ window.openEditModal = (subId) => {
     document.getElementById('editCurrency').value = sub.currency || 'PEN';
     
     // Fechas e intervalo de meses (1 mes = 30 días)
-    const todayStr = window.formatDateISO(new Date());
-    const startDateVal = sub.startDate ? window.formatDateISO(sub.startDate) : (sub.createdAt ? window.formatDateISO(sub.createdAt) : todayStr);
-    document.getElementById('editStartDate').value = startDateVal;
+    const todayFormatted = window.formatDateDDMMYYYY(new Date());
+    const startDateVal = sub.startDate ? window.formatDateDDMMYYYY(sub.startDate) : (sub.createdAt ? window.formatDateDDMMYYYY(sub.createdAt) : todayFormatted);
+    window.setDatePickerValue('editStartDate', startDateVal);
 
     let calcMonths = sub.months || 1;
     if (sub.startDate && sub.endDate) {
@@ -771,12 +801,13 @@ window.openEditModal = (subId) => {
     document.getElementById('editMonths').value = calcMonths;
 
     if (sub.endDate) {
-        document.getElementById('editEndDate').value = window.formatDateISO(sub.endDate);
+        window.setDatePickerValue('editEndDate', window.formatDateDDMMYYYY(sub.endDate));
     } else {
         window.recalculateEditEndDate();
     }
 
     document.getElementById('editModal').classList.remove('hidden');
+    window.initDatePickers();
 };
 
 window.recalculateEditEndDate = () => {
@@ -788,8 +819,7 @@ window.recalculateEditEndDate = () => {
     if (!startDate) return;
     startDate.setDate(startDate.getDate() + (monthsVal * 30));
 
-    const endInput = document.getElementById('editEndDate');
-    if (endInput) endInput.value = window.formatDateISO(startDate);
+    window.setDatePickerValue('editEndDate', startDate);
 };
 
 window.saveEditModal = async () => {
@@ -1301,9 +1331,8 @@ window.selectClientForAssign = (clientId) => {
     const amountInput = document.getElementById('assignAmountInput');
     if (amountInput) amountInput.value = (acc && acc.cost ? (parseFloat(acc.cost) / (acc.capacity || 4) * 1.5).toFixed(2) : '10.00');
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const startInput = document.getElementById('assignStartDateInput');
-    if (startInput) startInput.value = todayStr;
+    const todayFormatted = window.formatDateDDMMYYYY(new Date());
+    window.setDatePickerValue('assignStartDateInput', todayFormatted);
 
     const hidePassCheck = document.getElementById('assignHidePassCheck');
     if (hidePassCheck && acc) {
@@ -1311,6 +1340,7 @@ window.selectClientForAssign = (clientId) => {
     }
 
     window.setAssignDurationMonths(1);
+    window.initDatePickers();
 
     // Cambiar a Paso 2
     document.getElementById('assignStep1_SelectClient')?.classList.add('hidden');
@@ -1360,8 +1390,7 @@ window.recalculateAssignEndDate = () => {
     const daysToAdd = currentAssignDurationMonths * 30;
     startDate.setDate(startDate.getDate() + daysToAdd);
 
-    const endInput = document.getElementById('assignEndDateInput');
-    if (endInput) endInput.value = window.formatDateISO(startDate);
+    window.setDatePickerValue('assignEndDateInput', startDate);
 };
 
 window.executeClientSlotAssignment = async () => {
