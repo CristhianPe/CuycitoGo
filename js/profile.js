@@ -637,22 +637,46 @@ async function loadClientSubscriptions() {
     const container = document.getElementById('servicesContainer');
     if (!container || !currentClientUser) return;
 
+    // Helper de filtrado y desduplicación limpia
+    const processSubscriptionsForClient = (rawDocs) => {
+        const masterIdSet = new Set((allMasterAccounts || []).map(m => m.id));
+        const matchedMap = new Map();
+        const signatureMap = new Map();
+
+        rawDocs.forEach(data => {
+            if (!isSubscriptionBelongingToClient(data, currentClientUser)) return;
+
+            // Si la suscripción depende de una cuenta matriz, pero dicha matriz ya fue eliminada, ignorar huérfano
+            if (data.masterAccountId && allMasterAccounts.length > 0 && !masterIdSet.has(data.masterAccountId)) {
+                return;
+            }
+
+            // Desduplicación por firma única (Servicio + Correo + PIN)
+            const sig = `${data.service || ''}_${(data.email || '').trim().toLowerCase()}_${(data.pin || '').trim()}`;
+            if (signatureMap.has(sig)) {
+                const prev = signatureMap.get(sig);
+                // Si ya existe una versión más reciente o activa, quedarse con la más actualizada
+                if ((data.endDate || '') >= (prev.endDate || '')) {
+                    matchedMap.delete(prev.id);
+                    matchedMap.set(data.id, data);
+                    signatureMap.set(sig, data);
+                }
+            } else {
+                matchedMap.set(data.id, data);
+                signatureMap.set(sig, data);
+            }
+        });
+
+        return Array.from(matchedMap.values());
+    };
+
     // 1. CARGA INMEDIATA (0ms) DESDE CACHÉ LOCAL O DATOS DEMO
     let cachedSubs = [];
     try {
         cachedSubs = JSON.parse(localStorage.getItem("cuycito_client_subscriptions") || "[]");
     } catch(e) {}
 
-    const cachedMap = new Map();
-    cachedSubs.forEach(data => {
-        const item = { ...data, id: data.id || `cached_${Date.now()}` };
-        if (isSubscriptionBelongingToClient(item, currentClientUser)) {
-            if (!cachedMap.has(item.id)) {
-                cachedMap.set(item.id, item);
-            }
-        }
-    });
-    clientSubscriptions = Array.from(cachedMap.values());
+    clientSubscriptions = processSubscriptionsForClient(cachedSubs);
 
     if (currentClientUser.isDemo && clientSubscriptions.length === 0) {
         const today = new Date();
@@ -679,7 +703,13 @@ async function loadClientSubscriptions() {
                 const remoteMasterDocs = [];
                 masterSnap.forEach(d => remoteMasterDocs.push({ id: d.id, ...d.data() }));
                 allMasterAccounts = remoteMasterDocs;
+
+                // Re-filtrar suscripciones con la lista actualizada de cuentas matrices
+                let rawCached = [];
+                try { rawCached = JSON.parse(localStorage.getItem("cuycito_client_subscriptions") || "[]"); } catch(e){}
+                clientSubscriptions = processSubscriptionsForClient(rawCached);
                 renderClientSubscriptions(clientSubscriptions);
+                calculateMetrics(clientSubscriptions);
             });
         }
 
@@ -692,16 +722,7 @@ async function loadClientSubscriptions() {
                 });
                 localStorage.setItem("cuycito_client_subscriptions", JSON.stringify(remoteSubDocs));
 
-                const matchedMap = new Map();
-                remoteSubDocs.forEach(data => {
-                    if (isSubscriptionBelongingToClient(data, currentClientUser)) {
-                        if (!matchedMap.has(data.id)) {
-                            matchedMap.set(data.id, data);
-                        }
-                    }
-                });
-
-                const matchedRemote = Array.from(matchedMap.values());
+                const matchedRemote = processSubscriptionsForClient(remoteSubDocs);
 
                 if (matchedRemote.length > 0 || !currentClientUser.isDemo) {
                     clientSubscriptions = matchedRemote;

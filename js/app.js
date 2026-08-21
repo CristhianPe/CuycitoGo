@@ -239,6 +239,11 @@ onAuthStateChanged(auth, async (user) => {
             window.calculateEndDate();
             window.renderAll();
             window.initStoreMaintenanceListener();
+
+            // Saneamiento e integridad automática de cuentas matrices y servicios huérfanos
+            setTimeout(() => {
+                window.cleanupDatabaseOrphans(false);
+            }, 1000);
         } catch (error) {
             console.error("Error leyendo DB:", error);
             document.getElementById('dbStatus').innerHTML = '<span class="text-red-500">Error Cloud</span>';
@@ -794,10 +799,21 @@ window.saveBulkAccounts = async () => {
 // =====================================
 // 6. CUENTAS RAÍZ (MATRIZ) & VISIBILIDAD
 // =====================================
+window.getMasterCode = (acc) => {
+    if (!acc) return 'MAT-000';
+    if (acc.masterCode) return acc.masterCode;
+    if (acc.id) {
+        const cleanId = acc.id.toString().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        return `MAT-${cleanId.slice(-4)}`;
+    }
+    return `MAT-${Math.floor(1000 + Math.random() * 9000)}`;
+};
+
 window.saveMasterAccount = async () => {
     const service = await window.getOrRegisterService('mService', 'mServiceCustom');
     if (!service) return;
     const id = 'master_' + Date.now();
+    const masterCode = 'MAT-' + Math.floor(1000 + Math.random() * 9000);
     const provider = document.getElementById('mProvider').value.trim();
     const capacity = parseInt(document.getElementById('mCapacity').value) || 5;
     const cost = parseFloat(document.getElementById('mCost').value) || 0;
@@ -810,7 +826,23 @@ window.saveMasterAccount = async () => {
     const showCredentialsToClient = !hidePasswordFromClient;
     const end = new Date(new Date(startDate).getTime() + (months * 30 * 86400000)).toISOString().split('T')[0];
 
-    const newAcc = { id, service, provider, capacity, cost, currency, startDate, endDate: end, email, pass, hidePasswordFromClient, showCredentialsToClient, profiles: new Array(capacity).fill(null) };
+    const newAcc = { 
+        id, 
+        masterCode,
+        service, 
+        provider, 
+        capacity, 
+        cost, 
+        currency, 
+        startDate, 
+        endDate: end, 
+        email, 
+        pass, 
+        hidePasswordFromClient, 
+        showCredentialsToClient, 
+        profiles: new Array(capacity).fill(null),
+        createdAt: new Date().toISOString()
+    };
     appState.masterAccounts.push(newAcc);
 
     const txId = 'tx_mas_' + Date.now();
@@ -820,26 +852,27 @@ window.saveMasterAccount = async () => {
     try {
         await setDoc(doc(db, "masterAccounts", id), newAcc);
         await setDoc(doc(db, "history", txId), newTx);
-    } catch(e){}
+    } catch(e){
+        console.error("Error guardando cuenta matriz:", e);
+    }
 
     document.getElementById('masterModal').classList.add('hidden');
     window.renderAll();
 };
 
 window.toggleMasterCredentialsVisibility = async (accId) => {
-    const acc = appState.masterAccounts.find(a => a.id === accId);
+    const acc = (appState.masterAccounts || []).find(a => a.id === accId);
     if (!acc) return;
 
     acc.showCredentialsToClient = !acc.showCredentialsToClient;
     acc.hidePasswordFromClient = !acc.showCredentialsToClient;
 
-    // Sincronizar todas las suscripciones de esta Cuenta Raíz (por perfiles, masterAccountId o email)
+    // Sincronizar ÚNICAMENTE las suscripciones que pertenecen estrictamente a este ID de Cuenta Raíz
     appState.subscriptions.forEach(async (sub) => {
         const isLinkedByProfile = acc.profiles && Array.isArray(acc.profiles) && acc.profiles.includes(sub.id);
         const isLinkedById = sub.masterAccountId === acc.id;
-        const isLinkedByEmail = sub.email && acc.email && sub.email.trim().toLowerCase() === acc.email.trim().toLowerCase();
 
-        if (isLinkedByProfile || isLinkedById || isLinkedByEmail) {
+        if (isLinkedByProfile || isLinkedById) {
             sub.masterAccountId = acc.id;
             sub.hidePassword = acc.hidePasswordFromClient;
             sub.hidePasswordFromClient = acc.hidePasswordFromClient;
@@ -873,7 +906,7 @@ window.toggleMasterCredentialsVisibility = async (accId) => {
 window.toggleMasterPasswordVisibility = window.toggleMasterCredentialsVisibility;
 
 window.openEditMasterModal = (accId) => {
-    const acc = appState.masterAccounts.find(a => a.id === accId);
+    const acc = (appState.masterAccounts || []).find(a => a.id === accId);
     if(!acc) return;
     document.getElementById('editMasterId').value = acc.id;
     document.getElementById('editMasterEmail').value = acc.email;
@@ -885,7 +918,7 @@ window.openEditMasterModal = (accId) => {
 
 window.saveEditMasterModal = async () => {
     const id = document.getElementById('editMasterId').value;
-    const acc = appState.masterAccounts.find(a => a.id === id);
+    const acc = (appState.masterAccounts || []).find(a => a.id === id);
     if(!acc) return;
     const newEmail = document.getElementById('editMasterEmail').value.trim();
     const newPass = document.getElementById('editMasterPass').value.trim();
@@ -905,17 +938,27 @@ window.saveEditMasterModal = async () => {
     }
     acc.capacity = newCapacity;
 
+    // Sincronizar credenciales solo en suscripciones que pertenecen estrictamente a este ID de Cuenta Raíz
     appState.subscriptions.forEach(async (sub) => {
         const isLinkedByProfile = acc.profiles && acc.profiles.includes(sub.id);
         const isLinkedById = sub.masterAccountId === acc.id;
-        const isLinkedByEmail = sub.email && acc.email && sub.email.trim().toLowerCase() === acc.email.trim().toLowerCase();
 
-        if (isLinkedByProfile || isLinkedById || isLinkedByEmail) {
+        if (isLinkedByProfile || isLinkedById) {
             sub.email = acc.email;
             sub.pass = acc.pass;
             sub.hidePassword = acc.hidePasswordFromClient;
             sub.showCredentials = acc.showCredentialsToClient;
-            try { await setDoc(doc(db, "subscriptions", sub.id), sub, { merge: true }); } catch(e){}
+            try { 
+                await setDoc(doc(db, "subscriptions", sub.id), {
+                    email: acc.email,
+                    pass: acc.pass,
+                    hidePassword: acc.hidePasswordFromClient,
+                    hidePasswordFromClient: acc.hidePasswordFromClient,
+                    showCredentials: acc.showCredentialsToClient,
+                    showCredentialsToClient: acc.showCredentialsToClient,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true }); 
+            } catch(e){}
         }
     });
 
@@ -925,10 +968,43 @@ window.saveEditMasterModal = async () => {
 };
 
 window.deleteMasterAccount = async (accId) => {
-    if(confirm("¿Eliminar Cuenta Raíz?")) {
+    const acc = (appState.masterAccounts || []).find(a => a.id === accId);
+    const accCode = acc ? (acc.masterCode || window.getMasterCode(acc)) : '';
+    const accName = acc ? `"${acc.service}" [${accCode}] (${acc.email || ''})` : 'esta cuenta matriz';
+
+    const linkedSubs = (appState.subscriptions || []).filter(s => 
+        s.masterAccountId === accId || (acc && acc.profiles && Array.isArray(acc.profiles) && acc.profiles.includes(s.id))
+    );
+
+    let msg = `¿Estás seguro de ELIMINAR la Cuenta Raíz ${accName}?`;
+    if (linkedSubs.length > 0) {
+        msg += `\n\n⚠️ Esta cuenta tiene ${linkedSubs.length} servicio(s) asignado(s) a clientes.\nAl eliminarla, se eliminarán también estos servicios activos para evitar cuentas duplicadas o huérfanas en los perfiles de los clientes.`;
+    }
+
+    if (confirm(msg)) {
+        // 1. Eliminar suscripciones hijas asociadas
+        for (const sub of linkedSubs) {
+            appState.subscriptions = appState.subscriptions.filter(s => s.id !== sub.id);
+            try {
+                await deleteDoc(doc(db, "subscriptions", sub.id));
+                console.log("🗑️ Suscripción hija eliminada:", sub.id);
+            } catch(e){
+                console.error("Error eliminando sub vinculada:", e);
+            }
+        }
+
+        // 2. Eliminar la cuenta matriz de Firestore y del estado
         appState.masterAccounts = appState.masterAccounts.filter(a => a.id !== accId);
-        try { await deleteDoc(doc(db, "masterAccounts", accId)); } catch(e){}
+        try { 
+            await deleteDoc(doc(db, "masterAccounts", accId)); 
+            console.log("🗑️ Cuenta matriz eliminada de Firestore:", accId);
+        } catch(e){
+            console.error("Error eliminando cuenta matriz:", e);
+        }
+
+        saveLocal();
         window.renderAll();
+        alert(`✅ Cuenta Raíz ${accCode} y sus ${linkedSubs.length} servicios asociados fueron eliminados limpiamente.`);
     }
 };
 
@@ -1152,7 +1228,20 @@ window.executeClientSlotAssignment = async () => {
     const hidePass = !!document.getElementById('assignHidePassCheck')?.checked;
 
     const clientCode = client.clientCode || window.getClientCode(client);
+    const masterCode = acc.masterCode || window.getMasterCode(acc);
     const newSubId = "sub_cuy_" + Date.now();
+
+    // 0. Si el slot ya tenía una suscripción asignada previa, eliminarla de Firestore para no dejar huérfanos
+    if (acc.profiles && acc.profiles[currentTargetSlot]) {
+        const prevSubId = acc.profiles[currentTargetSlot];
+        if (prevSubId && prevSubId !== newSubId) {
+            appState.subscriptions = (appState.subscriptions || []).filter(s => s.id !== prevSubId);
+            try {
+                await deleteDoc(doc(db, "subscriptions", prevSubId));
+                console.log("🗑️ Reemplazada suscripción previa del slot:", prevSubId);
+            } catch(e){}
+        }
+    }
 
     const newSub = {
         id: newSubId,
@@ -1166,6 +1255,7 @@ window.executeClientSlotAssignment = async () => {
         pass: acc.pass,
         pin: pin,
         masterAccountId: acc.id,
+        masterCode: masterCode,
         slotIndex: currentTargetSlot,
         hidePassword: hidePass,
         hidePasswordFromClient: hidePass,
@@ -1231,12 +1321,32 @@ window.executeClientSlotAssignment = async () => {
 };
 
 window.unlinkProfile = async (accId, slotIndex) => {
-    const acc = appState.masterAccounts.find(a => a.id === accId);
+    const acc = (appState.masterAccounts || []).find(a => a.id === accId);
     if (!acc) return;
-    acc.profiles[slotIndex] = null;
-    try { await setDoc(doc(db, "masterAccounts", acc.id), acc, { merge: true }); } catch(e){}
-    saveLocal();
-    window.renderAll();
+    const oldSubId = acc.profiles ? acc.profiles[slotIndex] : null;
+
+    if (confirm(`¿Desvincular y liberar el cupo #${slotIndex + 1} de "${acc.service}"?`)) {
+        if (oldSubId) {
+            // Eliminar la suscripción desvinculada de Firestore y del estado para evitar duplicados en el perfil del cliente
+            appState.subscriptions = (appState.subscriptions || []).filter(s => s.id !== oldSubId);
+            try { 
+                await deleteDoc(doc(db, "subscriptions", oldSubId));
+                console.log("🗑️ Suscripción desvinculada eliminada de Firestore:", oldSubId);
+            } catch(e){
+                console.error("Error eliminando suscripción desvinculada:", e);
+            }
+        }
+
+        if (acc.profiles) {
+            acc.profiles[slotIndex] = null;
+        }
+        try { 
+            await setDoc(doc(db, "masterAccounts", acc.id), acc, { merge: true }); 
+        } catch(e){}
+
+        saveLocal();
+        window.renderAll();
+    }
 };
 
 // =====================================
@@ -2874,6 +2984,9 @@ window.renderMasterAccounts = () => {
         if (!acc.id) {
             acc.id = `master_${acc.email ? acc.email.replace(/[^a-zA-Z0-9]/g, '_') : accIdx}`;
         }
+        const masterCode = acc.masterCode || window.getMasterCode(acc);
+        acc.masterCode = masterCode;
+
         let occupied = (acc.profiles || []).filter(p => p !== null).length;
         let freeSlots = Math.max(0, acc.capacity - occupied);
         let occColor = occupied === acc.capacity ? 'text-cuycito-red border-cuycito-red' : 'text-emerald-400 border-emerald-400/50';
@@ -2900,7 +3013,10 @@ window.renderMasterAccounts = () => {
         <div class="bg-[#111] border border-gray-800 rounded-xl overflow-hidden shadow-lg flex flex-col">
             <div class="p-3 bg-black border-b border-gray-800 flex justify-between items-center">
                 <div>
-                    <h4 class="font-black text-white text-sm uppercase">${acc.service}</h4>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-amber-950 text-cuycito-gold border border-amber-500/40 text-[9px] font-black px-1.5 py-0.5 rounded font-mono">${masterCode}</span>
+                        <h4 class="font-black text-white text-sm uppercase">${acc.service}</h4>
+                    </div>
                     <p class="text-[10px] text-cuycito-gold font-mono">${acc.email}</p>
                 </div>
                 <div class="flex flex-col items-end gap-1">
@@ -2952,6 +3068,84 @@ window.renderMasterAccounts = () => {
         html += `</div></div>`;
         grid.innerHTML += html;
     });
+};
+
+// =====================================
+// LIMPIEZA AUTOMÁTICA DE INTEGRIDAD DE BASE DE DATOS (HUÉRFANOS Y DUPLICADOS)
+// =====================================
+window.cleanupDatabaseOrphans = async (isManual = false) => {
+    console.log("🧹 Ejecutando verificación de integridad de Base de Datos...");
+    const masterMap = new Map((appState.masterAccounts || []).map(m => [m.id, m]));
+    let cleanedOrphans = 0;
+    let cleanedDuplicates = 0;
+    let slotsReset = 0;
+
+    // 1. Limpiar o desvincular suscripciones que apuntan a cuentas matrices eliminadas
+    const seenSignatures = new Set();
+    const cleanSubscriptions = [];
+
+    for (const sub of (appState.subscriptions || [])) {
+        if (!sub.id) continue;
+
+        // Comprobar si apunta a una cuenta matriz inexistente
+        if (sub.masterAccountId && !masterMap.has(sub.masterAccountId)) {
+            console.warn(`🗑️ Suscripción huérfana detectada: ${sub.service} (${sub.id}) con matriz eliminada ${sub.masterAccountId}`);
+            try {
+                await deleteDoc(doc(db, "subscriptions", sub.id));
+                cleanedOrphans++;
+            } catch(e){}
+            continue; // No incluir en la lista activa
+        }
+
+        // Comprobar duplicados exactos (mismo cliente, mismo servicio, mismo correo y pin)
+        const clientIdentifier = sub.clientId || sub.clientCode || sub.person;
+        const sig = `${clientIdentifier}_${sub.service}_${sub.email || ''}_${sub.pin || ''}`;
+        
+        if (seenSignatures.has(sig)) {
+            console.warn(`🗑️ Suscripción duplicada redundante detectada: ${sig} (${sub.id})`);
+            try {
+                await deleteDoc(doc(db, "subscriptions", sub.id));
+                cleanedDuplicates++;
+            } catch(e){}
+            continue; // No incluir duplicado
+        }
+
+        seenSignatures.add(sig);
+        cleanSubscriptions.push(sub);
+    }
+
+    appState.subscriptions = cleanSubscriptions;
+
+    // 2. Comprobar slots en cuentas matrices que apunten a suscripciones inexistentes
+    const subSet = new Set(cleanSubscriptions.map(s => s.id));
+    for (const acc of (appState.masterAccounts || [])) {
+        let changed = false;
+        if (acc.profiles && Array.isArray(acc.profiles)) {
+            for (let i = 0; i < acc.profiles.length; i++) {
+                const sId = acc.profiles[i];
+                if (sId && !subSet.has(sId)) {
+                    acc.profiles[i] = null;
+                    changed = true;
+                    slotsReset++;
+                }
+            }
+        }
+        if (changed) {
+            try {
+                await setDoc(doc(db, "masterAccounts", acc.id), acc, { merge: true });
+            } catch(e){}
+        }
+    }
+
+    saveLocal();
+    window.renderAll();
+
+    const totalFixes = cleanedOrphans + cleanedDuplicates + slotsReset;
+    console.log(`✅ Limpieza completada: ${cleanedOrphans} huérfanos, ${cleanedDuplicates} duplicados, ${slotsReset} slots corregidos.`);
+
+    if (isManual) {
+        alert(`🧹 Limpieza de Base de Datos Completada:\n\n• ${cleanedOrphans} servicios huérfanos de matrices eliminadas retirados.\n• ${cleanedDuplicates} servicios duplicados eliminados.\n• ${slotsReset} cupos de cuentas matrices restablecidos.`);
+    }
 };
 
 window.getClientCode = (client) => {
