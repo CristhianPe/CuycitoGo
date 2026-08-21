@@ -620,7 +620,6 @@ function getClientCode(client) {
 }
 window.getClientCode = getClientCode;
 
-// Helper para vincular suscripciones con el cliente EXCLUSIVAMENTE por Identificador ID
 function isSubscriptionBelongingToClient(sub, client) {
     if (!sub || !client) return false;
 
@@ -628,33 +627,45 @@ function isSubscriptionBelongingToClient(sub, client) {
     const clientCode = (client.clientCode || getClientCode(client) || '').toString().trim().toUpperCase();
     const clientPhone = (client.phone || '').toString().replace(/\D/g, '');
     const clientName = (client.name || '').trim().toLowerCase();
+    const clientNick = (client.nickname || '').trim().toLowerCase();
 
     const subClientId = (sub.clientId || sub.userId || '').toString().trim();
     const subClientCode = (sub.clientCode || '').toString().trim().toUpperCase();
     const subPhone = (sub.clientPhone || sub.phone || '').toString().replace(/\D/g, '');
     const subPerson = (sub.person || '').trim().toLowerCase();
 
-    // 1. Identificador Principal de Firestore (sub.clientId === client.id)
-    if (subClientId) {
-        return clientId === subClientId;
+    // 1. REGLA ESTRICTA DE RECHAZO: Si la suscripción pertenece explícitamente a OTRO cliente por ID, Código o Teléfono, RECHAZAR inmediatamente
+    if (subClientId && clientId && subClientId !== clientId) {
+        return false;
+    }
+    if (subClientCode && clientCode && subClientCode !== 'CLI-000' && subClientCode !== 'CLI-1001' && subClientCode !== clientCode) {
+        return false;
+    }
+    if (subPhone && subPhone.length >= 7 && clientPhone && clientPhone.length >= 7 && subPhone !== clientPhone) {
+        return false;
     }
 
-    // 2. Identificador Único de Cliente (sub.clientCode === client.clientCode -> ej: CLI-1024)
-    if (subClientCode && subClientCode !== 'CLI-000' && subClientCode !== 'CLI-1001') {
-        return clientCode === subClientCode;
-    }
-
-    // 3. Identificador Telefónico Único (mínimo 7 dígitos)
-    if (subPhone && subPhone.length >= 7 && clientPhone && clientPhone.length >= 7) {
-        return clientPhone === subPhone;
-    }
-
-    // 4. Nombre exacto si no hay IDs
-    if (subPerson && clientName && subPerson === clientName) {
+    // 2. Coincidencia directa por ID Principal de Firestore
+    if (subClientId && clientId && subClientId === clientId) {
         return true;
     }
 
-    // 5. Si es cuenta demo
+    // 3. Coincidencia directa por Código Único CLI-XXXX
+    if (subClientCode && clientCode && subClientCode !== 'CLI-000' && subClientCode !== 'CLI-1001' && subClientCode === clientCode) {
+        return true;
+    }
+
+    // 4. Coincidencia directa por Número Telefónico Único (mínimo 7 dígitos)
+    if (subPhone && subPhone.length >= 7 && clientPhone && clientPhone.length >= 7 && subPhone === clientPhone) {
+        return true;
+    }
+
+    // 5. Coincidencia por Nombre Exacto (Únicamente si la suscripción no tiene IDs conflictivos)
+    if (!subClientId && !subClientCode && subPerson && (subPerson === clientName || (clientNick && subPerson === clientNick))) {
+        return true;
+    }
+
+    // 6. Si es cuenta demo
     if (client.isDemo && sub.isDemo) return true;
 
     return false;

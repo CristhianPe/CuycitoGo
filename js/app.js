@@ -3327,6 +3327,30 @@ window.cleanupDatabaseOrphans = async (isManual = false) => {
             continue;
         }
 
+        // 4. Auto-sellar el clientId y clientCode único para vincular unívocamente con el cliente real
+        if (sub.person) {
+            const matchedClient = (appState.clients || []).find(c => 
+                (c.id && sub.clientId && c.id === sub.clientId) ||
+                (c.name && c.name.trim().toLowerCase() === personNorm) ||
+                (c.nickname && c.nickname.trim().toLowerCase() === personNorm)
+            );
+            if (matchedClient) {
+                const cCode = matchedClient.clientCode || window.getClientCode(matchedClient);
+                if (sub.clientId !== matchedClient.id || sub.clientCode !== cCode) {
+                    sub.clientId = matchedClient.id;
+                    sub.clientCode = cCode;
+                    sub.clientPhone = matchedClient.phone || sub.clientPhone || '';
+                    try {
+                        await setDoc(doc(db, "subscriptions", sub.id), {
+                            clientId: sub.clientId,
+                            clientCode: sub.clientCode,
+                            clientPhone: sub.clientPhone
+                        }, { merge: true });
+                    } catch(e){}
+                }
+            }
+        }
+
         seenSignatures.add(sig);
         cleanSubscriptions.push(sub);
     }
