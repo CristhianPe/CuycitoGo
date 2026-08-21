@@ -87,6 +87,12 @@
                 <button id="currencyPEN" onclick="window.setGlobalCurrency('PEN')" class="px-2 py-1 text-[11px] font-bold rounded bg-cuycito-gold text-black transition">PEN (S/)</button>
                 <button id="currencyUSD" onclick="window.setGlobalCurrency('USD')" class="px-2 py-1 text-[11px] font-bold rounded text-slate-400 hover:text-cuycito-gold transition">USD ($)</button>
             </div>
+
+            <!-- Botón Supervisar Perfil de Cliente -->
+            <button onclick="window.openSuperviseClientModal()" class="bg-gradient-to-r from-purple-950 to-indigo-950 hover:from-purple-900 hover:to-indigo-900 border border-indigo-500/60 text-indigo-300 hover:text-white font-bold text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition shadow" title="Supervisar cuenta de un cliente en tiempo real como Administrador">
+                <i class="fa-solid fa-eye text-indigo-400"></i>
+                <span class="hidden lg:inline">Supervisar Cliente</span>
+            </button>
             
             <button onclick="document.getElementById('pwdGenModal').classList.remove('hidden'); window.generatePassword();" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition shadow">
                 <i class="fa-solid fa-key"></i> Pass
@@ -103,6 +109,10 @@
 
         <!-- LADO DERECHO: CONTROLES PARA MÓVIL Y TABLET (< 1280px) -->
         <div class="flex xl:hidden items-center gap-1.5 sm:gap-2">
+            <button onclick="window.openSuperviseClientModal()" class="bg-indigo-950 border border-indigo-500/60 text-indigo-300 p-2 rounded-xl text-xs transition" title="Supervisar Perfil de Cliente">
+                <i class="fa-solid fa-eye"></i>
+            </button>
+
             <button onclick="window.toggleMobileSidebar(true)" class="bg-gradient-to-r from-cuycito-red to-orange-500 hover:from-red-600 hover:to-orange-400 text-white font-black text-xs px-2.5 sm:px-3 py-1.5 rounded-xl transition shadow flex items-center gap-1.5 glow-red">
                 <i class="fa-solid fa-bolt text-yellow-300"></i>
                 <span class="hidden xs:inline">+ Operación</span>
@@ -2039,6 +2049,39 @@
                     <i class="fa-solid fa-circle-check mr-1"></i> Marcar como Activado
                 </button>
                 <button onclick="document.getElementById('tvQrFullscreenModal').classList.add('hidden')" class="bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs px-5 py-3 rounded-xl transition">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SUPERVISAR CUENTA DE CLIENTE (MODO ADMIN) -->
+    <div id="superviseClientModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div class="bg-cuycito-dark border border-indigo-500/80 rounded-2xl p-6 w-full max-w-xl space-y-4 shadow-[0_0_35px_rgba(99,102,241,0.25)] max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <div>
+                    <h3 class="text-base font-black text-indigo-300 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-shield-halved text-indigo-400"></i> Supervisión de Cuentas de Clientes
+                    </h3>
+                    <p class="text-xs text-gray-400">Selecciona cualquier cliente para ingresar directamente a su portal web y verificar sus servicios, saldo y accesos en tiempo real.</p>
+                </div>
+                <button onclick="document.getElementById('superviseClientModal').classList.add('hidden')" class="text-gray-400 hover:text-white transition p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Buscador en Vivo -->
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs"></i>
+                <input type="text" id="searchSuperviseInput" oninput="window.filterSuperviseClients()" placeholder="Buscar por nombre, apodo, ID (CLI-XXXX), celular o correo..." class="w-full bg-black border border-gray-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white outline-none focus:border-indigo-400">
+            </div>
+
+            <!-- Lista de Clientes -->
+            <div id="superviseClientsList" class="space-y-2 overflow-y-auto custom-scrollbar pr-1 flex-1 max-h-[55vh]"></div>
+
+            <div class="pt-2 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
+                <span id="superviseClientsCountText">0 clientes disponibles</span>
+                <button type="button" onclick="document.getElementById('superviseClientModal').classList.add('hidden')" class="bg-gray-800 hover:bg-gray-700 text-white font-bold px-4 py-1.5 rounded-lg transition">
                     Cerrar
                 </button>
             </div>

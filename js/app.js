@@ -3108,6 +3108,9 @@ window.renderClients = () => {
             <td class="p-4">${servicesHTML}</td>
             <td class="p-4 text-center">
                 <div class="flex items-center justify-center gap-1.5">
+                    <button onclick="window.impersonateAndOpenProfile('${c.id}')" class="bg-gradient-to-r from-purple-900 to-indigo-800 hover:from-purple-700 hover:to-indigo-600 text-white font-black p-2 px-2.5 rounded-lg transition shadow text-xs flex items-center gap-1" title="Entrar y supervisar el perfil de este cliente como Administrador">
+                        <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i> <span class="hidden xl:inline">Supervisar</span>
+                    </button>
                     <button onclick="window.openClientServicesModal('${c.id}')" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black font-black p-2 px-2.5 rounded-lg transition shadow text-xs flex items-center gap-1" title="Gestionar y Enlazar Servicios">
                         <i class="fa-solid fa-link"></i> <span class="hidden lg:inline">Enlazar</span>
                     </button>
@@ -3124,6 +3127,123 @@ window.renderClients = () => {
             </td>
         </tr>`;
     });
+};
+
+// =====================================
+// 10.0. MODO SUPERVISIÓN DE PERFILES DE CLIENTES (ADMINISTRADOR)
+// =====================================
+window.openSuperviseClientModal = () => {
+    const modal = document.getElementById('superviseClientModal');
+    if (!modal) return;
+
+    const searchInput = document.getElementById('searchSuperviseInput');
+    if (searchInput) searchInput.value = '';
+
+    window.filterSuperviseClients();
+    modal.classList.remove('hidden');
+};
+
+window.filterSuperviseClients = () => {
+    const container = document.getElementById('superviseClientsList');
+    const countText = document.getElementById('superviseClientsCountText');
+    if (!container) return;
+
+    const search = (document.getElementById('searchSuperviseInput')?.value || '').toLowerCase().trim();
+
+    const filtered = (appState.clients || []).filter(c => {
+        const name = (c.name || '').toLowerCase();
+        const nick = (c.nickname || '').toLowerCase();
+        const phone = (c.phone || '').toLowerCase();
+        const email = (c.email || '').toLowerCase();
+        const code = (c.clientCode || window.getClientCode(c)).toLowerCase();
+
+        return !search || name.includes(search) || nick.includes(search) || phone.includes(search) || email.includes(search) || code.includes(search);
+    });
+
+    if (countText) {
+        countText.innerText = `${filtered.length} cliente${filtered.length === 1 ? '' : 's'} disponible${filtered.length === 1 ? '' : 's'}`;
+    }
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="p-8 text-center text-gray-500 bg-black/40 rounded-xl border border-gray-800 space-y-2">
+                <i class="fa-solid fa-users-slash text-2xl text-gray-600"></i>
+                <p class="text-xs font-bold text-gray-400">No se encontraron clientes con esa búsqueda.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = filtered.map(c => {
+        const clientCode = c.clientCode || window.getClientCode(c);
+        const balance = parseFloat(c.balance || 0).toFixed(2);
+        const now = Date.now();
+        const lastSeenMs = c.lastSeen ? new Date(c.lastSeen).getTime() : 0;
+        const isOnline = (c.isOnline === true) && ((now - lastSeenMs) < (1000 * 90));
+
+        const onlineDot = isOnline 
+            ? '<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse inline-block shadow-[0_0_8px_rgba(52,211,153,0.8)]" title="En línea"></span>' 
+            : '<span class="w-2.5 h-2.5 rounded-full bg-gray-600 inline-block" title="Desconectado"></span>';
+
+        return `
+        <div class="flex items-center justify-between p-3 bg-black/60 border border-gray-800 hover:border-indigo-500/70 rounded-xl transition group">
+            <div class="flex items-center gap-3">
+                ${onlineDot}
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="bg-indigo-950 text-indigo-300 border border-indigo-500/40 text-[9px] font-black px-1.5 py-0.5 rounded font-mono">${clientCode}</span>
+                        <h4 class="text-xs font-black text-white group-hover:text-indigo-300 transition">${c.name}</h4>
+                        ${c.nickname ? `<span class="text-[10px] text-gray-400">(@${c.nickname})</span>` : ''}
+                    </div>
+                    <p class="text-[10px] text-gray-400 font-mono mt-0.5">
+                        📱 ${c.phone || 'Sin cel'} | 💰 Saldo: <span class="text-emerald-400 font-bold">S/ ${balance}</span>
+                        ${c.email ? ` | 📧 ${c.email}` : ''}
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="window.impersonateAndOpenProfile('${c.id}')" class="bg-gradient-to-r from-purple-900 to-indigo-800 hover:from-purple-700 hover:to-indigo-600 text-white font-black text-xs px-3.5 py-1.5 rounded-lg transition shadow flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                <span>Supervisar</span>
+            </button>
+        </div>
+        `;
+    }).join('');
+};
+
+window.impersonateAndOpenProfile = (clientId) => {
+    let client = (appState.clients || []).find(c => 
+        c.id === clientId || 
+        (c.id && c.id.toString() === (clientId || '').toString()) ||
+        (c.phone && c.phone.toString() === (clientId || '').toString())
+    );
+
+    if (!client) {
+        alert("No se pudo encontrar el cliente seleccionado.");
+        return;
+    }
+
+    // Configurar sesión supervisada
+    const clientSession = {
+        id: client.id,
+        name: client.name,
+        nickname: client.nickname || client.name,
+        phone: client.phone || '',
+        email: client.email || '',
+        pass: client.pass || '',
+        balance: parseFloat(client.balance || 0),
+        clientCode: client.clientCode || window.getClientCode(client),
+        isSupervisedByAdmin: true,
+        supervisedAt: new Date().toISOString()
+    };
+
+    localStorage.setItem("cuycitoClient", JSON.stringify(clientSession));
+    
+    // Cerrar modal si estuviera abierto
+    document.getElementById('superviseClientModal')?.classList.add('hidden');
+
+    // Abrir perfil en una nueva pestaña
+    const targetUrl = `perfil.html?userId=${encodeURIComponent(client.id)}&adminSupervision=true`;
+    window.open(targetUrl, '_blank');
 };
 
 window.updateClientBalanceDirectly = async (clientId, inputId) => {

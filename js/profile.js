@@ -227,12 +227,32 @@ const DEFAULT_CATALOG_PRODUCTS = [
 // 1. INICIALIZACIÓN Y VALIDACIÓN DE SESIÓN
 // ==========================================
 async function initProfilePage() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const superviseUserId = urlParams.get('userId');
+    const isAdminSupervision = urlParams.get('adminSupervision') === 'true';
+
     let savedClient = localStorage.getItem("cuycitoClient");
     
     try {
         currentClientUser = savedClient ? JSON.parse(savedClient) : null;
     } catch(e) {
         currentClientUser = null;
+    }
+
+    // Si se especifica un cliente por parámetro de URL (Supervisión Admin)
+    if (superviseUserId) {
+        if (!currentClientUser || currentClientUser.id !== superviseUserId) {
+            try {
+                const userDoc = await getDoc(doc(db, "users", superviseUserId));
+                if (userDoc.exists()) {
+                    currentClientUser = { id: userDoc.id, ...userDoc.data() };
+                    currentClientUser.isSupervisedByAdmin = true;
+                    localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+                }
+            } catch(err) {
+                console.warn("Error cargando usuario para supervisión desde Firestore:", err);
+            }
+        }
     }
 
     // Si no hay sesión o los datos están incompletos, restaurar sesión Demo VIP
@@ -260,6 +280,18 @@ async function initProfilePage() {
                 currentClientUser.referredCodeUsed = "VIP-JUAN-7K9A";
             }
             localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+        }
+    }
+
+    // Mostrar banner de supervisión de Administrador si corresponde
+    if (isAdminSupervision || (currentClientUser && currentClientUser.isSupervisedByAdmin)) {
+        const supervisorBanner = document.getElementById('adminSupervisorBanner');
+        const superviseName = document.getElementById('adminSuperviseClientName');
+        const superviseCode = document.getElementById('adminSuperviseClientCode');
+        if (supervisorBanner && currentClientUser) {
+            if (superviseName) superviseName.innerText = `${currentClientUser.name} (@${currentClientUser.nickname || currentClientUser.name})`;
+            if (superviseCode) superviseCode.innerText = `ID: ${getClientCode(currentClientUser)}`;
+            supervisorBanner.classList.remove('hidden');
         }
     }
 
