@@ -270,37 +270,60 @@ window.setGlobalCurrency = (curr) => {
     window.renderAll();
 };
 
-window.formatDateDDMMYYYY = (dateStr) => {
-    if (!dateStr || dateStr === 'N/A' || dateStr === '-') return dateStr || '-';
+window.parseDateUniversal = (dateStr) => {
+    if (!dateStr) return null;
     const str = dateStr.toString().trim();
-    if (str.includes('/')) return str; // Ya está en formato DD/MM/YYYY
-    const clean = str.split('T')[0];
-    const parts = clean.split('-');
-    if (parts.length === 3 && parts[0].length === 4) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    if (!str || str === 'N/A' || str === '-') return null;
+
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(str)) {
+        const parts = str.split('/');
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        const d = new Date(year, month, day, 0, 0, 0);
+        return isNaN(d) ? null : d;
     }
-    return str;
+
+    if (/^\d{4}-\d{1,2}-\d{1,2}/.test(str)) {
+        const clean = str.split('T')[0];
+        const parts = clean.split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const d = new Date(year, month, day, 0, 0, 0);
+        return isNaN(d) ? null : d;
+    }
+
+    const d = new Date(str);
+    return isNaN(d) ? null : d;
 };
 
 window.formatDateISO = (dateStr) => {
-    if (!dateStr) return '';
-    const str = dateStr.toString().trim();
-    if (str.includes('/')) {
-        const parts = str.split('/');
-        if (parts.length === 3) {
-            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-        }
-    }
-    return str.split('T')[0];
+    const d = window.parseDateUniversal(dateStr);
+    if (!d) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+window.formatDateDDMMYYYY = (dateStr) => {
+    const d = window.parseDateUniversal(dateStr);
+    if (!d) return dateStr || '-';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${day}/${month}/${year}`;
 };
 
 window.getDaysRemaining = (endDateStr) => {
     if (!endDateStr) return 0;
-    const isoStr = window.formatDateISO(endDateStr);
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const end = new Date(isoStr + (isoStr.includes('T') ? '' : 'T23:59:59'));
-    if (isNaN(end)) return 0;
-    return Math.ceil((end - today) / 86400000);
+    const dEnd = window.parseDateUniversal(endDateStr);
+    if (!dEnd) return 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    dEnd.setHours(0, 0, 0, 0);
+    return Math.ceil((dEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 };
 
 window.generatePassword = () => {
@@ -471,9 +494,11 @@ window.calculateEndDate = () => {
     if(!startInput || !startInput.value) return;
     const durationInput = document.getElementById('durationMonths');
     const months = durationInput ? parseInt(durationInput.value) || 1 : 1;
-    const end = new Date(new Date(startInput.value).getTime() + (months * 30 * 86400000));
+    const startDate = window.parseDateUniversal(startInput.value);
+    if (!startDate) return;
+    startDate.setDate(startDate.getDate() + (months * 30));
     const endDateInput = document.getElementById('endDate');
-    if(endDateInput) endDateInput.value = end.toISOString().split('T')[0];
+    if(endDateInput) endDateInput.value = window.formatDateISO(startDate);
 };
 
 // =====================================
@@ -727,22 +752,26 @@ window.openEditModal = (subId) => {
     document.getElementById('editCurrency').value = sub.currency || 'PEN';
     
     // Fechas e intervalo de meses (1 mes = 30 días)
-    const todayStr = new Date().toISOString().split('T')[0];
-    const startDateVal = sub.startDate || (sub.createdAt ? sub.createdAt.split('T')[0] : todayStr);
+    const todayStr = window.formatDateISO(new Date());
+    const startDateVal = sub.startDate ? window.formatDateISO(sub.startDate) : (sub.createdAt ? window.formatDateISO(sub.createdAt) : todayStr);
     document.getElementById('editStartDate').value = startDateVal;
 
     let calcMonths = sub.months || 1;
     if (sub.startDate && sub.endDate) {
-        const diffMs = new Date(sub.endDate + 'T00:00:00') - new Date(sub.startDate + 'T00:00:00');
-        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-        if (diffDays > 0) {
-            calcMonths = Math.max(1, Math.round(diffDays / 30));
+        const dStart = window.parseDateUniversal(sub.startDate);
+        const dEnd = window.parseDateUniversal(sub.endDate);
+        if (dStart && dEnd) {
+            const diffMs = dEnd.getTime() - dStart.getTime();
+            const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+            if (diffDays > 0) {
+                calcMonths = Math.max(1, Math.round(diffDays / 30));
+            }
         }
     }
     document.getElementById('editMonths').value = calcMonths;
 
     if (sub.endDate) {
-        document.getElementById('editEndDate').value = sub.endDate;
+        document.getElementById('editEndDate').value = window.formatDateISO(sub.endDate);
     } else {
         window.recalculateEditEndDate();
     }
@@ -755,12 +784,12 @@ window.recalculateEditEndDate = () => {
     const monthsVal = Math.max(1, parseInt(document.getElementById('editMonths')?.value) || 1);
     if (!startVal) return;
 
-    const startDate = new Date(startVal + 'T00:00:00');
+    const startDate = window.parseDateUniversal(startVal);
+    if (!startDate) return;
     startDate.setDate(startDate.getDate() + (monthsVal * 30));
 
-    const endStr = startDate.toISOString().split('T')[0];
     const endInput = document.getElementById('editEndDate');
-    if (endInput) endInput.value = endStr;
+    if (endInput) endInput.value = window.formatDateISO(startDate);
 };
 
 window.saveEditModal = async () => {
@@ -1325,13 +1354,14 @@ window.recalculateAssignEndDate = () => {
     const startVal = document.getElementById('assignStartDateInput')?.value;
     if (!startVal) return;
 
-    const startDate = new Date(startVal + 'T00:00:00');
+    const startDate = window.parseDateUniversal(startVal);
+    if (!startDate) return;
+
     const daysToAdd = currentAssignDurationMonths * 30;
     startDate.setDate(startDate.getDate() + daysToAdd);
 
-    const endStr = startDate.toISOString().split('T')[0];
     const endInput = document.getElementById('assignEndDateInput');
-    if (endInput) endInput.value = endStr;
+    if (endInput) endInput.value = window.formatDateISO(startDate);
 };
 
 window.executeClientSlotAssignment = async () => {
