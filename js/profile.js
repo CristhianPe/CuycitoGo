@@ -268,17 +268,24 @@ async function initProfilePage() {
 
     // Si se especifica un cliente por parámetro de URL (Supervisión Admin)
     if (superviseUserId) {
-        if (!currentClientUser || currentClientUser.id !== superviseUserId) {
-            try {
+        try {
+            // 1. Buscar primero en la colección "clients" por ID exacto
+            const clientDoc = await getDoc(doc(db, "clients", superviseUserId));
+            if (clientDoc.exists()) {
+                currentClientUser = { id: clientDoc.id, ...clientDoc.data() };
+                currentClientUser.isSupervisedByAdmin = true;
+                localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+            } else {
+                // 2. Si no existe en "clients", buscar en "users" por ID exacto
                 const userDoc = await getDoc(doc(db, "users", superviseUserId));
                 if (userDoc.exists()) {
                     currentClientUser = { id: userDoc.id, ...userDoc.data() };
                     currentClientUser.isSupervisedByAdmin = true;
                     localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
                 }
-            } catch(err) {
-                console.warn("Error cargando usuario para supervisión desde Firestore:", err);
             }
+        } catch(err) {
+            console.warn("Error cargando usuario para supervisión por ID desde Firestore:", err);
         }
     }
 
@@ -458,98 +465,72 @@ function initRealtimeUserBalanceListener() {
         userSnapshotUnsubscribe = null;
     }
 
-    if (!currentClientUser) return;
+    if (!currentClientUser || !currentClientUser.id) return;
 
     try {
-        if (currentClientUser.id) {
-            // Protocolo de Alta Eficiencia: 1 sola lectura dirigida por ID de documento
-            userSnapshotUnsubscribe = onSnapshot(doc(db, "users", currentClientUser.id), (docSnap) => {
-                if (!docSnap.exists()) return;
-                const uData = docSnap.data();
-                const prevBalance = currentClientUser.balance;
-                const newBalance = uData.balance !== undefined ? parseFloat(uData.balance) : currentClientUser.balance;
-                
-                currentClientUser = { 
-                    ...currentClientUser, 
-                    id: docSnap.id, 
-                    ...uData, 
-                    balance: newBalance 
-                };
-                
-                localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
-                updateProfileUI();
+        // Lectura estrictamente por ID de documento único
+        userSnapshotUnsubscribe = onSnapshot(doc(db, "users", currentClientUser.id), (docSnap) => {
+            if (!docSnap.exists()) return;
+            const uData = docSnap.data();
+            const prevBalance = currentClientUser.balance;
+            const newBalance = uData.balance !== undefined ? parseFloat(uData.balance) : currentClientUser.balance;
+            
+            currentClientUser = { 
+                ...currentClientUser, 
+                id: docSnap.id, 
+                ...uData, 
+                balance: newBalance 
+            };
+            
+            localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
+            updateProfileUI();
 
-                if (prevBalance !== undefined && parseFloat(prevBalance) !== parseFloat(newBalance)) {
-                    console.log(`⚡ Saldo actualizado en vivo: S/ ${parseFloat(newBalance).toFixed(2)} (Antes: S/ ${parseFloat(prevBalance).toFixed(2)})`);
-                    const balDisplay = document.getElementById('profileBalanceDisplay');
-                    if (balDisplay) {
-                        balDisplay.classList.add('animate-bounce', 'text-emerald-400');
-                        setTimeout(() => {
-                            balDisplay.classList.remove('animate-bounce', 'text-emerald-400');
-                        }, 2500);
-                    }
+            if (prevBalance !== undefined && parseFloat(prevBalance) !== parseFloat(newBalance)) {
+                console.log(`⚡ Saldo actualizado en vivo: S/ ${parseFloat(newBalance).toFixed(2)} (Antes: S/ ${parseFloat(prevBalance).toFixed(2)})`);
+                const balDisplay = document.getElementById('profileBalanceDisplay');
+                if (balDisplay) {
+                    balDisplay.classList.add('animate-bounce', 'text-emerald-400');
+                    setTimeout(() => {
+                        balDisplay.classList.remove('animate-bounce', 'text-emerald-400');
+                    }, 2500);
                 }
-            });
-        } else if (currentClientUser.phone) {
-            // Fallback por query indexada de teléfono
-            const qUser = query(collection(db, "users"), where("phone", "==", currentClientUser.phone.trim()));
-            userSnapshotUnsubscribe = onSnapshot(qUser, (snap) => {
-                if (snap.empty) return;
-                const d = snap.docs[0];
-                const uData = d.data();
-                const prevBalance = currentClientUser.balance;
-                const newBalance = uData.balance !== undefined ? parseFloat(uData.balance) : currentClientUser.balance;
-                
-                currentClientUser = { 
-                    ...currentClientUser, 
-                    id: d.id, 
-                    ...uData, 
-                    balance: newBalance 
-                };
-                
-                localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
-                updateProfileUI();
-
-                if (prevBalance !== undefined && parseFloat(prevBalance) !== parseFloat(newBalance)) {
-                    const balDisplay = document.getElementById('profileBalanceDisplay');
-                    if (balDisplay) {
-                        balDisplay.classList.add('animate-bounce', 'text-emerald-400');
-                        setTimeout(() => {
-                            balDisplay.classList.remove('animate-bounce', 'text-emerald-400');
-                        }, 2500);
-                    }
-                }
-            });
-        }
+            }
+        });
     } catch(err) {
-        console.warn("Error en listener de saldo optimizado:", err);
+        console.warn("Error en listener de saldo por ID:", err);
     }
 }
 
 async function refreshUserDataFromFirestore() {
-    if (!currentClientUser) return;
+    if (!currentClientUser || !currentClientUser.id) return;
     try {
-        const usersSnap = await getDocs(collection(db, "users"));
         let matchedDoc = null;
-        usersSnap.forEach(d => {
-            const uData = d.data();
-            if (d.id === currentClientUser.id || 
-                (uData.phone && currentClientUser.phone && uData.phone.trim() === currentClientUser.phone.trim()) ||
-                (uData.email && currentClientUser.email && uData.email.trim().toLowerCase() === currentClientUser.email.trim().toLowerCase()) ||
-                (uData.name && currentClientUser.name && uData.name.trim().toLowerCase() === currentClientUser.name.trim().toLowerCase()) ||
-                (uData.nickname && currentClientUser.nickname && uData.nickname.trim().toLowerCase() === currentClientUser.nickname.trim().toLowerCase())) {
-                matchedDoc = { id: d.id, ...uData };
+
+        // 1. Consulta directa por ID exacto en "clients"
+        try {
+            const clientDoc = await getDoc(doc(db, "clients", currentClientUser.id));
+            if (clientDoc.exists()) {
+                matchedDoc = { id: clientDoc.id, ...clientDoc.data() };
             }
-        });
+        } catch(e1) {}
+
+        // 2. Si no se encontró en "clients", consultar por ID exacto en "users"
+        if (!matchedDoc) {
+            try {
+                const userDoc = await getDoc(doc(db, "users", currentClientUser.id));
+                if (userDoc.exists()) {
+                    matchedDoc = { id: userDoc.id, ...userDoc.data() };
+                }
+            } catch(e2) {}
+        }
 
         if (matchedDoc) {
-            const prevBalance = currentClientUser.balance;
             currentClientUser = { ...currentClientUser, ...matchedDoc };
             localStorage.setItem("cuycitoClient", JSON.stringify(currentClientUser));
             updateProfileUI();
         }
     } catch (e) {
-        console.error("Error refrescando usuario desde Firestore:", e);
+        console.error("Error refrescando usuario por ID desde Firestore:", e);
     }
 }
 
