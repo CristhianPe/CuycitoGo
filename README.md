@@ -1,6 +1,6 @@
 # 🐹 CuycitoGO V5.0 - Ecosistema Integral de Gestión de Streaming, Tienda VIP & Automatización
 
-Bienvenido a **CuycitoGO V5.0**, la versión más avanzada del ecosistema integral diseñado para la venta, control financiero, administración de cuentas raíz por cupos, catálogo web con combos de oferta, notas en tiempo real, portal exclusivo de clientes y **sistema automatizado de recargas de saldo mediante lectura de correos Lemon Cash con IMAP**.
+Bienvenido a **CuycitoGO V5.0**, la versión definitiva y más avanzada del ecosistema integral diseñado para la venta, control financiero, administración de cuentas raíz por cupos, catálogo web con combos de oferta, notas en tiempo real, portal de autoservicio de clientes y **sistema automatizado de recargas de saldo mediante lectura de correos Lemon Cash con IMAP**.
 
 ---
 
@@ -8,7 +8,7 @@ Bienvenido a **CuycitoGO V5.0**, la versión más avanzada del ecosistema integr
 
 ### 1. 🛠️ Interruptor Máster de Modo Mantenimiento
 - **Control Centralizado en Tiempo Real**: Interruptor único ubicado en el menú superior del Dashboard que activa o desactiva instantáneamente el acceso público a la tienda web.
-- **Pantalla de Mantenimiento Personalizada (`mantenimiento.html`)**: Al activarse el mantenimiento, los usuarios de la tienda web son redirigidos a una interfaz estilizada con botón directo de contacto por WhatsApp con el Administrador.
+- **Pantalla de Mantenimiento Personalizada (`mantenimiento.html`)**: Al activarse el mantenimiento, los visitantes de la tienda web son redirigidos a una interfaz moderna y estilizada con botón directo de contacto por WhatsApp con el Administrador.
 - **Indicador Visual de Estado**: Badge dinámico animado en la tienda (`🛠️ Mantenimiento`).
 
 ### 2. 🗓️ Estandarización Universal de Fechas (`Día / Mes / Año` - `DD/MM/AAAA`)
@@ -36,7 +36,7 @@ Bienvenido a **CuycitoGO V5.0**, la versión más avanzada del ecosistema integr
 
 ---
 
-## 🏛️ Arquitectura del Sistema
+## 🏛️ Organigrama & Arquitectura del Sistema
 
 ```mermaid
 flowchart TD
@@ -71,6 +71,7 @@ flowchart TD
         C4["🛠️ mantenimiento.html (Aviso Mantenimiento)"]
     end
 
+    %% Flujos de Operación
     C3 -->|1. Solicita Recarga $10| B1
     B1 -->|2. Orden Pending $10.43| F4
     B2 -->|3. Escanea Correo Lemon Cash| B3
@@ -81,7 +82,23 @@ flowchart TD
 
 ---
 
-## 📂 Estructura del Proyecto
+## 🗄️ Estructura de la Base de Datos (Firebase Firestore)
+
+| Colección | Propósito & Estructura Principal |
+| :--- | :--- |
+| **`users`** | Almacena los perfiles de clientes (`id`, `name`, `nickname`, `phone`, `pass`, `balance`, `clientCode`, `isOnline`, `lastSeen`). |
+| **`subscriptions`** | Contratos de servicios activos (`clientId`, `clientCode`, `service`, `email`, `pass`, `pin`, `startDate`, `endDate`, `price`, `status`). |
+| **`masterAccounts`** | Cuentas matrices proveedor (`service`, `email`, `pass`, `capacity`, `profiles: [subId1, subId2, ...]`, `cost`). |
+| **`recharge_orders`** | Órdenes generadas para recarga (`userId`, `exactAmount`, `currency`, `status: pending/completed`, `expiresAt`). |
+| **`system_config`** | Ajustes globales del sistema (`store_settings -> { maintenanceMode: boolean, updatedAt: string }`). |
+| **`store_catalog`** | Productos, combos y promociones visibles en la tienda web (`title`, `price`, `imageUrl`, `category`). |
+| **`history`** | Registro contable de movimientos de ingresos y egresos. |
+| **`postits`** | Notas adhesivas sincronizadas para recordatorios rápidos del administrador. |
+| **`pending_registrations`**| Solicitudes de cuentas gratuitas o nuevos registros pendientes de aprobación. |
+
+---
+
+## 📂 Estructura de Archivos del Repositorio
 
 ```
 CuzcitoGo/
@@ -151,10 +168,14 @@ npm start
 
 ### 🚀 **Versión 5.0 (Release Oficial CuycitoGO V5.0)**
 - **🛠️ Interruptor Máster de Mantenimiento**: Control centralizado en vivo con pantalla `mantenimiento.html`.
-- **🗓️ Formateo Universal DD/MM/AAAA**: Selector e inputs en español con `Flatpickr`, anulando desajustes regionales.
+- **🗓️ Formateo Universal DD/MM/AAAA**: Selector e inputs en español con `Flatpickr`, anulando desajustes regionales de Windows y navegadores.
 - **🛡️ Vinculación Estricta por ID (`CLI-XXXX`)**: Aislamiento total de perfiles sin riesgo de cruce entre clientes similares.
 - **👑 Regla Rango CLIENTE VIP**: Requisito de 3+ servicios activos para lucir el rango VIP (con regresión automática a `CLIENTE ESTÁNDAR`).
 - **🟢 Presencia en Tiempo Real**: Puntos de conexión en vivo (Verde pulsante 🟢 / Gris ⚪).
+
+### 🚀 **Versión 4.4**
+- Auto-guardado unificado en la nube con indicador de sincronización en tiempo real.
+- Sistema de recargas automatizadas de saldo mediante lectura de correos IMAP de Lemon Cash con lógica de céntimos únicos.
 
 ---
 
