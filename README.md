@@ -1,69 +1,109 @@
-# 🐹 CuycitoGO - Ecosistema de Gestión de Streaming & Tienda Digital
+# 🐹 CuycitoGO V5.0 - Ecosistema Integral de Gestión de Streaming, Tienda VIP & Automatización
 
-Bienvenido a **CuycitoGO**, una plataforma integral diseñada para la venta, control financiero, administración de cuentas raíz, catálogo web con combos de oferta, notas/post-its en tiempo real, portal exclusivo de clientes y **sistema automatizado de recargas de saldo mediante lectura de correos Lemon Cash con IMAP**.
+Bienvenido a **CuycitoGO V5.0**, la versión más avanzada del ecosistema integral diseñado para la venta, control financiero, administración de cuentas raíz por cupos, catálogo web con combos de oferta, notas en tiempo real, portal exclusivo de clientes y **sistema automatizado de recargas de saldo mediante lectura de correos Lemon Cash con IMAP**.
 
 ---
 
-## 🏛️ Organigrama & Arquitectura del Sistema
+## 🚀 Novedades y Mejoras Principales en CuycitoGO V5.0
+
+### 1. 🛠️ Interruptor Máster de Modo Mantenimiento
+- **Control Centralizado en Tiempo Real**: Interruptor único ubicado en el menú superior del Dashboard que activa o desactiva instantáneamente el acceso público a la tienda web.
+- **Pantalla de Mantenimiento Personalizada (`mantenimiento.html`)**: Al activarse el mantenimiento, los usuarios de la tienda web son redirigidos a una interfaz estilizada con botón directo de contacto por WhatsApp con el Administrador.
+- **Indicador Visual de Estado**: Badge dinámico animado en la tienda (`🛠️ Mantenimiento`).
+
+### 2. 🗓️ Estandarización Universal de Fechas (`Día / Mes / Año` - `DD/MM/AAAA`)
+- **Flatpickr en Español Integrado**: Reemplazo completo de los campos `<input type="date">` nativos por selectores e inputs de texto enriquecidos con `Flatpickr` en español (`d/m/Y`).
+- **Anulación de Configuración Regional del Sistema**: Garantiza que en cualquier navegador o sistema operativo (Windows, Android, iOS) las fechas de inicio, vencimiento y edición se muestren estrictamente en formato **`DD/MM/AAAA`** (ejemplo: `18/08/2026`).
+- **Cálculo de Duración Personalizada (1 Mes = 30 Días)**: Incorporación de casilla de meses contratados tanto en *Asignación de Cupos* como en *Edición Manual*, calculando automáticamente: `Fecha Culminación = Fecha Inicio + (Meses * 30 días)`.
+
+### 3. 🛡️ Vinculación Estricta y Unívoca por ID de Cliente (`CLI-XXXX`)
+- **Seguridad Inmutable Contra Cruce de Nombres**: Filtro de seguridad que rechaza automáticamente cualquier servicio que pertenezca a otro cliente por ID de documento, `clientCode` o teléfono.
+- **Aislamiento Total de Perfiles Similares**: Clientes con nombres parecidos (ejemplo: `Luis` y `Luis Oppa`) mantienen sus datos y cuentas 100% independientes sin posibilidad de duplicidad.
+- **Auto-Sellado de IDs en Firestore**: Rutina de saneamiento que inyecta automáticamente `clientId`, `clientCode` y `clientPhone` en cada suscripción activa.
+
+### 4. 👑 Regla Dinámica para la Insignia "CLIENTE VIP"
+- **Requisito de 3+ Servicios Activos**: La insignia dorada **`👑 CLIENTE VIP`** se otorga de manera dinámica únicamente a los clientes que poseen 3 o más servicios activos vigentes.
+- **Regresión Automática a `CLIENTE ESTÁNDAR`**: Para clientes con 0, 1 o 2 servicios activos, el distintivo se ajusta automáticamente al rango gris **`CLIENTE ESTÁNDAR`**.
+
+### 5. 🟢 Indicador Visual de Presencia en Tiempo Real (En Línea / Desconectado)
+- **Rastreador de Estado Online**: Sincronización en vivo entre `perfil.html` y el Dashboard mediante el documento `users/{userId}`.
+- **Punto Verde Pulsante 🟢**: Muestra un punto verde brillante animado y la etiqueta `En línea` cuando el cliente se encuentra navegando en su portal.
+- **Punto Gris ⚪**: Muestra un punto gris cuando el cliente cerró su sesión o se encuentra inactivo.
+
+### 6. 🍋 Sistema Automatizado de Recargas con Lemon Cash (Worker IMAP Node.js)
+- **Lógica de Céntimos Únicos**: Asignación automática de centavos aleatorios (ejemplo: `$10.43`) para identificar de forma unívoca la transferencia de cada usuario.
+- **Worker IMAP & Regex Parser**: Monitoreo continuo de la bandeja de entrada, filtro de seguridad de remitentes oficiales Lemon Cash y acreditación atómica de saldo en Firestore.
+
+---
+
+## 🏛️ Arquitectura del Sistema
 
 ```mermaid
 flowchart TD
     subgraph ADMIN["👨‍💼 PANEL ADMINISTRADOR (dashboard.html)"]
-        A1["⚡ Operación Rápida & Auto-Guardado en Nube"]
-        A2["👑 Cuentas Raíz & Asignación de Perfiles"]
-        A3["📊 Finanzas & Rentabilidad en Tiempo Real"]
-        A4["👥 Accesos Tienda & Auto-Generador de Claves"]
-        A5["📦 Catálogo Web & Combos con Ahorro %"]
-        A6["📌 Posits / Notas Rápidas"]
+        A1["⚡ Auto-Guardado en Nube (Firestore)"]
+        A2["👑 Cuentas Raíz & Asignación de Cupos (1-4)"]
+        A3["📊 Finanzas & Rentabilidad (PEN/USD)"]
+        A4["👥 Accesos Tienda & Formulario Edición Manual"]
+        A5["🛠️ Interruptor Máster de Mantenimiento"]
+        A6["📌 Notas Rápidas / Post-its"]
     end
 
     subgraph BACKEND["⚙️ BACKEND & WORKER IMAP (Node.js/Express)"]
-        B1["POST /api/recharges/create\n(Generador de Céntimos Únicos: ej. $10.43)"]
-        B2["lemon-imap-service.js\n(Lector IMAP Seguro TLS/SSL & Parser Regex)"]
-        B3["recharge-controller.js\n(Conciliación e Idempotencia Anti-Duplicado)"]
+        B1["POST /api/recharges/create (Generador de Céntimos)"]
+        B2["lemon-imap-service.js (Worker IMAP Seguro TLS)"]
+        B3["recharge-controller.js (Conciliación & Saldo)"]
     end
 
     subgraph FIREBASE["🔥 BASE DE DATOS CLOUD (Firebase Firestore)"]
-        F1[("users\n(Clientes, Saldo VIP & Accesos)")]
-        F2[("recharge_orders\n(Órdenes Pendientes con Céntimos Únicos)")]
-        F3[("processed_emails\n(Registro Idempotente de Correos Conciliados)")]
-        F4[("subscriptions\n(Cuentas & Perfiles)")]
-        F5[("masterAccounts\n(Cuentas Raíz & Capacidad)")]
-        F6[("store_catalog\n(Catálogo & Combos)")]
-        F7[("postits\n(Notas Rápidas)")]
-        F8[("history\n(Historial Contable)")]
+        F1[("users (Clientes, Saldo VIP, Presencia)")]
+        F2[("subscriptions (Suscripciones & Perfiles)")]
+        F3[("masterAccounts (Cuentas Raíz & Slots)")]
+        F4[("recharge_orders (Órdenes de Recarga)")]
+        F5[("system_config/store_settings (Estado Mantenimiento)")]
+        F6[("history (Historial Contable)")]
     end
 
     subgraph CLIENTE["👤 CLIENTES & PORTAL VIP"]
-        C1["🛒 index.html\n(Tienda, Combos & Carrito)"]
-        C2["🔐 login-cliente.html\n(Login con Teléfono y Clave)"]
-        C3["📋 perfil.html\n(Mi Perfil, Saldo VIP & Recargar con Lemon Cash)"]
+        C1["🛒 index.html (Tienda & Catálogo)"]
+        C2["🔐 login-cliente.html (Login)"]
+        C3["📋 perfil.html (Mi Perfil & Billetera VIP)"]
+        C4["🛠️ mantenimiento.html (Aviso Mantenimiento)"]
     end
 
-    subgraph LEMON["🍋 LEMON CASH & BANDEJA DE CORREO"]
-        L1["App Lemon Cash\n(Cliente transfiere monto exacto: ej. $10.43)"]
-        L2["Bandeja de Correo IMAP\n(Notificación oficial de Lemon Cash)"]
-    end
-
-    %% Flujo de Recarga Automática
     C3 -->|1. Solicita Recarga $10| B1
-    B1 -->|2. Registra Orden Pending $10.43| F2
-    B1 -->|3. Muestra monto exacto y $lemontag| C3
-    C3 -->|4. Transfiere $10.43| L1
-    L1 -->|5. Envía comprobante oficial| L2
-    L2 -->|6. Lee correo y extrae monto con regex| B2
-    B2 -->|7. Cruza monto y verifica no duplicidad| B3
-    B3 -->|8. Actualiza orden a completed| F2
-    B3 -->|9. Acredita Saldo Atómicamente| F1
-    B3 -->|10. Registra email procesado| F3
-    F1 -.->|11. Refleja nuevo saldo en vivo| C3
+    B1 -->|2. Orden Pending $10.43| F4
+    B2 -->|3. Escanea Correo Lemon Cash| B3
+    B3 -->|4. Acredita Saldo Atómicamente| F1
+    A5 -->|5. Activa Mantenimiento| F5
+    F5 -.->|6. Redirige si está activo| C4
+```
 
-    %% Operación del Administrador
-    A1 -->|Auto-guarda| F4
-    A1 -->|Auto-guarda| F8
-    A2 -->|Sincroniza| F5
-    A5 -->|Publica| F6
-    A6 -->|Sincroniza| F7
+---
+
+## 📂 Estructura del Proyecto
+
+```
+CuzcitoGo/
+├── index.html                  # Tienda Web Pública & Catálogo de Servicios
+├── dashboard.html              # Panel Principal de Administración
+├── perfil.html                 # Portal del Cliente VIP
+├── login-cliente.html          # Inicio de Sesión de Clientes
+├── mantenimiento.html          # Pantalla de Mantenimiento Tienda
+├── css/
+│   └── styles.css              # Estilos Personalizados & Modo Oscuro
+├── js/
+│   ├── app.js                  # Lógica del Panel Admin & Sincronización DB
+│   ├── profile.js              # Lógica del Portal Cliente & Presencia
+│   ├── client-login.js         # Autenticación de Clientes
+│   ├── firebase-config.js      # Configuración de Firebase Cloud
+│   └── admin-notifications.js  # Alertas & Sonidos en Vivo
+├── backend/
+│   ├── server.js               # Servidor Node.js Express API
+│   ├── recharge-controller.js  # Controlador de Recargas & Saldo
+│   ├── lemon-imap-service.js   # Worker Lector IMAP de Correos Lemon Cash
+│   └── test-email-simulation.js# Script de Pruebas de Conciliación
+└── README.md                   # Documentación Oficial V5.0
 ```
 
 ---
@@ -71,12 +111,12 @@ flowchart TD
 ## 🍋 Guía de Configuración: Sistema de Recargas Lemon Cash
 
 ### 1. Variables de Entorno en `/backend/.env`
-Crea el archivo `.env` dentro de la carpeta `backend/` con las siguientes variables:
+Crea el archivo `.env` dentro de la carpeta `backend/`:
 
 ```env
 # Puerto del Servidor Backend
 PORT=5000
-NODE_ENV=development
+NODE_ENV=production
 
 # Configuración IMAP para lectura de correos de Lemon Cash
 IMAP_HOST=imap.gmail.com
@@ -96,45 +136,25 @@ LEMON_TAG=$cuycitogo
 LEMON_CVU=0000123400005678901234
 LEMON_ALIAS=cuycitogo.lemon
 LEMON_ACCOUNT_HOLDER=CuycitoGO Streaming VIP
-
-# Tiempo de expiración de órdenes (en minutos)
-RECHARGE_EXPIRATION_MINUTES=30
 ```
 
-> [!TIP]
-> **¿Cómo obtener la Contraseña de Aplicación en Gmail?**
-> 1. Ve a tu Cuenta de Google -> Seguridad -> Verificación en dos pasos.
-> 2. En la sección "Contraseñas de aplicaciones", genera una nueva llamada `CuycitoGO IMAP`.
-> 3. Copia los 16 caracteres generados y pégalos en `IMAP_APP_PASSWORD`.
-
 ### 2. Instalación de Dependencias e Inicio del Backend
-Abre una terminal en la carpeta `backend/`:
-
 ```bash
 cd backend
 npm install
 npm start
 ```
 
-### 3. Simulación de Pruebas (Sin necesidad de transferencias reales)
-Para probar la conciliación automática en desarrollo:
-```bash
-node test-email-simulation.js 10.43 $usuario_prueba
-```
-
 ---
 
 ## 📜 Historial de Versiones & Changelog
 
-### 🚀 **Versión 4.4 (Recargas Automáticas Lemon Cash & Auto-Guardado Unificado)**
-- **☁️ Auto-Guardado Unificado en el Dashboard**:
-  - Eliminación de botones redundantes en el navbar.
-  - Indicador interactivo `🟢 Nube Sincronizada (HH:MM:SS)` con confirmación visual automática cada vez que se guarda o modifica un registro.
-- **🍋 Sistema de Recargas de Saldo Automatizado con Lemon Cash**:
-  - **Lógica de Céntimos Únicos**: Generación de montos aleatorios exclusivos (ej. `$10.43`) para identificar de forma unívoca a cada cliente.
-  - **Servicio IMAP & Parser Regex**: Lectura continua de la bandeja de correo, filtro estricto de remitentes Lemon Cash y extracción del monto exacto con céntimos.
-  - **Conciliación e Idempotencia**: Acreditación atómica a la billetera del usuario en Firestore y protección contra correos duplicados (`processed_emails`).
-  - **Billetera VIP en Portal del Cliente ([perfil.html](file:///c:/Users/Cristhian/Desktop/CuzcitoGo/perfil.html))**: Modal interactivo de recarga con datos copiables de Lemon Cash y verificación en tiempo real.
+### 🚀 **Versión 5.0 (Release Oficial CuycitoGO V5.0)**
+- **🛠️ Interruptor Máster de Mantenimiento**: Control centralizado en vivo con pantalla `mantenimiento.html`.
+- **🗓️ Formateo Universal DD/MM/AAAA**: Selector e inputs en español con `Flatpickr`, anulando desajustes regionales.
+- **🛡️ Vinculación Estricta por ID (`CLI-XXXX`)**: Aislamiento total de perfiles sin riesgo de cruce entre clientes similares.
+- **👑 Regla Rango CLIENTE VIP**: Requisito de 3+ servicios activos para lucir el rango VIP (con regresión automática a `CLIENTE ESTÁNDAR`).
+- **🟢 Presencia en Tiempo Real**: Puntos de conexión en vivo (Verde pulsante 🟢 / Gris ⚪).
 
 ---
 
