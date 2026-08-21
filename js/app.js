@@ -270,9 +270,37 @@ window.setGlobalCurrency = (curr) => {
     window.renderAll();
 };
 
+window.formatDateDDMMYYYY = (dateStr) => {
+    if (!dateStr || dateStr === 'N/A' || dateStr === '-') return dateStr || '-';
+    const str = dateStr.toString().trim();
+    if (str.includes('/')) return str; // Ya está en formato DD/MM/YYYY
+    const clean = str.split('T')[0];
+    const parts = clean.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return str;
+};
+
+window.formatDateISO = (dateStr) => {
+    if (!dateStr) return '';
+    const str = dateStr.toString().trim();
+    if (str.includes('/')) {
+        const parts = str.split('/');
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+    }
+    return str.split('T')[0];
+};
+
 window.getDaysRemaining = (endDateStr) => {
-    const today = new Date(); today.setHours(0,0,0,0);
-    return Math.ceil((new Date(endDateStr) - today) / 86400000);
+    if (!endDateStr) return 0;
+    const isoStr = window.formatDateISO(endDateStr);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const end = new Date(isoStr + (isoStr.includes('T') ? '' : 'T23:59:59'));
+    if (isNaN(end)) return 0;
+    return Math.ceil((end - today) / 86400000);
 };
 
 window.generatePassword = () => {
@@ -293,14 +321,16 @@ window.copyGeneratedPassword = () => {
 window.triggerWhatsApp = (subId) => {
     const sub = appState.subscriptions.find(s => s.id === subId);
     if (!sub) return;
-    const msg = window.getDaysRemaining(sub.endDate) >= 0 ? `¡Hola! 🐹👋 Tu suscripción de ${sub.service} vence el ${sub.endDate}. ¿Deseas renovar?` : `¡Hola! 🐹⚠️ Tu cuenta de ${sub.service} ha vencido. Escríbenos para reactivar.`;
+    const formattedEnd = window.formatDateDDMMYYYY(sub.endDate);
+    const msg = window.getDaysRemaining(sub.endDate) >= 0 ? `¡Hola! 🐹👋 Tu suscripción de ${sub.service} vence el ${formattedEnd}. ¿Deseas renovar?` : `¡Hola! 🐹⚠️ Tu cuenta de ${sub.service} ha vencido. Escríbenos para reactivar.`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
 };
 
 window.triggerInfo = (subId) => {
     const sub = appState.subscriptions.find(s => s.id === subId);
     if (!sub) return;
-    let msg = `✨ *CUENTA ACTIVADA* ✨\n\n🎬 *Servicio:* ${sub.service}\n👤 *Perfil:* ${sub.person}\n📧 *Correo:* ${sub.email}\n🔐 *Pass:* ${sub.pass}\n🔢 *PIN:* ${sub.pin}\n📆 *Vence:* ${sub.endDate}`;
+    const formattedEnd = window.formatDateDDMMYYYY(sub.endDate);
+    let msg = `✨ *CUENTA ACTIVADA* ✨\n\n🎬 *Servicio:* ${sub.service}\n👤 *Perfil:* ${sub.person}\n📧 *Correo:* ${sub.email}\n🔐 *Pass:* ${sub.pass}\n🔢 *PIN:* ${sub.pin}\n📆 *Vence:* ${formattedEnd}`;
     const infoEl = document.getElementById('infoText');
     if(infoEl) infoEl.value = msg; 
     const modal = document.getElementById('infoModal');
@@ -2975,7 +3005,7 @@ window.renderActiveTable = () => {
                 ${sub.pin ? `<div class="text-cuycito-gold text-[10px]">PIN: ${sub.pin}</div>` : ''}
             </td>
             <td class="p-4 font-mono text-[11px] text-gray-300">
-                <div>${sub.endDate || '-'}</div>
+                <div>${window.formatDateDDMMYYYY(sub.endDate)}</div>
                 ${daysRemainingLabel}
             </td>
             <td class="p-4 text-center">${statusBadge}</td>
@@ -3017,7 +3047,7 @@ window.notifyClientOrderWhatsApp = (subId) => {
     const email = sub.email || sub.accountEmail || '';
     const pass = sub.pass || sub.accountPassword || '';
     const pin = sub.pin || '';
-    const endDate = sub.endDate || '30 días';
+    const endDate = window.formatDateDDMMYYYY(sub.endDate) || '30 días';
 
     let msg = `¡Hola *${sub.person || 'Cliente VIP'}*! 🐹🍿\n\n`;
     msg += `Tu pedido de *${serviceName}* en *CuycitoGO* ya está listo y activado:\n\n`;
@@ -3063,9 +3093,9 @@ window.openFullscreenQrModal = (subId) => {
     const btnAct = document.getElementById('fullscreenBtnActivate');
 
     if (sName) sName.innerText = `Código QR de ${sub.service}`;
-    if (cName) cName.innerText = `Cliente: ${sub.person} | ${sub.email || ''}`;
+    if (cName) cName.innerText = `Cliente: ${sub.person}`;
     if (img) img.src = sub.tvQrImage;
-    if (btnAct) btnAct.onclick = () => window.activatePendingTvQr(subId);
+    if (btnAct) btnAct.setAttribute('onclick', `window.activatePendingTvQr('${sub.id}'); document.getElementById('tvQrFullscreenModal').classList.add('hidden');`);
 
     if (modal) modal.classList.remove('hidden');
 };
@@ -3074,24 +3104,14 @@ window.activatePendingTvQr = async (subId) => {
     const sub = (appState.subscriptions || []).find(s => s.id === subId);
     if (!sub) return;
 
-    if (!confirm(`¿Confirmas la activación de ${sub.service} para el cliente "${sub.person}"?`)) return;
-
     sub.status = 'active';
     delete sub.tvQrImage;
 
     try {
-        await setDoc(doc(db, "subscriptions", subId), {
-            status: 'active',
-            tvQrImage: null,
-            activatedAt: new Date().toISOString()
-        }, { merge: true });
+        await setDoc(doc(db, "subscriptions", subId), sub, { merge: true });
     } catch(e) {}
 
     saveLocal();
-
-    const modal = document.getElementById('tvQrFullscreenModal');
-    if (modal) modal.classList.add('hidden');
-
     window.renderActiveTable();
     alert(`🎉 ¡Servicio Activado!\n\nEl servicio ${sub.service} para ${sub.person} ha quedado marcado como ACTIVO exitosamente.`);
 };
@@ -3141,7 +3161,7 @@ window.renderMasterAccounts = () => {
                 </div>
                 <div class="flex flex-col items-end gap-1">
                     <div class="text-center border px-2 py-0.5 rounded ${occColor} bg-black text-[10px] font-black tracking-widest">${occupied}/${acc.capacity} Lleno (${freeSlots} libres)</div>
-                    <span class="text-[9px] text-gray-500">Vence: ${acc.endDate || 'N/A'}</span>
+                    <span class="text-[9px] text-gray-500">Vence: ${window.formatDateDDMMYYYY(acc.endDate)}</span>
                 </div>
             </div>
             
@@ -3175,7 +3195,7 @@ window.renderMasterAccounts = () => {
                     <div class="flex justify-between items-center bg-gray-900 border border-gray-700 rounded p-2">
                         <div>
                             <p class="text-xs font-bold text-white">${sub.person} <span class="text-[10px] text-cuycito-gold">(${sub.pin || '-'})</span></p>
-                            <p class="text-[10px] ${dColor} font-mono">Vence: ${sub.endDate} | Cobra: ${subSym}${sub.amount}</p>
+                            <p class="text-[10px] ${dColor} font-mono">Vence: ${window.formatDateDDMMYYYY(sub.endDate)} | Cobra: ${subSym}${sub.amount}</p>
                         </div>
                         <button onclick="window.unlinkProfile('${acc.id}', ${i})" class="text-gray-500 hover:text-cuycito-red transition text-xs p-1" title="Desvincular"><i class="fa-solid fa-xmark"></i></button>
                     </div>`;

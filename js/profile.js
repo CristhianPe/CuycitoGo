@@ -102,11 +102,38 @@ function isCredentialsVisibleForClient(sub) {
 }
 window.isCredentialsVisibleForClient = isCredentialsVisibleForClient;
 
+function formatDateDDMMYYYY(dateStr) {
+    if (!dateStr || dateStr === 'N/A' || dateStr === '-') return dateStr || '-';
+    const str = dateStr.toString().trim();
+    if (str.includes('/')) return str; // Ya está en DD/MM/YYYY
+    const clean = str.split('T')[0];
+    const parts = clean.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return str;
+}
+window.formatDateDDMMYYYY = formatDateDDMMYYYY;
+
+function formatDateISO(dateStr) {
+    if (!dateStr) return '';
+    const str = dateStr.toString().trim();
+    if (str.includes('/')) {
+        const parts = str.split('/');
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+    }
+    return str.split('T')[0];
+}
+window.formatDateISO = formatDateISO;
+
 function getDaysRemaining(endDateStr) {
     if (!endDateStr) return 0;
+    const isoStr = formatDateISO(endDateStr);
     const today = new Date();
     today.setHours(0,0,0,0);
-    const end = new Date(endDateStr + (endDateStr.includes('T') ? '' : 'T23:59:59'));
+    const end = new Date(isoStr + (isoStr.includes('T') ? '' : 'T23:59:59'));
     if (isNaN(end)) return 0;
     return Math.ceil((end - today) / (1000 * 60 * 60 * 24));
 }
@@ -1092,7 +1119,7 @@ function renderClientSubscriptions(subs) {
 
                 <div class="text-[11px] text-gray-400 font-mono flex items-center justify-between pt-0.5">
                     <span>Fecha Vencimiento:</span>
-                    <strong class="${isExpired ? 'text-red-400' : 'text-white'}">${sub.endDate}</strong>
+                    <strong class="${isExpired ? 'text-red-400' : 'text-white'}">${formatDateDDMMYYYY(sub.endDate)}</strong>
                 </div>
             </div>
 
