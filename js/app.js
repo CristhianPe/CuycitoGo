@@ -2809,6 +2809,17 @@ window.renderActiveTable = () => {
     const statusFilter = document.getElementById('filterActiveStatus')?.value || 'VIGENTE';
 
     let list = (appState.subscriptions || []).filter(sub => {
+        const pNorm = (sub.person || '').toLowerCase().trim();
+        const sNorm = (sub.service || '').toLowerCase().trim();
+
+        // Si es un registro muerto ("Sin Asignar" o servicio corrupto/prueba), no mostrarlo y purgarlo de Firestore
+        if (pNorm.includes('sin asignar') || pNorm.startsWith('sin ') || pNorm === '' || sNorm.includes('disney premium 7') || sNorm.includes('777')) {
+            if (sub.id) {
+                deleteDoc(doc(db, "subscriptions", sub.id)).catch(()=>{});
+            }
+            return false;
+        }
+
         let matchSearch = !search ||
                           (sub.person && sub.person.toLowerCase().includes(search)) || 
                           (sub.service && sub.service.toLowerCase().includes(search)) || 
@@ -3107,9 +3118,9 @@ window.cleanupDatabaseOrphans = async (isManual = false) => {
         const personNorm = (sub.person || '').trim().toLowerCase();
         const serviceNorm = (sub.service || '').trim().toLowerCase();
 
-        // 1. Condición: Registro muerto o "Sin Asignar" o servicio corrupto/prueba (ej: "777", vacíos)
-        const isDeadName = personNorm === 'sin asignar' || personNorm === 'sin nombre' || personNorm === '' || personNorm === 'null' || personNorm === 'undefined';
-        const isCorruptService = serviceNorm.includes('777') || serviceNorm === '' || serviceNorm === 'null';
+        // 1. Condición: Registro muerto o "Sin Asignar" o servicio corrupto/prueba (ej: "777", "disney premium 7", vacíos)
+        const isDeadName = personNorm.includes('sin asignar') || personNorm.includes('sin nombre') || personNorm.startsWith('sin ') || personNorm === '' || personNorm === 'null' || personNorm === 'undefined' || !sub.person;
+        const isCorruptService = serviceNorm.includes('777') || serviceNorm.includes('disney premium 7') || serviceNorm === '' || serviceNorm === 'null';
         const isMissingClient = sub.clientId && !clientMap.has(sub.clientId) && isDeadName;
 
         if (isDeadName || isCorruptService || isMissingClient) {
