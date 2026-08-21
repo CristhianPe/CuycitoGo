@@ -792,6 +792,18 @@ function calculateMetrics(subs) {
     if (pendingEl) pendingEl.innerText = pending;
     if (expiringEl) expiringEl.innerText = expiring;
     if (expiredEl) expiredEl.innerText = expired;
+
+    // REGLA VIP: La insignia CLIENTE VIP se concede ÚNICAMENTE si el cliente cuenta con 3 o más servicios activos
+    const vipBadge = document.getElementById('profileClientVipBadge');
+    if (vipBadge) {
+        if (active >= 3) {
+            vipBadge.className = 'bg-cuycito-gold/20 text-cuycito-gold text-[11px] font-black px-3 py-0.5 rounded-full border border-cuycito-gold/40 uppercase tracking-wider shadow-sm flex items-center gap-1';
+            vipBadge.innerHTML = '<i class="fa-solid fa-crown text-yellow-400 text-[10px]"></i> CLIENTE VIP';
+        } else {
+            vipBadge.className = 'bg-gray-800/80 text-gray-400 text-[11px] font-bold px-3 py-0.5 rounded-full border border-gray-700 uppercase tracking-wider';
+            vipBadge.innerText = 'CLIENTE ESTÁNDAR';
+        }
+    }
 }
 
 const updateMetrics = calculateMetrics;
