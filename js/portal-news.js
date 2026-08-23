@@ -1189,6 +1189,7 @@ window.renderPortalTop5 = () => {
 // 12. INICIALIZACIÓN GLOBAL & SINCRONIZACIÓN CON LA NUBE
 document.addEventListener('DOMContentLoaded', () => {
     initPortalAuth();
+    initPortalMaintenanceListener();
     window.initHeroSlider();
     window.renderPortalSubdestacada();
     window.renderPortalThematicGrid();
@@ -1312,16 +1313,55 @@ function initPortalAuth() {
 
     authContainer.innerHTML = `
         <div class="flex items-center gap-3">
-            <a href="mantenimiento.html" class="text-xs font-bold text-gray-300 hover:text-white transition px-2.5 py-1.5 flex items-center gap-1.5">
+            <a href="login-cliente.html" class="text-xs font-bold text-gray-300 hover:text-white transition px-2.5 py-1.5 flex items-center gap-1.5">
                 <i class="fa-solid fa-arrow-right-to-bracket text-gray-400"></i>
                 <span>Iniciar Sesión</span>
             </a>
-            <a href="mantenimiento.html" class="bg-gradient-to-r from-red-600 via-red-500 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-lg glow-red transition duration-300 flex items-center gap-1.5 hover:scale-105 transform uppercase tracking-wider">
-                <i class="fa-solid fa-wrench text-white"></i>
-                <span>Mantenimiento</span>
+            <a href="login-cliente.html" class="bg-gradient-to-r from-cuycito-gold to-yellow-400 hover:from-yellow-400 hover:to-cuycito-gold text-black font-black text-xs px-4 py-2 rounded-xl shadow glow-gold transition duration-300 flex items-center gap-1.5 hover:scale-105 transform uppercase tracking-wider">
+                <i class="fa-solid fa-user-plus text-black"></i>
+                <span>Ingresar</span>
             </a>
         </div>
     `;
+}
+
+async function initPortalMaintenanceListener() {
+    try {
+        const { db, doc, onSnapshot } = await import('./firebase-config.js');
+        if (!db) return;
+
+        onSnapshot(doc(db, "system_config", "store_settings"), (docSnap) => {
+            const isMaintenance = docSnap.exists() && docSnap.data().maintenanceMode === true;
+            const heroBtn = document.getElementById('heroCtaButton');
+            const authContainer = document.getElementById('navAuthContainer');
+            const savedClient = localStorage.getItem("cuycitoClient");
+
+            if (isMaintenance) {
+                if (heroBtn) {
+                    heroBtn.href = "mantenimiento.html";
+                    heroBtn.innerHTML = '<i class="fa-solid fa-wrench text-black"></i><span>Portal en Mantenimiento</span>';
+                }
+                if (authContainer && !savedClient) {
+                    authContainer.innerHTML = `
+                        <a href="mantenimiento.html" class="bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black text-xs px-4 py-2 rounded-xl shadow glow-red transition flex items-center gap-2 uppercase tracking-wider">
+                            <i class="fa-solid fa-wrench"></i>
+                            <span>En Mantenimiento</span>
+                        </a>
+                    `;
+                }
+            } else {
+                if (heroBtn) {
+                    heroBtn.href = "login-cliente.html";
+                    heroBtn.innerHTML = '<i class="fa-solid fa-bolt text-black"></i><span>Ingresar a Mi Cuenta</span>';
+                }
+                if (!savedClient && authContainer) {
+                    initPortalAuth();
+                }
+            }
+        });
+    } catch(err) {
+        console.warn("No se pudo iniciar listener de mantenimiento en portal:", err);
+    }
 }
 
 function initPriceComparator() {

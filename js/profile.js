@@ -156,7 +156,10 @@ try {
     onSnapshot(doc(db, "system_config", "store_settings"), (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
-            if (data.maintenanceMode === true || data.is_store_open === false) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAdminSupervision = urlParams.get('adminSupervision') === 'true' || (window.currentClientUser && window.currentClientUser.isSupervisedByAdmin);
+
+            if (data.maintenanceMode === true && !isAdminSupervision) {
                 console.log("🛑 MODO MANTENIMIENTO ACTIVADO: Expulsando cliente a mantenimiento.html...");
                 localStorage.removeItem("cuycitoClient");
                 sessionStorage.clear();

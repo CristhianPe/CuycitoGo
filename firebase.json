@@ -15,41 +15,26 @@
       "**/*.txt",
       "recharge_tab.png"
     ],
-    "redirects": [
+    "rewrites": [
       {
         "source": "/login",
-        "destination": "/mantenimiento",
-        "type": 302
+        "destination": "/login-cliente.html"
       },
       {
         "source": "/registro",
-        "destination": "/mantenimiento",
-        "type": 302
+        "destination": "/login-cliente.html"
       },
       {
         "source": "/perfil",
-        "destination": "/mantenimiento",
-        "type": 302
+        "destination": "/perfil.html"
       },
       {
         "source": "/tienda",
-        "destination": "/mantenimiento",
-        "type": 302
+        "destination": "/index.html"
       },
       {
-        "source": "/login-cliente",
-        "destination": "/mantenimiento",
-        "type": 302
-      },
-      {
-        "source": "/invitacion",
-        "destination": "/invitacion",
-        "type": 301
-      },
-      {
-        "source": "/vip",
-        "destination": "/vip",
-        "type": 301
+        "source": "/dashboard",
+        "destination": "/dashboard.html"
       }
     ],
     "headers": [

@@ -150,6 +150,34 @@ const DEFAULT_CATALOG_ITEMS = [
     }
 ];
 
+function getClientCode(client) {
+    if (!client) return 'CLI-000';
+    if (client.clientCode) return client.clientCode;
+    if (client.phone) {
+        const cleanDigits = client.phone.toString().replace(/\D/g, '');
+        if (cleanDigits.length >= 4) {
+            return `CLI-${cleanDigits.slice(-4)}`;
+        }
+    }
+    if (client.id) {
+        const cleanId = client.id.toString().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        return `CLI-${cleanId.slice(-4)}`;
+    }
+    return 'CLI-1001';
+}
+window.getClientCode = getClientCode;
+
+function getMasterCode(acc) {
+    if (!acc) return 'MAT-000';
+    if (acc.masterCode) return acc.masterCode;
+    if (acc.id) {
+        const cleanId = acc.id.toString().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        return `MAT-${cleanId.slice(-4)}`;
+    }
+    return `MAT-${Math.floor(1000 + Math.random() * 9000)}`;
+}
+window.getMasterCode = getMasterCode;
+
 if (typeof Chart !== 'undefined') { Chart.defaults.color = '#9ca3af'; }
 
 // =====================================
@@ -248,8 +276,18 @@ onAuthStateChanged(auth, async (user) => {
                 window.cleanupDatabaseOrphans(false);
             }, 1000);
         } catch (error) {
-            console.error("Error leyendo DB:", error);
-            document.getElementById('dbStatus').innerHTML = '<span class="text-red-500">Error Cloud</span>';
+            console.error("❌ Error conectando / leyendo Base de Datos Firebase:", error);
+            const statusEl = document.getElementById('dbStatus');
+            if (statusEl) {
+                const errCode = error?.code || error?.name || 'Error';
+                const isPermission = error?.code === 'permission-denied';
+                statusEl.innerHTML = `<span class="text-red-500 font-black flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation"></i> Error Cloud</span>`;
+                statusEl.className = "cursor-pointer hover:border-red-500 transition text-[11px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl bg-black/90 border border-red-500/80 text-red-500 flex items-center gap-1.5 shadow";
+                statusEl.title = isPermission 
+                    ? "Permiso denegado por Firestore. Verifica las Reglas de Seguridad en tu consola de Firebase." 
+                    : `Detalle: ${errCode} - ${error?.message || 'Error de conexión'}. Haz click para reintentar.`;
+                statusEl.setAttribute('onclick', 'window.location.reload()');
+            }
             document.getElementById('mainBody').classList.remove('hidden');
         }
     } else { 
@@ -337,11 +375,21 @@ window.initDatePickers = () => {
             allowInput: true,
             onChange: function(selectedDates, dateStr, instance) {
                 const id = instance.element.id;
-                if (id === 'editStartDate' || id === 'editMonths') {
+                if (id === 'editStartDate') {
                     window.recalculateEditEndDate();
                 } else if (id === 'assignStartDateInput') {
                     window.recalculateAssignEndDate();
-                } else if (id === 'startDate' || id === 'durationMonths') {
+                } else if (id === 'startDate') {
+                    window.calculateEndDate();
+                }
+            },
+            onClose: function(selectedDates, dateStr, instance) {
+                const id = instance.element.id;
+                if (id === 'editStartDate') {
+                    window.recalculateEditEndDate();
+                } else if (id === 'assignStartDateInput') {
+                    window.recalculateAssignEndDate();
+                } else if (id === 'startDate') {
                     window.calculateEndDate();
                 }
             }
@@ -465,33 +513,48 @@ window.switchTab = (tabId) => {
 
 window.updateAllServiceDropdowns = () => {
     const ids = ['txService', 'bulkService', 'mService', 'editService', 'csmNewService'];
+    const serviceList = (appState.services && appState.services.length > 0) ? appState.services : DEFAULT_SERVICES;
+
     ids.forEach(id => {
         const select = document.getElementById(id);
         if (!select) return;
         const currentVal = select.value;
-        select.innerHTML = '<option value="">-- Seleccionar Servicio --</option>';
-        appState.services.forEach(serv => { select.innerHTML += `<option value="${serv}">${serv}</option>`; });
+        select.innerHTML = '<option value="" class="bg-gray-900 text-white">-- Seleccionar Plataforma / Servicio --</option>';
+        serviceList.forEach(serv => { 
+            select.innerHTML += `<option value="${serv}" class="bg-gray-900 text-white">${serv}</option>`; 
+        });
         if (id !== 'csmNewService') {
-            select.innerHTML += '<option value="__NEW__" class="text-cuycito-gold font-bold">➕ Agregar Nuevo Servicio...</option>';
+            select.innerHTML += '<option value="__NEW__" class="bg-gray-900 text-cuycito-gold font-bold">➕ Agregar Nuevo Servicio...</option>';
         }
-        if (currentVal && currentVal !== '__NEW__' && [...select.options].some(o => o.value === currentVal)) { select.value = currentVal; }
+        if (currentVal && currentVal !== '__NEW__' && [...select.options].some(o => o.value === currentVal)) { 
+            select.value = currentVal; 
+        }
     });
 
     const filterSelect = document.getElementById('filterActiveService');
     if (filterSelect) {
         const currentFilter = filterSelect.value;
-        filterSelect.innerHTML = '<option value="">Todos los Servicios</option>';
-        appState.services.forEach(serv => { filterSelect.innerHTML += `<option value="${serv}">${serv}</option>`; });
+        filterSelect.innerHTML = '<option value="" class="bg-gray-900 text-white">Todos los Servicios</option>';
+        serviceList.forEach(serv => { 
+            filterSelect.innerHTML += `<option value="${serv}" class="bg-gray-900 text-white">${serv}</option>`; 
+        });
         filterSelect.value = currentFilter;
     }
 };
+
+window.populateServicesDropdowns = window.updateAllServiceDropdowns;
 
 window.handleServiceSelectChange = (selectId, customInputId) => {
     const select = document.getElementById(selectId);
     const customInput = document.getElementById(customInputId);
     if (!select || !customInput) return;
-    if (select.value === '__NEW__') { customInput.classList.remove('hidden'); customInput.focus(); } 
-    else { customInput.classList.add('hidden'); customInput.value = ''; }
+    if (select.value === '__NEW__') { 
+        customInput.classList.remove('hidden'); 
+        customInput.focus(); 
+    } else { 
+        customInput.classList.add('hidden'); 
+        customInput.value = ''; 
+    }
 };
 
 window.getOrRegisterService = async (selectId, customInputId) => {
@@ -753,9 +816,7 @@ window.openEditModal = (subId) => {
     const sub = (appState.subscriptions || []).find(s => s.id === subId || s._docId === subId);
     if (!sub) return;
 
-    if (typeof window.populateServicesDropdowns === 'function') {
-        window.populateServicesDropdowns();
-    }
+    window.updateAllServiceDropdowns();
 
     document.getElementById('editSubId').value = sub.id || sub._docId;
     document.getElementById('editPerson').value = sub.person || '';
@@ -764,16 +825,16 @@ window.openEditModal = (subId) => {
     const editServiceCustom = document.getElementById('editServiceCustom');
     
     if (editServiceSelect) {
-        const hasOption = Array.from(editServiceSelect.options).some(opt => opt.value === sub.service);
-        if (hasOption) {
-            editServiceSelect.value = sub.service;
-            if (editServiceCustom) editServiceCustom.classList.add('hidden');
-        } else {
-            editServiceSelect.value = 'OTRO';
-            if (editServiceCustom) {
-                editServiceCustom.value = sub.service || '';
-                editServiceCustom.classList.remove('hidden');
-            }
+        if (sub.service && !appState.services.includes(sub.service)) {
+            appState.services.push(sub.service);
+            appState.services.sort();
+            window.updateAllServiceDropdowns();
+        }
+        
+        editServiceSelect.value = sub.service || '';
+        if (editServiceCustom) {
+            editServiceCustom.classList.add('hidden');
+            editServiceCustom.value = '';
         }
     }
 
@@ -952,8 +1013,9 @@ window.saveBulkAccounts = async () => {
     const service = await window.getOrRegisterService('bulkService', 'bulkServiceCustom');
     if (!service) return;
     const count = parseInt(document.getElementById('bulkCount').value) || 5;
-    const todayStr = new Date().toISOString().split('T')[0];
-    const endStr = new Date(Date.now() + (30 * 86400000)).toISOString().split('T')[0];
+    const todayStr = window.formatDateDDMMYYYY(new Date());
+    const endObj = new Date(Date.now() + (30 * 86400000));
+    const endStr = window.formatDateDDMMYYYY(endObj);
 
     for (let i = 1; i <= count; i++) {
         const person = document.getElementById(`bulk_p_${i}`)?.value.trim();
@@ -988,6 +1050,35 @@ window.getMasterCode = (acc) => {
     return `MAT-${Math.floor(1000 + Math.random() * 9000)}`;
 };
 
+window.openCreateMasterModal = () => {
+    window.updateAllServiceDropdowns();
+    const modal = document.getElementById('masterModal');
+    if (!modal) return;
+
+    const mServiceSelect = document.getElementById('mService');
+    if (mServiceSelect) mServiceSelect.value = '';
+    const mServiceCustom = document.getElementById('mServiceCustom');
+    if (mServiceCustom) {
+        mServiceCustom.classList.add('hidden');
+        mServiceCustom.value = '';
+    }
+
+    document.getElementById('mProvider').value = '';
+    document.getElementById('mCapacity').value = '5';
+    document.getElementById('mCost').value = '';
+    document.getElementById('mCurrency').value = 'PEN';
+    
+    const todayFormatted = window.formatDateDDMMYYYY(new Date());
+    window.setDatePickerValue('mStartDate', todayFormatted);
+    document.getElementById('mMonths').value = '1';
+    document.getElementById('mEmail').value = '';
+    document.getElementById('mPass').value = '';
+    document.getElementById('mHidePass').checked = false;
+
+    modal.classList.remove('hidden');
+    window.initDatePickers();
+};
+
 window.saveMasterAccount = async () => {
     const service = await window.getOrRegisterService('mService', 'mServiceCustom');
     if (!service) return;
@@ -997,13 +1088,16 @@ window.saveMasterAccount = async () => {
     const capacity = parseInt(document.getElementById('mCapacity').value) || 5;
     const cost = parseFloat(document.getElementById('mCost').value) || 0;
     const currency = document.getElementById('mCurrency').value;
-    const startDate = document.getElementById('mStartDate').value;
+    const startDate = document.getElementById('mStartDate').value || window.formatDateDDMMYYYY(new Date());
     const months = parseInt(document.getElementById('mMonths').value) || 1;
     const email = document.getElementById('mEmail').value.trim();
     const pass = document.getElementById('mPass').value.trim();
     const hidePasswordFromClient = document.getElementById('mHidePass').checked;
     const showCredentialsToClient = !hidePasswordFromClient;
-    const end = new Date(new Date(startDate).getTime() + (months * 30 * 86400000)).toISOString().split('T')[0];
+    
+    const sDateObj = window.parseDateUniversal(startDate) || new Date();
+    const endObj = new Date(sDateObj.getTime() + (months * 30 * 86400000));
+    const end = window.formatDateDDMMYYYY(endObj);
 
     const newAcc = { 
         id, 

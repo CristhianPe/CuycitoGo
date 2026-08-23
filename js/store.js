@@ -42,9 +42,9 @@ function initAuthStatus() {
 
 function renderLoginButton(container) {
     container.innerHTML = `
-        <a href="mantenimiento.html" class="flex items-center gap-2 bg-gradient-to-r from-red-600 via-red-500 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white px-4 py-2 rounded-xl text-xs font-black transition shadow glow-red">
-            <i class="fa-solid fa-wrench"></i>
-            <span>Mantenimiento</span>
+        <a href="login-cliente.html" class="flex items-center gap-2 bg-gradient-to-r from-cuycito-gold to-yellow-400 hover:from-yellow-400 hover:to-cuycito-gold text-black px-4 py-2 rounded-xl text-xs font-black transition shadow glow-gold">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i>
+            <span>Iniciar Sesión</span>
         </a>
     `;
 }

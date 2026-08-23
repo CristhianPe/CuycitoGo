@@ -9,7 +9,7 @@ try {
     onSnapshot(doc(db, "system_config", "store_settings"), (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
-            if (data.maintenanceMode === true || data.is_store_open === false) {
+            if (data.maintenanceMode === true) {
                 isStoreInMaintenance = true;
                 console.log("🛑 MODO MANTENIMIENTO ACTIVADO: Redirigiendo a mantenimiento.html...");
                 localStorage.removeItem("cuycitoClient");

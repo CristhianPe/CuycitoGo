@@ -218,13 +218,17 @@
             onSnapshot(doc(db, "system_config", "store_settings"), (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    if (data.is_store_open === true && data.maintenanceMode === false) {
-                        console.log("Tienda reactivada por el administrador. Redirigiendo...");
+                    if (data.maintenanceMode === false || data.maintenanceMode === undefined) {
+                        console.log("Tienda reactivada por el administrador. Redirigiendo a login...");
                         window.location.replace('login-cliente.html');
                     }
+                } else {
+                    window.location.replace('login-cliente.html');
                 }
             });
-        } catch(e) {}
+        } catch(e) {
+            console.warn("Error en listener de mantenimiento:", e);
+        }
     </script>
 
 </body>

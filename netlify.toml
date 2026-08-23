@@ -14,30 +14,25 @@
 
 [[redirects]]
   from = "/login"
-  to = "/mantenimiento.html"
-  status = 302
-  force = true
+  to = "/login-cliente.html"
+  status = 200
 
 [[redirects]]
   from = "/registro"
-  to = "/mantenimiento.html"
-  status = 302
-  force = true
+  to = "/login-cliente.html"
+  status = 200
 
 [[redirects]]
   from = "/perfil"
-  to = "/mantenimiento.html"
-  status = 302
-  force = true
+  to = "/perfil.html"
+  status = 200
 
 [[redirects]]
-  from = "/login-cliente.html"
-  to = "/mantenimiento.html"
-  status = 302
-  force = true
+  from = "/tienda"
+  to = "/index.html"
+  status = 200
 
 [[redirects]]
-  from = "/perfil.html"
-  to = "/mantenimiento.html"
-  status = 302
-  force = true
+  from = "/dashboard"
+  to = "/dashboard.html"
+  status = 200

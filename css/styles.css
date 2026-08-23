@@ -170,4 +170,32 @@ input[type="number"]::-webkit-outer-spin-button {
 .news-card-zoom:hover img {
     transform: scale(1.05);
     filter: brightness(1.08);
+}
+
+/* ======================================================== */
+/* ESTILOS UNIVERSALES PARA FORMULARIOS, SELECTS Y OPTIONS  */
+/* ======================================================== */
+select {
+    color: #ffffff !important;
+    background-color: #000000 !important;
+}
+
+select option {
+    background-color: #121212 !important;
+    color: #ffffff !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+}
+
+select option:hover,
+select option:checked {
+    background-color: #ffb703 !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+}
+
+select optgroup {
+    background-color: #1a1a1a !important;
+    color: #ffb703 !important;
+    font-weight: 800 !important;
 }
