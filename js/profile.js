@@ -2696,9 +2696,10 @@ window.filterProfileCatalog = (category) => {
 };
 
 function resolveProductImage(p) {
-    if (p && p.imageUrl && typeof p.imageUrl === 'string' && p.imageUrl.trim() !== '' && !p.imageUrl.includes('undefined')) {
-        if (!p.imageUrl.includes('unsplash.com') && !p.imageUrl.includes('hdqwalls') && !p.imageUrl.includes('undefined')) {
-            return p.imageUrl.trim();
+    if (p && p.imageUrl && typeof p.imageUrl === 'string') {
+        const clean = p.imageUrl.trim();
+        if (clean !== '' && clean !== 'undefined' && clean !== 'null') {
+            return clean;
         }
     }
     const title = (p?.title || '').toLowerCase();
@@ -2727,6 +2728,12 @@ function resolveProductImage(p) {
     }
     if (title.includes('max') || title.includes('hbo')) {
         return 'assets/img/banner_max.svg';
+    }
+    if (title.includes('chatgpt') || title.includes('gpt') || title.includes('openai') || title.includes('claude') || title.includes('gemini') || title.includes('midjourney') || title.includes('deepseek') || cat.includes('ai') || cat.includes('ia')) {
+        return 'assets/img/banner_ai.svg';
+    }
+    if (title.includes('canva') || title.includes('office') || title.includes('capcut') || title.includes('adobe') || title.includes('freepik') || cat.includes('productiv')) {
+        return 'assets/img/banner_productivity.svg';
     }
     if (title.includes('netflix')) {
         return 'assets/img/promo_netflix_4k.jpg';

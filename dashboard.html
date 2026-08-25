@@ -478,6 +478,10 @@
                         <p class="text-xs text-gray-400 mt-0.5">Publica productos directamente desde Cuentas Raíz, suma stock o crea combos de oferta con cálculo de ahorro.</p>
                     </div>
                     <div class="flex items-center gap-2">
+                        <button onclick="window.refreshCatalogOnly()" class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3.5 py-2.5 rounded-lg transition flex items-center gap-2 shadow cursor-pointer" title="Refrescar productos del catálogo">
+                            <i id="refreshCatalogIcon" class="fa-solid fa-arrows-rotate"></i>
+                            <span class="hidden sm:inline">Actualizar Catálogo</span>
+                        </button>
                         <button onclick="window.openComboModal()" class="bg-gradient-to-r from-cuycito-red via-red-600 to-amber-600 hover:from-cuycito-redHover hover:to-cuycito-gold text-white text-xs font-black px-4 py-2.5 rounded-lg shadow-lg glow-red transition flex items-center gap-2">
                             <i class="fa-solid fa-gift"></i> Crear Combo Oferta 🔥
                         </button>
@@ -1047,12 +1051,21 @@
             </div>
 
             <!-- 1. ALERTAS: PRÓXIMOS A VENCER -->
-            <div>
-                <h2 class="text-sm font-black uppercase tracking-widest text-white flex items-center justify-between border-b border-cuycito-red pb-2 mb-3">
-                    <span><i class="fa-solid fa-triangle-exclamation text-cuycito-gold animate-pulse mr-2"></i> Por Vencer</span>
-                    <span id="alertCount" class="bg-cuycito-gold text-black px-2 py-1 rounded font-black shadow-[0_0_8px_rgba(255,183,3,0.6)]">0</span>
+            <div class="flex-1 flex flex-col min-h-0">
+                <h2 class="text-sm font-black uppercase tracking-widest text-white flex items-center justify-between border-b border-cuycito-red pb-2 mb-2 shrink-0">
+                    <span class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-triangle-exclamation text-cuycito-gold animate-pulse"></i>
+                        <span>Por Vencer (10 Días)</span>
+                    </span>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" id="btnRefreshExpiring" onclick="window.refreshExpiringAlerts()" class="w-6 h-6 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-400 hover:text-cuycito-gold text-[10px] flex items-center justify-center transition cursor-pointer" title="Actualizar lista de alertas">
+                            <i class="fa-solid fa-arrows-rotate" id="refreshExpiringIcon"></i>
+                        </button>
+                        <span id="alertCount" class="bg-cuycito-gold text-black text-xs px-2 py-0.5 rounded font-black shadow-[0_0_8px_rgba(255,183,3,0.6)]">0</span>
+                    </div>
                 </h2>
-                <div id="notificationsContainer" class="space-y-3"></div>
+                <!-- Ajustado a la mitad del espacio con scroll fluido -->
+                <div id="notificationsContainer" class="space-y-2.5 overflow-y-auto custom-scrollbar pr-1 max-h-[36vh] min-h-[130px]"></div>
             </div>
 
             <!-- 2. SECCIÓN: POSIT / NOTAS RÁPIDAS (DEBAJO DE ALERTAS) -->
@@ -1274,7 +1287,7 @@
     <!-- MODAL DE PRODUCTO DE CATÁLOGO WEB CON PUBLICACIÓN DESDE CUENTA RAÍZ & STOCK -->
     <div id="catalogModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-cuycito-dark border border-cuycito-gold rounded-2xl p-6 w-full max-w-lg space-y-4 shadow-[0_0_35px_rgba(255,183,3,0.3)] max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <h3 class="text-lg font-black text-cuycito-gold uppercase border-b border-gray-800 pb-2"><i class="fa-solid fa-box"></i> Producto de Tienda Web</h3>
+            <h3 class="text-lg font-black text-cuycito-gold uppercase border-b border-gray-800 pb-2" id="catModalTitle"><i class="fa-solid fa-box"></i> Producto de Tienda Web</h3>
             <input type="hidden" id="catId">
             <input type="hidden" id="catOldImage">
             <input type="hidden" id="catLinkedMasterId">
@@ -1302,13 +1315,15 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-gray-400 mb-1">Tipo de Producto / Categoría</label>
-                        <select id="catCategory" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold">
+                        <select id="catCategory" class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold font-bold">
                             <option value="Streaming">Streaming</option>
                             <option value="Pantallas / Perfil">Pantallas / Perfil</option>
                             <option value="Cuentas Raíz">Cuentas Raíz / Completas</option>
-                            <option value="Música">Música</option>
-                            <option value="Gaming">Gaming</option>
-                            <option value="Combos">Combos</option>
+                            <option value="Productivas">⚡ Productivas (Canva / Office / Adobe / etc)</option>
+                            <option value="AI">🤖 AI (ChatGPT / Midjourney / Claude / etc)</option>
+                            <option value="Música">🎵 Música</option>
+                            <option value="Gaming">🎮 Gaming & Anime</option>
+                            <option value="Combos">📦 Combos</option>
                         </select>
                     </div>
                     <div>
@@ -1328,9 +1343,10 @@
                             <option value="#8b5cf6">🟣 Púrpura (Max HBO)</option>
                             <option value="#3b82f6">🔵 Azul (Disney+ ESPN)</option>
                             <option value="#f97316">🟠 Naranja (Crunchyroll Anime)</option>
-                            <option value="#10b981">🟢 Verde (Spotify / Apple Music)</option>
+                            <option value="#10a37f">🟢 Verde Esmeralda / Teal (AI / ChatGPT / OpenAI)</option>
+                            <option value="#00c4cc">🔷 Cyan / Turquesa (Productivas / Canva / Prime)</option>
+                            <option value="#10b981">🍏 Verde Claro (Spotify / Apple Music)</option>
                             <option value="#ffb703">🟡 Dorado VIP (Combos / Ofertas)</option>
-                            <option value="#06b6d4">🔷 Cyan (Prime Video)</option>
                         </select>
                     </div>
                 </div>
@@ -1338,14 +1354,33 @@
                     <label class="block text-gray-400 mb-1">Descripción Breve</label>
                     <textarea id="catDesc" rows="2" placeholder="Ej. 1 Perfil Privado con PIN, calidad 4K Ultra HD y garantía 30 días..." class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none focus:border-cuycito-gold"></textarea>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-gray-400 mb-1 text-cuycito-gold font-bold">Subir Imagen (Opcional)</label>
-                        <input type="file" id="catImageFile" accept="image/*" class="w-full bg-black border border-gray-700 rounded p-1.5 text-gray-400 text-[10px]">
+                <div class="space-y-2 bg-black/60 border border-gray-800 rounded-xl p-3">
+                    <div class="flex items-center justify-between">
+                        <label class="text-gray-300 text-[11px] font-bold flex items-center gap-1.5">
+                            <i class="fa-solid fa-image text-cuycito-gold"></i> Imagen del Producto
+                        </label>
+                        <button type="button" onclick="window.clearCatalogImage()" class="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-1 font-bold transition cursor-pointer">
+                            <i class="fa-solid fa-trash-can"></i> Quitar imagen personalizada
+                        </button>
                     </div>
-                    <div>
-                        <label class="block text-gray-400 mb-1">O URL de Imagen</label>
-                        <input type="url" id="catImageUrlDirect" placeholder="https://..." class="w-full bg-black border border-gray-700 rounded p-2 text-white outline-none text-xs">
+                    
+                    <!-- Vista previa en vivo -->
+                    <div class="w-full h-32 rounded-lg bg-black border border-gray-700 overflow-hidden relative group flex items-center justify-center">
+                        <img id="catImagePreview" src="assets/img/promo_netflix_4k.jpg" class="w-full h-full object-cover" alt="Vista Previa de Imagen">
+                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[11px] text-white font-bold pointer-events-none">
+                            Vista Previa en Vivo
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 pt-1">
+                        <div>
+                            <label class="block text-gray-400 mb-1 text-[10px] text-cuycito-gold font-bold">1. Subir archivo</label>
+                            <input type="file" id="catImageFile" accept="image/*" onchange="window.previewCatalogFile(this)" class="w-full bg-black border border-gray-700 rounded p-1 text-gray-400 text-[10px]">
+                        </div>
+                        <div>
+                            <label class="block text-gray-400 mb-1 text-[10px]">2. O URL directa</label>
+                            <input type="url" id="catImageUrlDirect" oninput="window.previewCatalogUrl(this.value)" placeholder="https://..." class="w-full bg-black border border-gray-700 rounded p-1.5 text-white outline-none text-xs">
+                        </div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2 pt-2">
@@ -1354,10 +1389,10 @@
                 </div>
             </div>
             <div class="flex justify-between items-center pt-3 border-t border-gray-800 mt-4">
-                <button type="button" onclick="window.deleteCatalogItem()" class="text-cuycito-red hover:text-red-400 transition"><i class="fa-solid fa-trash"></i> Eliminar</button>
+                <button type="button" onclick="window.deleteCatalogItem()" class="text-cuycito-red hover:text-red-400 transition cursor-pointer"><i class="fa-solid fa-trash"></i> Eliminar</button>
                 <div class="flex gap-3">
-                    <button onclick="document.getElementById('catalogModal').classList.add('hidden')" class="bg-gray-800 text-white text-xs px-5 py-2.5 rounded">Cancelar</button>
-                    <button onclick="window.saveCatalogItem()" class="bg-cuycito-gold text-black font-black text-xs px-5 py-2.5 rounded">Guardar en Tienda</button>
+                    <button type="button" onclick="document.getElementById('catalogModal').classList.add('hidden')" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-5 py-2.5 rounded-xl cursor-pointer">Cancelar</button>
+                    <button type="button" id="btnSaveCatalogItem" onclick="window.saveCatalogItem()" class="bg-cuycito-gold hover:bg-cuycito-gold_light text-black font-black text-xs px-5 py-2.5 rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer"><i class="fa-solid fa-cloud-arrow-up"></i> Guardar en Tienda</button>
                 </div>
             </div>
         </div>

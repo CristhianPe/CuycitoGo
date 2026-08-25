@@ -25,10 +25,43 @@ let chartAnnualInstance = null;
 let activeManagingClient = null;
 let currentComboRows = [];
 
+async function compressImageFileToDataUrl(file, maxWidth = 800, maxHeight = 450, quality = 0.82) {
+    return new Promise((resolve) => {
+        if (!file) return resolve('');
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(dataUrl);
+            };
+            img.onerror = () => resolve(e.target.result);
+            img.src = e.target.result;
+        };
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(file);
+    });
+}
+
 function resolveProductImage(p) {
-    if (p && p.imageUrl && typeof p.imageUrl === 'string' && p.imageUrl.trim() !== '' && !p.imageUrl.includes('undefined')) {
-        if (!p.imageUrl.includes('unsplash.com') && !p.imageUrl.includes('hdqwalls') && !p.imageUrl.includes('undefined')) {
-            return p.imageUrl.trim();
+    if (p && p.imageUrl && typeof p.imageUrl === 'string') {
+        const clean = p.imageUrl.trim();
+        if (clean !== '' && clean !== 'undefined' && clean !== 'null') {
+            return clean;
         }
     }
     const title = (p?.title || '').toLowerCase();
@@ -2169,32 +2202,29 @@ window.createAndLinkDirectSub = async () => {
 // =====================================
 window.openCatalogModal = (catId = null) => {
     const form = document.getElementById('catalogModal');
-    
     const masterSelect = document.getElementById('catMasterSelect');
+    const titleModalEl = document.getElementById('catModalTitle');
+    const saveBtn = document.getElementById('btnSaveCatalogItem');
+    const previewEl = document.getElementById('catImagePreview');
+    
+    if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Guardar en Tienda';
+    }
+
     if (masterSelect) {
-        masterSelect.innerHTML = '<option value="">-- Seleccionar Plataforma o Cuenta Raíz --</option>';
-
-        // 1. Agrupar por Servicio / Plataforma para cálculo combinado de stock
-        const servicesWithAccounts = {};
-        appState.masterAccounts.forEach(acc => {
-            const serv = acc.service || 'Streaming';
-            if (!servicesWithAccounts[serv]) {
-                servicesWithAccounts[serv] = { accounts: [], totalCapacity: 0, totalOccupied: 0 };
-            }
-            const occ = (acc.profiles || []).filter(p => p !== null).length;
-            servicesWithAccounts[serv].accounts.push(acc);
-            servicesWithAccounts[serv].totalCapacity += acc.capacity;
-            servicesWithAccounts[serv].totalOccupied += occ;
-        });
-
-        const servKeys = Object.keys(servicesWithAccounts).sort();
-        if (servKeys.length > 0) {
-            let groupServicesHTML = '<optgroup label="⚡ SUMA TOTAL POR SERVICIO (Todas las Cuentas Raíz)">';
-            servKeys.forEach(serv => {
-                const info = servicesWithAccounts[serv];
-                const totalFree = Math.max(0, info.totalCapacity - info.totalOccupied);
-                const count = info.accounts.length;
-                groupServicesHTML += `<option value="service_${serv}">⚡ ${serv} (${totalFree} cupos libres en ${count} cuenta${count > 1 ? 's' : ''} activa${count > 1 ? 's' : ''})</option>`;
+        masterSelect.innerHTML = '<option value="">-- Seleccionar Cuenta o Servicio Raíz --</option>';
+        
+        // 1. Agrupados por Servicio
+        const distinctServices = [...new Set(appState.masterAccounts.map(a => a.service))].filter(Boolean);
+        if (distinctServices.length > 0) {
+            let groupServicesHTML = '<optgroup label="⚡ PLATAFORMAS COMPLETAS (Suma Automática)">';
+            distinctServices.forEach(sName => {
+                const accounts = appState.masterAccounts.filter(m => (m.service || '').toLowerCase() === sName.toLowerCase());
+                const totalCap = accounts.reduce((sum, a) => sum + (a.capacity || 0), 0);
+                const totalOcc = accounts.reduce((sum, a) => sum + (a.profiles || []).filter(p => p !== null).length, 0);
+                const totalFree = Math.max(0, totalCap - totalOcc);
+                groupServicesHTML += `<option value="service_${sName}">⚡ ${sName} (Todas las cuentas: ${totalFree} cupos libres)</option>`;
             });
             groupServicesHTML += '</optgroup>';
             masterSelect.innerHTML += groupServicesHTML;
@@ -2214,6 +2244,7 @@ window.openCatalogModal = (catId = null) => {
     }
 
     if(!catId) {
+        if (titleModalEl) titleModalEl.innerHTML = '<i class="fa-solid fa-box-open text-cuycito-gold"></i> Nuevo Producto de Tienda';
         document.getElementById('catId').value = 'prod_' + Date.now();
         document.getElementById('catTitle').value = '';
         document.getElementById('catCategory').value = 'Pantallas / Perfil';
@@ -2227,108 +2258,80 @@ window.openCatalogModal = (catId = null) => {
         document.getElementById('catLinkedService').value = '';
         document.getElementById('catImageFile').value = ''; 
         document.getElementById('catImageUrlDirect').value = '';
+        if (previewEl) previewEl.src = 'assets/img/promo_netflix_4k.jpg';
     } else {
         const p = appState.catalog.find(c => c.id === catId);
-        document.getElementById('catId').value = p.id;
-        document.getElementById('catTitle').value = p.title;
-        document.getElementById('catCategory').value = p.category || 'Pantallas / Perfil';
-        document.getElementById('catDesc').value = p.description || '';
-        document.getElementById('catPrice').value = p.price;
-        document.getElementById('catStock').value = p.stock !== undefined ? p.stock : 5;
-        
-        let colorVal = p.color || p.colorClass || '#e50914';
-        if (!colorVal.startsWith('#')) {
-            const colorMap = { 'red-600': '#e50914', 'purple-500': '#8b5cf6', 'purple-600': '#8b5cf6', 'blue-500': '#3b82f6', 'blue-600': '#3b82f6', 'orange-500': '#f97316', 'emerald-500': '#10b981', 'emerald-600': '#10b981', 'yellow-500': '#ffb703', 'cuycito-gold': '#ffb703' };
-            colorVal = colorMap[colorVal] || '#e50914';
-        }
-        document.getElementById('catColor').value = colorVal;
+        if (titleModalEl) titleModalEl.innerHTML = `<i class="fa-solid fa-pen-to-square text-cuycito-gold"></i> Editar Producto: <span class="text-white">${p ? p.title : ''}</span>`;
+        if (p) {
+            document.getElementById('catId').value = p.id;
+            document.getElementById('catTitle').value = p.title || '';
+            document.getElementById('catCategory').value = p.category || 'Pantallas / Perfil';
+            document.getElementById('catDesc').value = p.description || '';
+            document.getElementById('catPrice').value = p.price !== undefined ? p.price : '';
+            document.getElementById('catStock').value = p.stock !== undefined ? p.stock : 5;
+            
+            let colorVal = p.color || p.colorClass || '#e50914';
+            if (!colorVal.startsWith('#')) {
+                const colorMap = { 'red-600': '#e50914', 'purple-500': '#8b5cf6', 'purple-600': '#8b5cf6', 'blue-500': '#3b82f6', 'blue-600': '#3b82f6', 'orange-500': '#f97316', 'emerald-500': '#10b981', 'emerald-600': '#10b981', 'yellow-500': '#ffb703', 'cuycito-gold': '#ffb703' };
+                colorVal = colorMap[colorVal] || '#e50914';
+            }
+            document.getElementById('catColor').value = colorVal;
 
-        document.getElementById('catPromo').checked = p.promo || p.isOffer || false;
-        document.getElementById('catOldImage').value = p.imageUrl || '';
-        document.getElementById('catLinkedMasterId').value = p.linkedMasterId || '';
-        document.getElementById('catLinkedService').value = p.linkedService || '';
-        document.getElementById('catImageUrlDirect').value = p.imageUrl || '';
-        document.getElementById('catImageFile').value = ''; 
-        
-        if (masterSelect) {
-            if (p.linkedService) {
-                masterSelect.value = `service_${p.linkedService}`;
-            } else if (p.linkedMasterId) {
-                masterSelect.value = `account_${p.linkedMasterId}`;
+            document.getElementById('catPromo').checked = p.promo || p.isOffer || false;
+            document.getElementById('catOldImage').value = p.imageUrl || '';
+            document.getElementById('catLinkedMasterId').value = p.linkedMasterId || '';
+            document.getElementById('catLinkedService').value = p.linkedService || '';
+            document.getElementById('catImageUrlDirect').value = p.imageUrl || '';
+            document.getElementById('catImageFile').value = ''; 
+            
+            if (previewEl) {
+                previewEl.src = resolveProductImage(p);
+            }
+            
+            if (masterSelect) {
+                if (p.linkedService) {
+                    masterSelect.value = `service_${p.linkedService}`;
+                } else if (p.linkedMasterId) {
+                    masterSelect.value = `account_${p.linkedMasterId}`;
+                }
             }
         }
     }
     form.classList.remove('hidden');
 };
 
-window.loadCatalogFromMasterAccount = () => {
-    const masterSelect = document.getElementById('catMasterSelect');
-    const selectedVal = masterSelect ? masterSelect.value : '';
-    if (!selectedVal) {
-        alert("Por favor selecciona una Plataforma o Cuenta Raíz de la lista.");
-        return;
-    }
-
-    if (selectedVal.startsWith('service_')) {
-        const serviceName = selectedVal.replace('service_', '');
-        const matchingAccounts = appState.masterAccounts.filter(m => (m.service || '').toLowerCase() === serviceName.toLowerCase());
-        
-        const totalCapacity = matchingAccounts.reduce((sum, a) => sum + (a.capacity || 0), 0);
-        const totalOccupied = matchingAccounts.reduce((sum, a) => sum + (a.profiles || []).filter(p => p !== null).length, 0);
-        const totalFreeSlots = Math.max(0, totalCapacity - totalOccupied);
-
-        document.getElementById('catTitle').value = `${serviceName} Premium 4K - 1 Perfil Privado`;
-        document.getElementById('catCategory').value = 'Pantallas / Perfil';
-        document.getElementById('catDesc').value = `1 Perfil Privado con PIN personalizado y calidad 4K Ultra HD. Garantía total durante tus 30 días de suscripción con soporte continuo.`;
-        document.getElementById('catStock').value = totalFreeSlots;
-        document.getElementById('catLinkedService').value = serviceName;
-        document.getElementById('catLinkedMasterId').value = '';
-
-        const servLower = serviceName.toLowerCase();
-        const colorSelect = document.getElementById('catColor');
-        if (colorSelect) {
-            if (servLower.includes('netflix')) colorSelect.value = 'red-600';
-            else if (servLower.includes('spotify')) colorSelect.value = 'emerald-500';
-            else if (servLower.includes('disney')) colorSelect.value = 'blue-500';
-            else if (servLower.includes('max') || servLower.includes('hbo')) colorSelect.value = 'purple-500';
-            else if (servLower.includes('prime')) colorSelect.value = 'yellow-500';
-            else if (servLower.includes('crunchyroll')) colorSelect.value = 'orange-500';
-        }
-
-        alert(`✨ ¡Datos cargados desde todas las cuentas de ${serviceName}!\nStock total sumado: ${totalFreeSlots} cupos libres en ${matchingAccounts.length} cuenta(s) activa(s).`);
-    } else if (selectedVal.startsWith('account_')) {
-        const accId = selectedVal.replace('account_', '');
-        const acc = appState.masterAccounts.find(a => a.id === accId);
-        if (!acc) return;
-
-        const occupied = (acc.profiles || []).filter(p => p !== null).length;
-        const freeSlots = Math.max(0, acc.capacity - occupied);
-
-        document.getElementById('catTitle').value = `${acc.service} Premium 4K - 1 Perfil Privado`;
-        document.getElementById('catCategory').value = 'Pantallas / Perfil';
-        document.getElementById('catDesc').value = `1 Perfil Privado con PIN personalizado. Calidad 4K Ultra HD y garantía 100% durante 30 días.`;
-        document.getElementById('catStock').value = freeSlots;
-        document.getElementById('catLinkedMasterId').value = acc.id;
-        document.getElementById('catLinkedService').value = '';
-
-        const servLower = (acc.service || '').toLowerCase();
-        const colorSelect = document.getElementById('catColor');
-        if (colorSelect) {
-            if (servLower.includes('netflix')) colorSelect.value = 'red-600';
-            else if (servLower.includes('spotify')) colorSelect.value = 'emerald-500';
-            else if (servLower.includes('disney')) colorSelect.value = 'blue-500';
-            else if (servLower.includes('max') || servLower.includes('hbo')) colorSelect.value = 'purple-500';
-            else if (servLower.includes('prime')) colorSelect.value = 'yellow-500';
-            else if (servLower.includes('crunchyroll')) colorSelect.value = 'orange-500';
-        }
-
-        alert(`✨ ¡Datos cargados desde ${acc.service} (${acc.email})!\nStock asignado: ${freeSlots} cupos libres.`);
+window.previewCatalogFile = async (input) => {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const dataUrl = await compressImageFileToDataUrl(file);
+        const previewEl = document.getElementById('catImagePreview');
+        if (previewEl) previewEl.src = dataUrl;
+        document.getElementById('catOldImage').value = dataUrl;
     }
 };
 
+window.previewCatalogUrl = (url) => {
+    const previewEl = document.getElementById('catImagePreview');
+    if (previewEl && url && url.trim().length > 5) {
+        previewEl.src = url.trim();
+    }
+};
+
+window.clearCatalogImage = () => {
+    const fileInput = document.getElementById('catImageFile');
+    const directUrl = document.getElementById('catImageUrlDirect');
+    const oldImage = document.getElementById('catOldImage');
+    const previewEl = document.getElementById('catImagePreview');
+
+    if (fileInput) fileInput.value = '';
+    if (directUrl) directUrl.value = '';
+    if (oldImage) oldImage.value = '';
+    if (previewEl) previewEl.src = 'assets/img/promo_netflix_4k.jpg';
+};
+
 window.saveCatalogItem = async () => {
+    const saveBtn = document.getElementById('btnSaveCatalogItem');
     const statusLabel = document.getElementById('dbStatus');
-    statusLabel.innerHTML = '<span class="text-yellow-400"><i class="fa-solid fa-spinner fa-spin"></i> Guardando...</span>';
     
     const id = document.getElementById('catId').value;
     const title = document.getElementById('catTitle').value.trim();
@@ -2343,24 +2346,19 @@ window.saveCatalogItem = async () => {
     
     const fileInput = document.getElementById('catImageFile');
     const directUrl = document.getElementById('catImageUrlDirect').value.trim();
-    let imageUrl = directUrl || document.getElementById('catOldImage').value; 
-
-    if (fileInput.files.length > 0) {
-        try {
-            statusLabel.innerHTML = '<span class="text-yellow-400"><i class="fa-solid fa-spinner fa-spin"></i> Subiendo imagen...</span>';
-            const file = fileInput.files[0];
-            const storageRef = ref(storage, 'catalogo/' + Date.now() + '_' + file.name);
-            await uploadBytes(storageRef, file);
-            imageUrl = await getDownloadURL(storageRef);
-        } catch(e) {
-            console.error("Error subiendo imagen:", e);
-            alert("No se pudo subir la imagen a Storage, se guardará con la URL o sin ella.");
-        }
-    }
+    let imageUrl = directUrl || document.getElementById('catOldImage').value || '';
 
     if (!title) {
         alert("El título del producto es obligatorio.");
         return;
+    }
+
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const compressedDataUrl = await compressImageFileToDataUrl(file);
+        if (compressedDataUrl) {
+            imageUrl = compressedDataUrl;
+        }
     }
 
     const newItem = { 
@@ -2377,19 +2375,91 @@ window.saveCatalogItem = async () => {
         promo, 
         isOffer: promo, 
         imageUrl, 
-        isCombo: false 
+        isCombo: false,
+        updatedAt: new Date().toISOString()
     };
 
+    const isEdit = appState.catalog.some(c => c.id === id);
     const index = appState.catalog.findIndex(c => c.id === id);
-    if(index > -1) appState.catalog[index] = newItem;
-    else appState.catalog.push(newItem);
+    if (index > -1) {
+        appState.catalog[index] = newItem;
+    } else {
+        appState.catalog.push(newItem);
+    }
 
+    // Actualización visual inmediata optimista
+    document.getElementById('catalogModal').classList.add('hidden');
+    window.renderCatalog();
+
+    const successMsg = isEdit 
+        ? `✅ ¡Producto "${title}" editado con éxito!`
+        : `✅ ¡Producto "${title}" creado con éxito!`;
+    
+    alert(successMsg);
+
+    // Guardado y sincronización en segundo plano protegida
+    (async () => {
+        try {
+            if (statusLabel) statusLabel.innerHTML = '<span class="text-yellow-400"><i class="fa-solid fa-spinner fa-spin"></i> Sincronizando...</span>';
+            
+            // Subir a Storage en segundo plano si hay archivo nuevo
+            if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                try {
+                    const file = fileInput.files[0];
+                    const storageRef = ref(storage, 'catalogo/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_'));
+                    await uploadBytes(storageRef, file);
+                    const cloudUrl = await getDownloadURL(storageRef);
+                    if (cloudUrl) {
+                        newItem.imageUrl = cloudUrl;
+                        const idx = appState.catalog.findIndex(c => c.id === id);
+                        if (idx > -1) appState.catalog[idx].imageUrl = cloudUrl;
+                    }
+                } catch(errStorage) {
+                    console.warn("Storage background warning (usando base64/URL):", errStorage);
+                }
+            }
+
+            const savePromise = setDoc(doc(db, "store_catalog", id), newItem, { merge: true });
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000));
+            await Promise.race([savePromise, timeoutPromise]);
+
+            if (statusLabel) statusLabel.innerHTML = '<span class="text-emerald-400"><i class="fa-solid fa-cloud-check"></i> Sincronizado</span>';
+        } catch(e) {
+            console.warn("Firestore sync background:", e);
+            if (statusLabel) statusLabel.innerHTML = '<span class="text-emerald-400"><i class="fa-solid fa-cloud-check"></i> Guardado Local</span>';
+        }
+    })();
+};
+
+window.refreshCatalogOnly = async () => {
+    const icon = document.getElementById('refreshCatalogIcon');
+    if (icon) icon.classList.add('fa-spin');
+    const statusLabel = document.getElementById('dbStatus');
+    if (statusLabel) statusLabel.innerHTML = '<span class="text-yellow-400"><i class="fa-solid fa-spinner fa-spin"></i> Actualizando catálogo...</span>';
+    
     try {
-        await setDoc(doc(db, "store_catalog", id), newItem);
-        document.getElementById('catalogModal').classList.add('hidden');
+        const catalogSnap = await getDocs(collection(db, "store_catalog"));
+        appState.catalog = [];
+        catalogSnap.forEach(d => {
+            const item = { id: d.id, ...d.data() };
+            if (!item.imageUrl || item.imageUrl.trim() === '') {
+                item.imageUrl = resolveProductImage(item);
+            }
+            appState.catalog.push(item);
+        });
+        if (appState.catalog.length === 0) {
+            appState.catalog = [...DEFAULT_CATALOG_ITEMS];
+        }
         window.renderCatalog();
-        statusLabel.innerHTML = '<span class="text-emerald-400"><i class="fa-solid fa-cloud-check"></i> Sincronizado</span>';
-    } catch(e) { alert("Error guardando producto."); }
+        if (statusLabel) statusLabel.innerHTML = '<span class="text-emerald-400"><i class="fa-solid fa-cloud-check"></i> Catálogo Actualizado</span>';
+    } catch(e) {
+        console.error("Error al actualizar catálogo:", e);
+        window.renderCatalog();
+    }
+    
+    setTimeout(() => {
+        if (icon) icon.classList.remove('fa-spin');
+    }, 500);
 };
 
 window.deleteCatalogItem = async () => {
@@ -4479,16 +4549,39 @@ window.renderCatalog = () => {
     });
 };
 
+window.refreshExpiringAlerts = async () => {
+    const icon = document.getElementById('refreshExpiringIcon');
+    if (icon) icon.classList.add('fa-spin');
+    
+    try {
+        const subSnap = await getDocs(collection(db, "subscriptions"));
+        appState.subscriptions = [];
+        subSnap.forEach(d => appState.subscriptions.push({ ...d.data(), id: d.id, _docId: d.id }));
+
+        const masterSnap = await getDocs(collection(db, "masterAccounts"));
+        appState.masterAccounts = [];
+        masterSnap.forEach(d => appState.masterAccounts.push({ ...d.data(), id: d.id, _docId: d.id }));
+    } catch(e) {
+        console.warn("Actualizando alertas locales:", e);
+    }
+    
+    window.renderNotifications();
+    
+    setTimeout(() => {
+        if (icon) icon.classList.remove('fa-spin');
+    }, 450);
+};
+
 window.renderNotifications = () => {
     const cont = document.getElementById('notificationsContainer'); 
     if(!cont) return;
     cont.innerHTML = '';
 
-    // 1. Cuentas Matrices por vencer (Aviso a partir de 1 semana = 7 días o menos)
+    // 1. Cuentas Matrices por vencer (Aviso a partir de 10 días o menos)
     const expiringMasters = (appState.masterAccounts || []).filter(acc => {
         if (!acc.endDate) return false;
         const days = window.getDaysRemaining(acc.endDate);
-        return days <= 7;
+        return days <= 10;
     }).map(acc => {
         const days = window.getDaysRemaining(acc.endDate);
         return {
@@ -4503,11 +4596,11 @@ window.renderNotifications = () => {
         };
     });
 
-    // 2. Suscripciones de Clientes por vencer (Aviso a partir de 3 días o menos)
+    // 2. Suscripciones de Clientes por vencer (Aviso a partir de 10 días o menos)
     const expiringSubs = (appState.subscriptions || []).filter(s => {
         if (!s.endDate || s.status === 'pending_activation') return false;
         const days = window.getDaysRemaining(s.endDate);
-        return days <= 3 && days >= 0;
+        return days <= 10;
     }).map(s => {
         const days = window.getDaysRemaining(s.endDate);
         return {
