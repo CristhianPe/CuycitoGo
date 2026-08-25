@@ -2302,6 +2302,81 @@ window.openCatalogModal = (catId = null) => {
     form.classList.remove('hidden');
 };
 
+window.loadCatalogFromMasterAccount = () => {
+    const masterSelect = document.getElementById('catMasterSelect');
+    const selectedVal = masterSelect ? masterSelect.value : '';
+    if (!selectedVal) {
+        alert("Por favor selecciona una Plataforma o Cuenta Raíz de la lista.");
+        return;
+    }
+
+    if (selectedVal.startsWith('service_')) {
+        const serviceName = selectedVal.replace('service_', '');
+        const matchingAccounts = appState.masterAccounts.filter(m => (m.service || '').toLowerCase() === serviceName.toLowerCase());
+        
+        const totalCapacity = matchingAccounts.reduce((sum, a) => sum + (a.capacity || 0), 0);
+        const totalOccupied = matchingAccounts.reduce((sum, a) => sum + (a.profiles || []).filter(p => p !== null).length, 0);
+        const totalFreeSlots = Math.max(0, totalCapacity - totalOccupied);
+
+        document.getElementById('catTitle').value = `${serviceName} Premium 4K - 1 Perfil Privado`;
+        document.getElementById('catCategory').value = 'Pantallas / Perfil';
+        document.getElementById('catDesc').value = `1 Perfil Privado con PIN personalizado y calidad 4K Ultra HD. Garantía total durante tus 30 días de suscripción con soporte continuo.`;
+        document.getElementById('catStock').value = totalFreeSlots;
+        document.getElementById('catLinkedService').value = serviceName;
+        document.getElementById('catLinkedMasterId').value = '';
+
+        const servLower = serviceName.toLowerCase();
+        const colorSelect = document.getElementById('catColor');
+        if (colorSelect) {
+            if (servLower.includes('netflix')) colorSelect.value = '#e50914';
+            else if (servLower.includes('spotify')) colorSelect.value = '#10b981';
+            else if (servLower.includes('disney')) colorSelect.value = '#3b82f6';
+            else if (servLower.includes('max') || servLower.includes('hbo')) colorSelect.value = '#8b5cf6';
+            else if (servLower.includes('prime')) colorSelect.value = '#00c4cc';
+            else if (servLower.includes('crunchyroll')) colorSelect.value = '#f97316';
+        }
+
+        const previewEl = document.getElementById('catImagePreview');
+        if (previewEl) {
+            previewEl.src = resolveProductImage({ title: serviceName });
+        }
+
+        alert(`✨ ¡Datos cargados desde todas las cuentas de ${serviceName}!\nStock total sumado: ${totalFreeSlots} cupos libres en ${matchingAccounts.length} cuenta(s) activa(s).`);
+    } else if (selectedVal.startsWith('account_')) {
+        const accId = selectedVal.replace('account_', '');
+        const acc = appState.masterAccounts.find(a => a.id === accId);
+        if (!acc) return;
+
+        const occupied = (acc.profiles || []).filter(p => p !== null).length;
+        const freeSlots = Math.max(0, acc.capacity - occupied);
+
+        document.getElementById('catTitle').value = `${acc.service} Premium 4K - 1 Perfil Privado`;
+        document.getElementById('catCategory').value = 'Pantallas / Perfil';
+        document.getElementById('catDesc').value = `1 Perfil Privado con PIN personalizado. Calidad 4K Ultra HD y garantía 100% durante 30 días.`;
+        document.getElementById('catStock').value = freeSlots;
+        document.getElementById('catLinkedMasterId').value = acc.id;
+        document.getElementById('catLinkedService').value = '';
+
+        const servLower = (acc.service || '').toLowerCase();
+        const colorSelect = document.getElementById('catColor');
+        if (colorSelect) {
+            if (servLower.includes('netflix')) colorSelect.value = '#e50914';
+            else if (servLower.includes('spotify')) colorSelect.value = '#10b981';
+            else if (servLower.includes('disney')) colorSelect.value = '#3b82f6';
+            else if (servLower.includes('max') || servLower.includes('hbo')) colorSelect.value = '#8b5cf6';
+            else if (servLower.includes('prime')) colorSelect.value = '#00c4cc';
+            else if (servLower.includes('crunchyroll')) colorSelect.value = '#f97316';
+        }
+
+        const previewEl = document.getElementById('catImagePreview');
+        if (previewEl) {
+            previewEl.src = resolveProductImage({ title: acc.service });
+        }
+
+        alert(`✨ ¡Datos cargados desde ${acc.service} (${acc.email})!\nStock asignado: ${freeSlots} cupos libres.`);
+    }
+};
+
 window.previewCatalogFile = async (input) => {
     if (input.files && input.files[0]) {
         const file = input.files[0];

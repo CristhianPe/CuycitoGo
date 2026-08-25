@@ -1815,6 +1815,7 @@ window.openRechargeModal = async () => {
     // Verificar si el servidor y robot IMAP están en línea
     await window.checkServerStatus();
 };
+window.openProfileRechargeModal = window.openRechargeModal;
 
 window.checkServerStatus = async () => {
     const statusNotice = document.getElementById('rechargeServerStatusNotice');
