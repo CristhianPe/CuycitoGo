@@ -302,7 +302,15 @@
                         <h3 class="text-sm font-black text-white uppercase"><i class="fa-solid fa-server text-emerald-400 mr-1.5"></i> Control de Cuentas Raíz & Asignación</h3>
                         <p class="text-xs text-gray-400 mt-0.5">Controla cupos libres, rentabilidad y activa o desactiva la visibilidad de contraseñas para los clientes.</p>
                     </div>
-                    <button onclick="window.openCreateMasterModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-4 py-2 rounded glow-gold"><i class="fa-solid fa-plus"></i> Nueva Cuenta Raíz</button>
+                    <div class="flex items-center gap-2">
+                        <button id="btnRefreshMasterAccounts" onclick="window.refreshMasterAccountsOnly()" class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 hover:text-cuycito-gold text-xs font-bold px-3.5 py-2 rounded-lg transition flex items-center gap-2 shadow cursor-pointer" title="Refrescar cuentas raíz desde la base de datos">
+                            <i class="fa-solid fa-arrows-rotate" id="refreshMasterAccountsIcon"></i>
+                            <span>Actualizar</span>
+                        </button>
+                        <button onclick="window.openCreateMasterModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-4 py-2 rounded-lg glow-gold transition flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-plus"></i> Nueva Cuenta Raíz
+                        </button>
+                    </div>
                 </div>
                 <div id="masterGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10"></div>
             </section>

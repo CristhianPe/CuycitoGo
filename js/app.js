@@ -1114,18 +1114,26 @@ window.openCreateMasterModal = () => {
 
 window.saveMasterAccount = async () => {
     const service = await window.getOrRegisterService('mService', 'mServiceCustom');
-    if (!service) return;
+    if (!service) {
+        alert("Por favor selecciona o ingresa una plataforma.");
+        return;
+    }
+    const email = (document.getElementById('mEmail')?.value || '').trim();
+    const pass = (document.getElementById('mPass')?.value || '').trim();
+    if (!email || !pass) {
+        alert("Por favor ingresa el correo y la contraseña de la cuenta raíz.");
+        return;
+    }
+
     const id = 'master_' + Date.now();
     const masterCode = 'MAT-' + Math.floor(1000 + Math.random() * 9000);
-    const provider = document.getElementById('mProvider').value.trim();
-    const capacity = parseInt(document.getElementById('mCapacity').value) || 5;
-    const cost = parseFloat(document.getElementById('mCost').value) || 0;
-    const currency = document.getElementById('mCurrency').value;
-    const startDate = document.getElementById('mStartDate').value || window.formatDateDDMMYYYY(new Date());
-    const months = parseInt(document.getElementById('mMonths').value) || 1;
-    const email = document.getElementById('mEmail').value.trim();
-    const pass = document.getElementById('mPass').value.trim();
-    const hidePasswordFromClient = document.getElementById('mHidePass').checked;
+    const provider = (document.getElementById('mProvider')?.value || '').trim();
+    const capacity = parseInt(document.getElementById('mCapacity')?.value) || 5;
+    const cost = parseFloat(document.getElementById('mCost')?.value) || 0;
+    const currency = document.getElementById('mCurrency')?.value || 'PEN';
+    const startDate = document.getElementById('mStartDate')?.value || window.formatDateDDMMYYYY(new Date());
+    const months = parseInt(document.getElementById('mMonths')?.value) || 1;
+    const hidePasswordFromClient = !!document.getElementById('mHidePass')?.checked;
     const showCredentialsToClient = !hidePasswordFromClient;
     
     const sDateObj = window.parseDateUniversal(startDate) || new Date();
@@ -1155,15 +1163,60 @@ window.saveMasterAccount = async () => {
     const newTx = { id: txId, date: startDate, type: 'COMPRA', person: provider || 'Proveedor', service, amount: cost, currency };
     appState.history.push(newTx);
 
-    try {
-        await setDoc(doc(db, "masterAccounts", id), newAcc);
-        await setDoc(doc(db, "history", txId), newTx);
-    } catch(e){
-        console.error("Error guardando cuenta matriz:", e);
-    }
+    // Cierre inmediato del modal y render local no bloqueante
+    document.getElementById('masterModal')?.classList.add('hidden');
+    saveLocal();
+    window.renderMasterAccounts();
+    window.renderActiveTable();
+    window.renderNotifications();
+    alert(`✅ ¡Cuenta Raíz "${service}" (${masterCode}) creada exitosamente!`);
 
-    document.getElementById('masterModal').classList.add('hidden');
-    window.renderAll();
+    try {
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000));
+        await Promise.race([
+            Promise.all([
+                setDoc(doc(db, "masterAccounts", id), newAcc),
+                setDoc(doc(db, "history", txId), newTx)
+            ]),
+            timeoutPromise
+        ]);
+    } catch(e){
+        console.error("Error guardando cuenta matriz en Firestore:", e);
+    }
+};
+
+window.refreshMasterAccountsOnly = async () => {
+    const btn = document.getElementById('btnRefreshMasterAccounts');
+    const icon = document.getElementById('refreshMasterAccountsIcon');
+    if (icon) icon.classList.add('animate-spin');
+    if (btn) btn.disabled = true;
+
+    try {
+        const masterSnap = await getDocs(collection(db, "masterAccounts"));
+        const newMasters = [];
+        masterSnap.forEach(d => newMasters.push({ id: d.id, ...d.data() }));
+        if (newMasters.length > 0) {
+            appState.masterAccounts = newMasters;
+        }
+
+        const subsSnap = await getDocs(collection(db, "subscriptions"));
+        const newSubs = [];
+        subsSnap.forEach(d => newSubs.push({ id: d.id, ...d.data() }));
+        if (newSubs.length > 0) {
+            appState.subscriptions = newSubs;
+        }
+
+        saveLocal();
+        window.renderMasterAccounts();
+        window.renderNotifications();
+        alert(`🔄 ¡Cuentas Raíz actualizadas desde la nube! Total: ${appState.masterAccounts.length} cuentas.`);
+    } catch(e) {
+        console.error("Error al refrescar cuentas raíz:", e);
+        window.renderMasterAccounts();
+    } finally {
+        if (icon) icon.classList.remove('animate-spin');
+        if (btn) btn.disabled = false;
+    }
 };
 
 window.toggleMasterCredentialsVisibility = async (accId) => {
@@ -1223,19 +1276,20 @@ window.openEditMasterModal = (accId) => {
 };
 
 window.saveEditMasterModal = async () => {
-    const id = document.getElementById('editMasterId').value;
+    const id = document.getElementById('editMasterId')?.value;
     const acc = (appState.masterAccounts || []).find(a => a.id === id);
     if(!acc) return;
-    const newEmail = document.getElementById('editMasterEmail').value.trim();
-    const newPass = document.getElementById('editMasterPass').value.trim();
-    const newCapacity = parseInt(document.getElementById('editMasterCapacity').value) || acc.capacity;
-    const newHidePass = document.getElementById('editMasterHidePass').checked;
+    const newEmail = (document.getElementById('editMasterEmail')?.value || '').trim();
+    const newPass = (document.getElementById('editMasterPass')?.value || '').trim();
+    const newCapacity = parseInt(document.getElementById('editMasterCapacity')?.value) || acc.capacity;
+    const newHidePass = !!document.getElementById('editMasterHidePass')?.checked;
     
     acc.email = newEmail;
     acc.pass = newPass;
     acc.hidePasswordFromClient = newHidePass;
     acc.showCredentialsToClient = !newHidePass;
 
+    if (!acc.profiles) acc.profiles = [];
     if (newCapacity > acc.capacity) {
         const diff = newCapacity - acc.capacity;
         for(let i=0; i<diff; i++) acc.profiles.push(null);
@@ -1244,8 +1298,8 @@ window.saveEditMasterModal = async () => {
     }
     acc.capacity = newCapacity;
 
-    // Sincronizar credenciales solo en suscripciones que pertenecen estrictamente a este ID de Cuenta Raíz
-    appState.subscriptions.forEach(async (sub) => {
+    const subsToSync = [];
+    appState.subscriptions.forEach((sub) => {
         const isLinkedByProfile = acc.profiles && acc.profiles.includes(sub.id);
         const isLinkedById = sub.masterAccountId === acc.id;
 
@@ -1253,24 +1307,38 @@ window.saveEditMasterModal = async () => {
             sub.email = acc.email;
             sub.pass = acc.pass;
             sub.hidePassword = acc.hidePasswordFromClient;
+            sub.hidePasswordFromClient = acc.hidePasswordFromClient;
             sub.showCredentials = acc.showCredentialsToClient;
-            try { 
-                await setDoc(doc(db, "subscriptions", sub.id), {
-                    email: acc.email,
-                    pass: acc.pass,
-                    hidePassword: acc.hidePasswordFromClient,
-                    hidePasswordFromClient: acc.hidePasswordFromClient,
-                    showCredentials: acc.showCredentialsToClient,
-                    showCredentialsToClient: acc.showCredentialsToClient,
-                    updatedAt: new Date().toISOString()
-                }, { merge: true }); 
-            } catch(e){}
+            sub.showCredentialsToClient = acc.showCredentialsToClient;
+            subsToSync.push(sub);
         }
     });
 
-    try { await setDoc(doc(db, "masterAccounts", id), acc, { merge: true }); } catch(e){}
-    document.getElementById('editMasterModal').classList.add('hidden');
-    window.renderAll();
+    // Cierre inmediato del modal y guardado local optimista
+    document.getElementById('editMasterModal')?.classList.add('hidden');
+    saveLocal();
+    window.renderMasterAccounts();
+    window.renderActiveTable();
+    alert(`✅ ¡Cuenta Raíz "${acc.service}" actualizada exitosamente!`);
+
+    try {
+        const promises = [
+            setDoc(doc(db, "masterAccounts", id), acc, { merge: true }),
+            ...subsToSync.map(sub => setDoc(doc(db, "subscriptions", sub.id), {
+                email: acc.email,
+                pass: acc.pass,
+                hidePassword: acc.hidePasswordFromClient,
+                hidePasswordFromClient: acc.hidePasswordFromClient,
+                showCredentials: acc.showCredentialsToClient,
+                showCredentialsToClient: acc.showCredentialsToClient,
+                updatedAt: new Date().toISOString()
+            }, { merge: true }))
+        ];
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000));
+        await Promise.race([Promise.all(promises), timeoutPromise]);
+    } catch(e) {
+        console.error("Error actualizando cuenta matriz en Firestore:", e);
+    }
 };
 
 window.deleteMasterAccount = async (accId) => {
