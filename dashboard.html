@@ -1051,7 +1051,7 @@
             </div>
 
             <!-- 1. ALERTAS: PRÓXIMOS A VENCER -->
-            <div class="flex-1 flex flex-col min-h-0">
+            <div class="space-y-2">
                 <h2 class="text-sm font-black uppercase tracking-widest text-white flex items-center justify-between border-b border-cuycito-red pb-2 mb-2 shrink-0">
                     <span class="flex items-center gap-1.5">
                         <i class="fa-solid fa-triangle-exclamation text-cuycito-gold animate-pulse"></i>
@@ -1064,17 +1064,17 @@
                         <span id="alertCount" class="bg-cuycito-gold text-black text-xs px-2 py-0.5 rounded font-black shadow-[0_0_8px_rgba(255,183,3,0.6)]">0</span>
                     </div>
                 </h2>
-                <!-- Ajustado a la mitad del espacio con scroll fluido -->
-                <div id="notificationsContainer" class="space-y-2.5 overflow-y-auto custom-scrollbar pr-1 max-h-[36vh] min-h-[130px]"></div>
+                <!-- Ajustado sin espacio vacío sobrante con scroll suave -->
+                <div id="notificationsContainer" class="space-y-2 overflow-y-auto custom-scrollbar pr-1 max-h-[220px]"></div>
             </div>
 
-            <!-- 2. SECCIÓN: POSIT / NOTAS RÁPIDAS (DEBAJO DE ALERTAS) -->
-            <div class="border-t border-gray-800 pt-4 mt-1 space-y-3">
+            <!-- 2. SECCIÓN: POSIT / NOTAS RÁPIDAS (INMEDIATAMENTE DEBAJO DE ALERTAS) -->
+            <div class="border-t border-gray-800 pt-3 space-y-2.5">
                 <div class="flex items-center justify-between border-b border-cuycito-gold/40 pb-2">
                     <h2 class="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
                         <i class="fa-solid fa-note-sticky text-cuycito-gold text-base"></i> Notas / Posit
                     </h2>
-                    <button type="button" onclick="window.toggleNewPostitForm()" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black text-[11px] font-black px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow">
+                    <button type="button" onclick="window.toggleNewPostitForm()" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black text-[11px] font-black px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow cursor-pointer">
                         <i class="fa-solid fa-plus"></i> Nuevo Posit
                     </button>
                 </div>
@@ -1086,25 +1086,23 @@
                     
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-center gap-1.5" id="postitColorPicker">
-                            <button type="button" onclick="window.selectPostitColor('yellow')" class="w-4 h-4 rounded-full bg-yellow-400 border-2 border-white transition transform scale-110 shadow" data-color="yellow" title="Amarillo"></button>
-                            <button type="button" onclick="window.selectPostitColor('emerald')" class="w-4 h-4 rounded-full bg-emerald-400 border border-transparent transition opacity-70 hover:opacity-100 shadow" data-color="emerald" title="Verde"></button>
-                            <button type="button" onclick="window.selectPostitColor('cyan')" class="w-4 h-4 rounded-full bg-cyan-400 border border-transparent transition opacity-70 hover:opacity-100 shadow" data-color="cyan" title="Celeste"></button>
-                            <button type="button" onclick="window.selectPostitColor('rose')" class="w-4 h-4 rounded-full bg-rose-400 border border-transparent transition opacity-70 hover:opacity-100 shadow" data-color="rose" title="Rosa"></button>
-                            <button type="button" onclick="window.selectPostitColor('purple')" class="w-4 h-4 rounded-full bg-purple-400 border border-transparent transition opacity-70 hover:opacity-100 shadow" data-color="purple" title="Morado"></button>
+                            <button type="button" onclick="window.selectPostitColor('yellow')" class="w-4 h-4 rounded-full bg-yellow-400 border-2 border-white transition transform scale-110 shadow cursor-pointer" data-color="yellow" title="Amarillo"></button>
+                            <button type="button" onclick="window.selectPostitColor('emerald')" class="w-4 h-4 rounded-full bg-emerald-400 border border-transparent transition opacity-70 hover:opacity-100 shadow cursor-pointer" data-color="emerald" title="Verde"></button>
+                            <button type="button" onclick="window.selectPostitColor('cyan')" class="w-4 h-4 rounded-full bg-cyan-400 border border-transparent transition opacity-70 hover:opacity-100 shadow cursor-pointer" data-color="cyan" title="Celeste"></button>
+                            <button type="button" onclick="window.selectPostitColor('rose')" class="w-4 h-4 rounded-full bg-rose-400 border border-transparent transition opacity-70 hover:opacity-100 shadow cursor-pointer" data-color="rose" title="Rosa"></button>
+                            <button type="button" onclick="window.selectPostitColor('purple')" class="w-4 h-4 rounded-full bg-purple-400 border border-transparent transition opacity-70 hover:opacity-100 shadow cursor-pointer" data-color="purple" title="Morado"></button>
                         </div>
                         <input type="hidden" id="selectedPostitColor" value="yellow">
 
                         <div class="flex items-center gap-1.5">
-                            <button type="button" onclick="window.toggleNewPostitForm(false)" class="text-gray-500 hover:text-white text-xs px-1.5 py-0.5">Cancelar</button>
-                            <button type="button" onclick="window.savePostit()" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black font-black text-xs px-3 py-1 rounded-lg transition shadow">Guardar</button>
+                            <button type="button" onclick="window.toggleNewPostitForm(false)" class="text-gray-500 hover:text-white text-xs px-1.5 py-0.5 cursor-pointer">Cancelar</button>
+                            <button type="button" onclick="window.savePostit()" class="bg-cuycito-gold hover:bg-cuycito-goldHover text-black font-black text-xs px-3 py-1 rounded-lg transition shadow cursor-pointer">Guardar</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Contenedor dinámico de Posits -->
-                <div id="postitsContainer" class="space-y-2.5 max-h-[380px] overflow-y-auto custom-scrollbar pr-1">
-                    <div class="p-3 text-center text-gray-500 text-xs italic">Cargando posits...</div>
-                </div>
+                <div id="postitsContainer" class="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-1"></div>
             </div>
         </aside>
     </div>

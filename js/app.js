@@ -1627,7 +1627,9 @@ window.executeClientSlotAssignment = async () => {
     const passText = hidePass ? '🔒 Contraseña Oculta en Portal' : `🔑 Contraseña: ${acc.pass}`;
     const whatsappMsg = `¡Hola ${client.name}! 🐹✨\n\nTu servicio de *${acc.service}* ha sido *ACTIVADO CON ÉXITO*:\n\n👤 *Perfil / PIN:* ${pin}\n📧 *Correo:* ${acc.email}\n${passText}\n📆 *Vigencia:* Del ${startDate} al ${endDate}\n\nYa puedes acceder a tu panel en https://cuzcitogo.pe/perfil.html para revisar tu servicio. ¡Gracias por tu preferencia! 🙌`;
 
-    if (confirm(`🎉 ¡Cliente "${client.name}" (${clientCode}) conectado exitosamente a ${acc.service} (Cupo #${currentTargetSlot + 1})!\n\n¿Deseas enviar las credenciales y confirmación por WhatsApp ahora?`)) {
+    alert(`✅ ¡Cliente "${client.name}" (${clientCode}) asignado con éxito a ${acc.service} (Cupo #${currentTargetSlot + 1})!`);
+
+    if (client.phone && confirm(`¿Deseas enviar las credenciales y comprobante de activación a ${client.name} por WhatsApp (+${client.phone}) ahora?`)) {
         window.open(`https://wa.me/${(client.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(whatsappMsg)}`, '_blank');
     }
 };
