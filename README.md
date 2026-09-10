@@ -221,11 +221,13 @@ npx serve .
 
 ---
 
-## 📄 Licencia
+## 📄 Licencia y Propiedad Intelectual
 
-Este proyecto se encuentra bajo la licencia **MIT**. Consulta el archivo `LICENSE` para más detalles.
+**Copyright © 2026 Cristhian PE — CuycitoGO. Todos los derechos reservados.**
+
+Este repositorio se publica **exclusivamente con fines de exhibición técnica y evaluación profesional de portafolio**. Queda estrictamente prohibida la copia, duplicación, distribución o explotación comercial de este software o de su código fuente sin el consentimiento previo y por escrito del autor. Consulta el archivo [`LICENSE`](LICENSE) para más detalles.
 
 ---
 
-© 2026 **CuycitoGO** • Desarrollado por **Cristhian PE** • Diseñado para Portafolio & Producción.
+© 2026 **CuycitoGO** • Desarrollado por **Cristhian PE** • Exhibición de Portafolio Profesional.
 
