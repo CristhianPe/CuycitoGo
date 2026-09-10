@@ -114,8 +114,8 @@ flowchart TD
 ## 📁 Estructura del Proyecto
 
 ```text
-CuzcitoGo/
-├── index.html                      # Catálogo y tienda pública de streaming
+CuycitoGo/
+├── index.html                      # Tienda pública y catálogo de streaming
 ├── dashboard.html                  # Panel administrativo web central
 ├── perfil.html                     # Portal de autoservicio para clientes VIP
 ├── login-cliente.html              # Autenticación de clientes
