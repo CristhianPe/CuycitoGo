@@ -16,16 +16,16 @@ Bienvenido a **CuycitoGO v5.0**, un ecosistema tecnológico distribuido y de alt
 
 ```mermaid
 flowchart TD
-    subgraph CLIENTES["👤 PORTAL CLIENTES & AUTOSERVICIO"]
-        C1["🛒 Tienda & Catálogo (index.html)"]
+    subgraph CLIENTES["👤 PORTAL CLIENTES Y AUTOSERVICIO"]
+        C1["🛒 Tienda y Catálogo (index.html)"]
         C2["🔐 Login Seguro de Clientes (login-cliente.html)"]
-        C3["📋 Portal VIP & Billetera Digital (perfil.html)"]
+        C3["📋 Portal VIP y Billetera Digital (perfil.html)"]
         C4["🛠️ Modo Mantenimiento Centralizado (mantenimiento.html)"]
     end
 
     subgraph ADMIN_WEB["👨‍💼 DASHBOARD ADMINISTRATIVO WEB"]
-        A1["⚡ Control de Cuentas Matriz & Perfiles"]
-        A2["📊 Finanzas & Rentabilidad en Tiempo Real (PEN / USD)"]
+        A1["⚡ Control de Cuentas Matriz y Perfiles"]
+        A2["📊 Finanzas y Rentabilidad en Tiempo Real (PEN / USD)"]
         A3["🤖 Agente IA Marketing (Generador 16:9 y 2:3)"]
         A4["🧠 Agente IA Precios (Optimizador de Márgenes con Gemini)"]
         A5["🛠️ Interruptor Máster de Mantenimiento"]
@@ -33,26 +33,26 @@ flowchart TD
 
     subgraph ANDROID_APP["📱 APP NATIVA ANDROID (Kotlin + Jetpack Compose)"]
         M1["📈 Monitoreo en Vivo de Ventas y Clientes"]
-        M2["🔔 Sistema de Alarmas & Alertas Sonoras (SoundAlertManager)"]
+        M2["🔔 Sistema de Alarmas y Alertas Sonoras (SoundAlertManager)"]
         M3["📺 Activaciones Remotas de Códigos TV"]
         M4["🧩 Widget de Pantalla de Inicio (AppWidgetProvider)"]
     end
 
-    subgraph BACKEND["⚙️ BACKEND CORE & WORKER FINTECH (Node.js/Express)"]
+    subgraph BACKEND["⚙️ BACKEND CORE Y WORKER FINTECH (Node.js/Express)"]
         B1["API REST de Recargas (Generación de Céntimos Únicos)"]
         B2["Worker IMAP Seguro TLS (Monitoreo de Correos Lemon Cash)"]
-        B3["Conciliación & Acreditación Atómica de Saldo en Firestore"]
+        B3["Conciliación y Acreditación Atómica de Saldo en Firestore"]
     end
 
     subgraph WSP_AGENTS["🤖 SISTEMA MULTI-AGENTE WHATSAPP (Baileys + Gemini AI)"]
-        W1["Agente 1: Atención al Cliente & Asistente Conversacional"]
-        W2["Agente 2: Registro de Ventas & Validación Automática"]
-        W3["Agente 3: Renovación Proactiva & Cobranza Preventiva"]
+        W1["Agente 1: Atención al Cliente y Asistente Conversacional"]
+        W2["Agente 2: Registro de Ventas y Validación Automática"]
+        W3["Agente 3: Renovación Proactiva y Cobranza Preventiva"]
         W4["Agente 4: OCR de Comprobantes de Pago (Yape / Plin)"]
         W5["Agente 5: Control y Edición de Cuentas Matriz"]
     end
 
-    subgraph CLOUD["🔥 BASE DE DATOS & ALMACENAMIENTO (Google Firebase)"]
+    subgraph CLOUD["🔥 BASE DE DATOS Y ALMACENAMIENTO (Google Firebase)"]
         F1[("users: Billeteras, Clientes y Estado En Línea")]
         F2[("subscriptions: Contratos Activos y Credenciales")]
         F3[("masterAccounts: Cuentas Proveedor y Cupos")]
@@ -61,16 +61,18 @@ flowchart TD
     end
 
     %% Conexiones Clave
-    C3 -->|1. Solicita Recarga| B1
-    B1 -->|2. Registra Orden con Céntimos Únicos| F4
-    B2 -->|3. Detecta Transferencia Vía IMAP| B3
-    B3 -->|4. Acredita Saldo Atómicamente| F1
-    A1 <-->|Sincronización Bidireccional| F2
-    A1 <-->|Sincronización Bidireccional| F3
-    W1 <-->|Consulta Inteligente| F2
-    W3 -->|Notifica Vencimientos Próximos| CLIENTES
-    M1 <-->|Escucha en Tiempo Real| F1
-    M2 <--|Dispara Alarma Sonora| F4
+    C3 -->|"1. Solicita Recarga"| B1
+    B1 -->|"2. Registra Orden con Céntimos Únicos"| F4
+    B2 -->|"3. Detecta Transferencia Vía IMAP"| B3
+    B3 -->|"4. Acredita Saldo Atómicamente"| F1
+    A1 -->|"Sincronización Bidireccional"| F2
+    F2 -->|"Lectura en Vivo"| A1
+    A1 -->|"Gestión de Cupos"| F3
+    F3 -->|"Lectura de Cuentas"| A1
+    W1 -->|"Consulta Inteligente"| F2
+    W3 -->|"Notifica Vencimientos Próximos"| CLIENTES
+    M1 -->|"Escucha en Tiempo Real"| F1
+    F4 -->|"Dispara Alarma Sonora"| M2
 ```
 
 ---
