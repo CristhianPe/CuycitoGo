@@ -7,7 +7,7 @@
 
 # 🐹 CuycitoGO v5.0 — Streaming Management, Automation & AI Ecosystem
 
-[![Live Website](https://img.shields.io/badge/Live%20Website-cuycitogo--app.web.app-2563EB?logo=googlechrome&logoColor=white)](https://cuycitogo-app.web.app)
+[![Live Website](https://img.shields.io/badge/Live%20Website-cuycitogo.online-2563EB?logo=googlechrome&logoColor=white)](https://cuycitogo.online)
 [![Node.js](https://img.shields.io/badge/Node.js-v18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express.js](https://img.shields.io/badge/Express.js-Backend%20Worker-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![Firebase Firestore](https://img.shields.io/badge/Firebase-Firestore%20Cloud-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
@@ -16,8 +16,8 @@
 [![WhatsApp Baileys](https://img.shields.io/badge/WhatsApp-Multi--Agent%20Baileys-25D366?logo=whatsapp&logoColor=white)](https://github.com/WhiskeySockets/Baileys)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-v3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-> 🌐 **Official Production Website:** [https://cuycitogo-app.web.app](https://cuycitogo-app.web.app)  
-> 🔗 **Alternative Mirror (Firebase Hosting):** [https://cuycitogo-app.firebaseapp.com](https://cuycitogo-app.firebaseapp.com)
+> 🌐 **Official Production Website:** [https://cuycitogo.online](https://cuycitogo.online)  
+> 🔗 **Backup Mirror (Firebase):** [https://cuycitogo-app.web.app](https://cuycitogo-app.web.app)
 
 Welcome to **CuycitoGO v5.0**, a distributed, high-availability technology ecosystem designed for comprehensive digital subscription management, profile-level quota accounting, automated bank reconciliation (Fintech/IMAP), autonomous multi-channel customer support powered by **WhatsApp Agents with Google Gemini AI**, and native mobile administration via **Android with Jetpack Compose**.
 
@@ -95,7 +95,7 @@ flowchart TD
 - **Digital Wallet & 1-Click Renewals**: End-users track subscription time remaining, renew instantaneously against their balance, or upload TV QR captures for rapid streaming activation.
 - **Real-Time Presence Tracking**: Reactive online state indicator (pulsing green 🟢 / idle grey ⚪) synchronized live with the admin dashboard.
 - **Master Maintenance Switch**: Single-click kill-switch redirecting public traffic to an elegant maintenance landing screen (`mantenimiento.html`) with direct support fallbacks.
-- **Production URL**: Deployed and accessible at **[https://cuycitogo-app.web.app](https://cuycitogo-app.web.app)**.
+- **Production URL**: Deployed and operational at **[https://cuycitogo.online](https://cuycitogo.online)** *(Backup mirror: [cuycitogo-app.web.app](https://cuycitogo-app.web.app))*.
 
 ### 2. 🍋 Backend & Automated Bank Reconciliation (IMAP Worker)
 - **Unique Penny Allocation Algorithm**: Automatic generation of pseudo-random cent offsets on recharge orders (e.g., `S/ 15.37`) to uniquely attribute unauthenticated bank transfers without manual human intervention.

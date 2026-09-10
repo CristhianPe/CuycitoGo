@@ -7,7 +7,7 @@
 
 # 🐹 CuycitoGO v5.0 — Streaming-Verwaltungs-, Automatisierungs- & KI-Ökosystem
 
-[![Live-Website](https://img.shields.io/badge/Live--Website-cuycitogo--app.web.app-2563EB?logo=googlechrome&logoColor=white)](https://cuycitogo-app.web.app)
+[![Live-Website](https://img.shields.io/badge/Live--Website-cuycitogo.online-2563EB?logo=googlechrome&logoColor=white)](https://cuycitogo.online)
 [![Node.js](https://img.shields.io/badge/Node.js-v18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express.js](https://img.shields.io/badge/Express.js-Backend%20Worker-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![Firebase Firestore](https://img.shields.io/badge/Firebase-Firestore%20Cloud-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
@@ -16,8 +16,8 @@
 [![WhatsApp Baileys](https://img.shields.io/badge/WhatsApp-Multi--Agent%20Baileys-25D366?logo=whatsapp&logoColor=white)](https://github.com/WhiskeySockets/Baileys)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-v3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-> 🌐 **Offizielle Produktions-Website:** [https://cuycitogo-app.web.app](https://cuycitogo-app.web.app)  
-> 🔗 **Alternativer Spiegel (Firebase Hosting):** [https://cuycitogo-app.firebaseapp.com](https://cuycitogo-app.firebaseapp.com)
+> 🌐 **Offizielle Produktions-Website:** [https://cuycitogo.online](https://cuycitogo.online)  
+> 🔗 **Backup-Spiegel (Firebase):** [https://cuycitogo-app.web.app](https://cuycitogo-app.web.app)
 
 Willkommen bei **CuycitoGO v5.0**, einem verteilten, hochverfügbaren Technologie-Ökosystem für das ganzheitliche Management digitaler Abonnements, profilbasierte Kontingentbuchhaltung, automatisierten Bankabgleich (Fintech/IMAP), autonomen Multikanal-Kundensupport über **WhatsApp-Agenten mit Google Gemini KI** sowie eine native mobile Verwaltung unter **Android mit Jetpack Compose**.
 
@@ -95,7 +95,7 @@ flowchart TD
 - **Digitale Wallet & 1-Klick-Verlängerung**: Endkunden behalten verbleibende Abonnementlaufzeiten im Blick, verlängern sofort über ihr Guthaben oder laden TV-QR-Screenshots zur schnellen Freischaltung hoch.
 - **Echtzeit-Präsenzerfassung**: Dynamische Online-Statusanzeige (pulsierender grüner Punkt 🟢 / grau ⚪), live synchronisiert mit dem Administrations-Dashboard.
 - **Zentraler Master-Wartungsschalter**: Sofortige Umleitung des öffentlichen Datenverkehrs auf einen ansprechend gestalteten Wartungsbildschirm (`mantenimiento.html`) mit direktem Support-Zugang.
-- **Produktions-URL**: Bereitgestellt und abrufbar unter **[https://cuycitogo-app.web.app](https://cuycitogo-app.web.app)**.
+- **Produktions-URL**: Bereitgestellt und einsatzbereit unter **[https://cuycitogo.online](https://cuycitogo.online)** *(Backup-Spiegel: [cuycitogo-app.web.app](https://cuycitogo-app.web.app))*.
 
 ### 2. 🍋 Backend & Automatisierter Bankabgleich (IMAP-Worker)
 - **Eindeutige Cent-Zuweisung**: Automatische Generierung von Zufalls-Centbeträgen bei Aufladeaufträgen (z. B. `S/ 15.37`), um Überweisungen ohne manuelle Prüfung eindeutig und verwechslungssicher zuzuordnen.

@@ -7,7 +7,7 @@
 
 # 🐹 CuycitoGO v5.0 — Ecosistema Integral de Gestión de Streaming, Automatización & IA
 
-[![Sitio Web Oficial](https://img.shields.io/badge/Sitio%20Web%20Oficial-cuycitogo--app.web.app-2563EB?logo=googlechrome&logoColor=white)](https://cuycitogo-app.web.app)
+[![Sitio Web Oficial](https://img.shields.io/badge/Sitio%20Web%20Oficial-cuycitogo.online-2563EB?logo=googlechrome&logoColor=white)](https://cuycitogo.online)
 [![Node.js](https://img.shields.io/badge/Node.js-v18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express.js](https://img.shields.io/badge/Express.js-Backend%20Worker-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![Firebase Firestore](https://img.shields.io/badge/Firebase-Firestore%20Cloud-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
@@ -16,8 +16,8 @@
 [![WhatsApp Baileys](https://img.shields.io/badge/WhatsApp-Multi--Agent%20Baileys-25D366?logo=whatsapp&logoColor=white)](https://github.com/WhiskeySockets/Baileys)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-v3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-> 🌐 **Sitio Web Oficial en Producción:** [https://cuycitogo-app.web.app](https://cuycitogo-app.web.app)  
-> 🔗 **Espejo Alternativo (Firebase Hosting):** [https://cuycitogo-app.firebaseapp.com](https://cuycitogo-app.firebaseapp.com)
+> 🌐 **Sitio Web Oficial:** [https://cuycitogo.online](https://cuycitogo.online)  
+> 🔗 **Espejo de Respaldo (Firebase):** [https://cuycitogo-app.web.app](https://cuycitogo-app.web.app)
 
 Bienvenido a **CuycitoGO v5.0**, un ecosistema tecnológico distribuido y de alta disponibilidad diseñado para la gestión integral de suscripciones digitales, control contable de cuentas por cupos, conciliación bancaria automatizada (Fintech/IMAP), soporte autónomo multicanal mediante **Agentes de WhatsApp con Google Gemini AI** y administración móvil nativa en **Android con Jetpack Compose**.
 
@@ -95,7 +95,7 @@ flowchart TD
 - **Billetera Digital y Renovación en 1 Clic**: Los clientes visualizan el tiempo restante de sus cuentas, pueden renovar instantáneamente descontando su saldo o cargar capturas QR de TV para activaciones de streaming.
 - **Rastreo de Presencia en Tiempo Real**: Indicador dinámico de estado en línea (punto verde pulsante 🟢 / gris ⚪) sincronizado de forma reactiva con el panel del administrador.
 - **Modo Mantenimiento Máster**: Con un solo interruptor en el panel administrativo se desvía el tráfico público a una pantalla estilizada (`mantenimiento.html`) con enlaces directos de asistencia.
-- **URL en Producción**: Desplegado y operativo en **[https://cuycitogo-app.web.app](https://cuycitogo-app.web.app)**.
+- **URL en Producción**: Desplegado y operativo en **[https://cuycitogo.online](https://cuycitogo.online)** *(Espejo de respaldo: [cuycitogo-app.web.app](https://cuycitogo-app.web.app))*.
 
 ### 2. 🍋 Backend & Conciliación Bancaria Automatizada (Worker IMAP)
 - **Lógica de Céntimos Únicos**: Asignación automática de centavos aleatorios a cada orden de recarga (ej. `S/ 15.37`) para identificar transferencias unívocamente sin requerir confirmación manual.
