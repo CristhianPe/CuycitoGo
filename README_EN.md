@@ -136,7 +136,6 @@ CuycitoGo/
 ├── cartelera.html & estrenos.html  # Multimedia catalog & premier highlights
 ├── finanzas.py                     # Python desktop financial auditing tool
 ├── firebase.json                   # Firebase Hosting configuration & rewrites
-├── netlify.toml                    # Secondary deployment configuration
 │
 ├── js/                             # Frontend ES6 Modules
 │   ├── app.js                      # Admin dashboard business logic & DB controller

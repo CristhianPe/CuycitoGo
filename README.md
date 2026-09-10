@@ -136,7 +136,6 @@ CuycitoGo/
 ├── cartelera.html & estrenos.html  # Vistas de contenido multimedia y novedades
 ├── finanzas.py                     # Herramienta financiera de escritorio en Python
 ├── firebase.json                   # Configuración de despliegue en Firebase Hosting
-├── netlify.toml                    # Configuración para despliegue alternativo en Netlify
 │
 ├── js/                             # Módulos JavaScript (ES6 Modules)
 │   ├── app.js                      # Lógica del panel administrativo y gestión DB
