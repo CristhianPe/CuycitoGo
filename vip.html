@@ -1,0 +1,143 @@
+﻿<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pase VIP Exclusivo - CuycitoGO</title>
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
+    <link rel="apple-touch-icon" href="assets/img/logo.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cuycito: {
+                            gold: '#F59E0B',
+                            goldHover: '#D97706',
+                            black: '#0A0A0C',
+                            darkCard: '#141418',
+                            border: '#27272A',
+                            green: '#10B981',
+                            red: '#EF4444',
+                            cyan: '#06B6D4'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-black text-gray-100 min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans">
+    <!-- Luces ambientales de fondo -->
+    <div class="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="fixed bottom-10 right-10 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="w-full max-w-md relative z-10">
+        <!-- Tarjeta VIP -->
+        <div class="bg-gradient-to-b from-[#18181B] to-[#0E0E11] border-2 border-amber-500/50 rounded-3xl p-8 shadow-2xl glow-gold text-center relative overflow-hidden backdrop-blur-xl">
+            <div class="absolute top-0 right-0 transform translate-x-8 -translate-y-8 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
+
+            <!-- Logo e Icono -->
+            <div class="relative inline-block mb-5">
+                <img src="assets/img/logo.png" alt="CuycitoGO" class="w-24 h-24 mx-auto rounded-2xl shadow-xl border-2 border-amber-500 p-1 bg-black object-contain animate-bounce">
+                <span class="absolute -bottom-2 -right-2 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow">
+                    VIP PASS
+                </span>
+            </div>
+
+            <!-- Titulo y Mensaje -->
+            <h1 class="text-2xl font-black text-white tracking-tight mb-2">
+                �Pase VIP de <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">CuycitoGO</span>!
+            </h1>
+            <p class="text-gray-400 text-xs mb-6">
+                Has recibido una invitacion exclusiva para acceder a servicios de streaming premium con bono de bienvenida.
+            </p>
+
+            <!-- Badge de Invitacion Decodificada -->
+            <div class="bg-black/80 border border-amber-500/30 rounded-2xl p-4 mb-6 shadow-inner">
+                <div class="flex items-center justify-center gap-2 text-emerald-400 text-xs font-bold mb-1">
+                    <i class="fas fa-check-circle"></i> Invitacion VIP Verificada
+                </div>
+                <div class="text-[11px] text-gray-300">
+                    Beneficio: <strong class="text-amber-400">S/ 1.00 Sol de Credito de Bienvenida</strong> abonado a tu saldo.
+                </div>
+                <div id="tokenNotice" class="text-[10px] font-mono text-gray-500 mt-2">
+                    Codigo seguro: <span id="displayRefCode" class="text-amber-300 font-black">VALIDANDO...</span>
+                </div>
+            </div>
+
+            <!-- Boton de Accion Directo -->
+            <button id="btnContinue" onclick="proceedToRegister()" class="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-black font-black text-sm py-3.5 px-6 rounded-2xl shadow-lg glow-gold transition duration-300 flex items-center justify-center gap-2 transform hover:scale-105 uppercase tracking-wider mb-4">
+                <span>Continuar al Registro VIP</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
+
+            <!-- Spinner de auto-redireccion -->
+            <div class="flex items-center justify-center gap-2 text-gray-500 text-[11px]">
+                <i class="fas fa-circle-notch fa-spin text-amber-500"></i>
+                <span id="redirectCounter">Redirigiendo automaticamente en 2s...</span>
+            </div>
+        </div>
+
+        <div class="text-center mt-6 text-xs text-gray-500">
+            CuycitoGO &copy; 2026 � Plataforma Segura y Verificada
+        </div>
+    </div>
+
+    <script>
+        // Funcion de descifrado de Token Seguro
+        function decodeInvitationToken(token) {
+            if (!token) return '';
+            try {
+                let clean = token.trim();
+                if (clean.startsWith('cz')) clean = clean.substring(2);
+                let b64 = clean.replace(/-/g, '+').replace(/_/g, '/');
+                while (b64.length % 4) b64 += '=';
+                const xored = atob(b64);
+                const salt = 0x5A;
+                let decoded = '';
+                for (let i = 0; i < xored.length; i++) {
+                    decoded += String.fromCharCode(xored.charCodeAt(i) ^ salt);
+                }
+                return decoded.toUpperCase();
+            } catch(e) {
+                return token.toUpperCase();
+            }
+        }
+
+        // Obtener parametros
+        const params = new URLSearchParams(window.location.search);
+        const rawToken = params.get('token') || params.get('c') || params.get('inv') || params.get('v') || params.get('ref') || '';
+        const resolvedRefCode = decodeInvitationToken(rawToken) || 'VIP-CUYCITO';
+
+        document.getElementById('displayRefCode').innerText = resolvedRefCode;
+
+        // Guardar en Storage para prellenado sin exponer en URL de destino
+        try {
+            sessionStorage.setItem('cuycito_pending_referral_code', resolvedRefCode);
+            localStorage.setItem('cuycito_pending_referral_code', resolvedRefCode);
+        } catch(e) {}
+
+        function proceedToRegister() {
+            window.location.replace('mantenimiento.html');
+        }
+
+        // Auto-redireccion suave en 2 segundos
+        let timeLeft = 2;
+        const interval = setInterval(() => {
+            timeLeft--;
+            const counter = document.getElementById('redirectCounter');
+            if (counter) counter.innerText = `Redirigiendo automaticamente en ${timeLeft}s...`;
+            if (timeLeft <= 0) {
+                clearInterval(interval);
+                proceedToRegister();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
+

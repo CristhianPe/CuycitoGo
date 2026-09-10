@@ -1,0 +1,70 @@
+# ==============================================================================
+# CUYCITOGO - GITIGNORE DE SEGURIDAD & PRODUCCIÓN
+# ==============================================================================
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+firebase-debug.log*
+firebase-debug.*.log*
+
+# Firebase & Deployment Cache
+.firebase/
+.firebaserc.local
+
+# Runtime data & PIDs
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+node_modules/
+.npm
+.eslintcache
+.node_repl_history
+
+# Environment variables & Sensitive Credentials
+.env
+*.env
+!.env.example
+serviceAccountKey.json
+google-services.json
+*.pem
+*.key
+
+# WhatsApp / Baileys Session & Auth State (CRÍTICO: No exponer tokens de sesión)
+whatsapp_agent_service/baileys_auth_info/
+whatsapp_agent_service/pairing_code.txt
+whatsapp_agent_service/qr_pago_oficial.png
+
+# Android & Mobile Build Artifacts
+.gradle/
+build/
+android-admin-app/build/
+android-admin-app/app/build/
+android-admin-app/.gradle/
+android-admin-app/local.properties
+*.apk
+*.aab
+
+# Desktop Binaries & Executables
+dist/
+*.exe
+*.spec
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# IDE & Operating System Artifacts
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini

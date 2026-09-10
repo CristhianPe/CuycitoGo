@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#143468"/>
+      <stop offset="50%" stop-color="#091730"/>
+      <stop offset="100%" stop-color="#030814"/>
+    </radialGradient>
+    <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#70aaff"/>
+      <stop offset="100%" stop-color="#0063e5"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffb703"/>
+      <stop offset="100%" stop-color="#fb8500"/>
+    </linearGradient>
+    <filter id="glowBlue" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="15" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="450" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle Grid / Star particles -->
+  <g opacity="0.4">
+    <circle cx="120" cy="80" r="1.5" fill="#fff"/>
+    <circle cx="280" cy="60" r="1" fill="#fff"/>
+    <circle cx="680" cy="110" r="2" fill="#fff"/>
+    <circle cx="730" cy="220" r="1.5" fill="#fff"/>
+    <circle cx="90" cy="320" r="1" fill="#fff"/>
+    <circle cx="200" cy="380" r="1.5" fill="#fff"/>
+    <circle cx="620" cy="360" r="1" fill="#fff"/>
+  </g>
+
+  <!-- Giant Glow Behind Logo -->
+  <circle cx="400" cy="200" r="160" fill="#0063e5" opacity="0.35" filter="url(#glowBlue)"/>
+
+  <!-- Official Curved Disney Arc -->
+  <path d="M 230 260 C 270 120, 500 110, 570 190" fill="none" stroke="url(#arcGrad)" stroke-width="6" stroke-linecap="round" filter="url(#glowBlue)"/>
+
+  <!-- Disney+ Center Logo Articulation -->
+  <g transform="translate(400, 205)" text-anchor="middle">
+    <!-- Disney script stylized typography -->
+    <text x="-35" y="15" font-family="'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="64" fill="#ffffff" letter-spacing="-1">
+      Disney
+    </text>
+    <!-- Plus symbol in vibrant cyan glow -->
+    <text x="95" y="18" font-family="'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="76" fill="#14a0ff" filter="url(#glowBlue)">
+      +
+    </text>
+  </g>
+
+  <!-- Subtitle Hub Brands (Disney, Pixar, Marvel, Star Wars, NatGeo, ESPN) -->
+  <g transform="translate(400, 290)" text-anchor="middle">
+    <rect x="-260" y="-18" width="520" height="36" rx="18" fill="#000000" fill-opacity="0.6" stroke="#1d3557" stroke-width="1.5"/>
+    <text x="0" y="5" font-family="'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="11" fill="#90b8f8" letter-spacing="3">
+      DISNEY • PIXAR • MARVEL • STAR WARS • ESPN
+    </text>
+  </g>
+
+  <!-- Top Badges -->
+  <g transform="translate(40, 45)">
+    <rect width="110" height="26" rx="6" fill="#0063e5" fill-opacity="0.3" stroke="#0063e5" stroke-width="1"/>
+    <text x="55" y="17" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="10" fill="#60a5fa" letter-spacing="1">PREMIUM 4K</text>
+  </g>
+
+  <g transform="translate(650, 45)">
+    <rect width="110" height="26" rx="6" fill="#000000" fill-opacity="0.6" stroke="#fbbf24" stroke-width="1"/>
+    <text x="55" y="17" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="10" fill="#fbbf24" letter-spacing="1">PIN PRIVADO</text>
+  </g>
+
+  <!-- Bottom Badges Bar -->
+  <g transform="translate(400, 395)" text-anchor="middle">
+    <text x="0" y="0" font-family="sans-serif" font-weight="700" font-size="11" fill="#64748b" letter-spacing="1">
+      CALIDAD 4K ULTRA HD • DEPORTES EN VIVO • ACCESO TOTAL
+    </text>
+  </g>
+</svg>

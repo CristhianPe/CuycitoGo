@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es" class="dark h-full bg-[#0a0a0a]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CuycitoGO - Próximos Estrenos 2026</title>
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
+    <link rel="apple-touch-icon" href="assets/img/logo.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cuycito: {
+                            black: '#0a0a0a',
+                            dark: '#121212',
+                            card: '#161616',
+                            border: '#262626',
+                            red: '#dc2626',
+                            redDark: '#850000',
+                            redHover: '#b91c1c',
+                            gold: '#ffb703',
+                            goldLight: '#fbbf24',
+                            goldHover: '#e5a500'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-cuycito-gold selection:text-black bg-[#0a0a0a] text-slate-100">
+
+    <!-- ========================================================= -->
+    <!-- CABECERA PRINCIPAL                                        -->
+    <!-- ========================================================= -->
+    <header class="bg-[#121212]/95 border-b border-gray-800/90 sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                
+                <!-- Logotipo Oficial CuycitoGO -->
+                <a href="/" class="flex items-center gap-3 group">
+                    <img src="assets/img/logo.png" alt="CuycitoGO" class="h-14 sm:h-16 object-contain transition group-hover:scale-105 drop-shadow-[0_0_15px_rgba(255,183,3,0.3)]">
+                </a>
+
+                <!-- Enlaces de Navegación -->
+                <nav class="hidden lg:flex items-center gap-7 text-xs font-bold uppercase tracking-wider">
+                    <a href="/" class="text-gray-300 hover:text-orange-400 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-newspaper text-orange-400"></i> Noticias
+                    </a>
+                    <a href="cartelera" class="text-cuycito-gold border-b-2 border-cuycito-gold pb-1 flex items-center gap-1.5">
+                        <i class="fa-solid fa-film text-cuycito-gold"></i> Cartelera y Estrenos
+                    </a>
+                    <a href="/#precios-oficiales" class="text-gray-300 hover:text-cuycito-gold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-chart-line text-emerald-400"></i> Precios Oficiales
+                    </a>
+                    <a href="/#guias-tech" class="text-gray-300 hover:text-cuycito-gold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-tv text-sky-400"></i> Guía 4K
+                    </a>
+                </nav>
+
+                <!-- Estado Mantenimiento / Login en Navbar -->
+                <div id="navAuthContainer" class="flex items-center gap-3">
+                    <a href="login-cliente.html" class="bg-gradient-to-r from-cuycito-gold to-yellow-400 hover:from-yellow-400 hover:to-cuycito-gold text-black font-black text-xs px-4 py-2 rounded-xl shadow glow-gold transition flex items-center gap-2 uppercase tracking-wider">
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                        <span>Ingresar</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========================================================= -->
+    <!-- PORTADA DE PRÓXIMOS ESTRENOS                              -->
+    <!-- ========================================================= -->
+    <section class="bg-gradient-to-b from-[#141414] via-[#0e0e0e] to-[#0a0a0a] border-b border-gray-800/80 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div class="space-y-2 max-w-2xl">
+                    <span class="text-cuycito-red text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                        <i class="fa-solid fa-clapperboard"></i> Calendario de Lanzamientos 2026
+                    </span>
+                    <h1 class="text-3xl sm:text-5xl font-black text-white leading-tight">
+                        Próximos <span class="text-gold-gradient">Estrenos</span> de Streaming
+                    </h1>
+                    <p class="text-xs sm:text-sm text-gray-300 leading-relaxed font-normal">
+                        Conoce las fechas oficiales de lanzamiento, temporadas finales y nuevas películas que llegarán a Netflix, Max, Disney+, Prime Video y Crunchyroll.
+                    </p>
+                </div>
+
+                <!-- Buscador de Estrenos -->
+                <div class="relative w-full md:w-80">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-xs text-gray-500"></i>
+                    <input 
+                        type="text" 
+                        id="searchCarteleraInput" 
+                        oninput="window.searchCartelera()" 
+                        placeholder="Buscar estreno o saga..." 
+                        class="w-full bg-[#161616] border border-gray-700 rounded-2xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cuycito-gold transition"
+                    >
+                </div>
+            </div>
+
+            <!-- Filtros de Plataforma -->
+            <div class="flex flex-wrap gap-2 pt-2 text-xs font-bold border-t border-gray-800/80">
+                <button data-platform="ALL" onclick="window.filterCarteleraPage('ALL')" class="cartelera-filter-btn bg-cuycito-gold text-black text-xs font-black px-4 py-2 rounded-xl shadow glow-gold">Todos los Estrenos</button>
+                <button data-platform="NETFLIX" onclick="window.filterCarteleraPage('NETFLIX')" class="cartelera-filter-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition">Netflix</button>
+                <button data-platform="MAX" onclick="window.filterCarteleraPage('MAX')" class="cartelera-filter-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition">Max (HBO)</button>
+                <button data-platform="DISNEY" onclick="window.filterCarteleraPage('DISNEY')" class="cartelera-filter-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition">Disney+</button>
+                <button data-platform="PRIME" onclick="window.filterCarteleraPage('PRIME')" class="cartelera-filter-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition">Prime Video</button>
+                <button data-platform="CRUNCHYROLL" onclick="window.filterCarteleraPage('CRUNCHYROLL')" class="cartelera-filter-btn bg-[#141414] hover:bg-gray-800 text-gray-400 hover:text-white border border-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition">Crunchyroll</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- GRILLA DEDICADA DE ESTRENOS (PROPORCIÓN 2:3)              -->
+    <!-- ========================================================= -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div id="estrenosDedicatedGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Inyectado dinámicamente desde js/portal-news.js -->
+        </div>
+    </main>
+
+    <!-- ========================================================= -->
+    <!-- PIE DE PÁGINA                                             -->
+    <!-- ========================================================= -->
+    <footer class="bg-[#0a0a0a] border-t border-gray-800/80 py-12 text-gray-400 text-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="flex flex-col items-center md:items-start gap-2">
+                    <a href="index.html" class="flex items-center gap-2">
+                        <img src="assets/img/logo.png" alt="CuycitoGO" class="h-12 object-contain drop-shadow-[0_0_15px_rgba(255,183,3,0.3)]">
+                    </a>
+                    <p class="text-[11px] text-gray-500 text-center md:text-left max-w-sm">
+                        Calendario oficial y fichas técnicas de estrenos mundiales de cine y televisión.
+                    </p>
+                </div>
+                <div class="flex flex-wrap justify-center gap-6 font-bold uppercase tracking-wider text-[11px]">
+                    <a href="/" class="hover:text-cuycito-gold transition">Inicio</a>
+                    <a href="cartelera" class="hover:text-cuycito-gold transition">Cartelera</a>
+                    <a href="estrenos" class="hover:text-cuycito-gold transition text-cuycito-gold">Estrenos</a>
+                    <a href="/#precios-oficiales" class="hover:text-cuycito-gold transition">Precios Perú</a>
+                    <a href="login-cliente.html" class="hover:text-cuycito-gold transition text-cuycito-gold">Portal Clientes</a>
+                </div>
+            </div>
+            <div class="border-t border-gray-900 pt-6 text-center text-[11px] text-gray-600">
+                © 2026 CuycitoGO News. Todos los derechos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL LECTOR DE FICHA DE ESTRENO -->
+    <div id="articleReaderModal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4 z-50 transition-all duration-300">
+        <div class="bg-[#121212] border border-gray-800 rounded-3xl p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl relative">
+            <button onclick="window.closeArticleModal()" class="absolute top-4 right-4 bg-gray-900 hover:bg-gray-800 text-gray-400 hover:text-white p-2 rounded-xl transition border border-gray-800 z-10">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div id="articleReaderContent"></div>
+            <div class="mt-8 pt-4 border-t border-gray-800 flex justify-end">
+                <button onclick="window.closeArticleModal()" class="bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold px-5 py-2.5 rounded-xl border border-gray-700 transition">
+                    Cerrar Ficha
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/portal-news.js"></script>
+</body>
+</html>

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CuycitoGo • Centro de Control del Bot</title>
+  <link rel="icon" type="image/jpeg" href="cuycito_avatar.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090b10;
+      --card-bg: rgba(18, 23, 34, 0.85);
+      --border: #222c3d;
+      --accent: #f59e0b;
+      --accent-glow: rgba(245, 158, 11, 0.3);
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.25);
+      --yellow: #eab308;
+      --red: #ef4444;
+      --text: #f3f4f6;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: radial-gradient(circle at top, #162032 0%, var(--bg) 75%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 25px 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 950px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    /* Cabecera */
+    .header {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand-avatar {
+      width: 65px;
+      height: 65px;
+      border-radius: 18px;
+      object-fit: cover;
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+    .brand h1 {
+      font-size: 24px;
+      font-weight: 900;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand h1 span { color: var(--accent); }
+    .brand p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+    
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 13px;
+      border: 1px solid transparent;
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    .status-badge.online {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--green);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .status-badge.warning {
+      background: rgba(234, 179, 8, 0.15);
+      color: var(--yellow);
+      border-color: rgba(234, 179, 8, 0.3);
+    }
+    .pulse-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Grid de Diagnósticos en Tiempo Real */
+    .diag-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    .diag-card {
+      background: rgba(13, 18, 28, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .diag-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .diag-status {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .diag-detail {
+      font-size: 11px;
+      color: #64748b;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Grid de Controles */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .card h2 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Botones de Control */
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .btn {
+      padding: 15px 20px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(1px); }
+    .btn-start {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+    .btn-stop {
+      background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    }
+    .btn-restart {
+      background: #222c3d;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+    }
+
+    /* Vinculación por Código */
+    .pairing-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .input-field {
+      width: 100%;
+      padding: 13px 16px;
+      border-radius: 12px;
+      background: #0d121c;
+      border: 1px solid var(--border);
+      color: white;
+      font-size: 15px;
+      font-family: inherit;
+    }
+    .input-field:focus { outline: none; border-color: var(--accent); }
+
+    .code-display {
+      background: #090d16;
+      border: 2px dashed var(--accent);
+      border-radius: 16px;
+      padding: 16px;
+      text-align: center;
+      margin-top: 5px;
+      display: none;
+    }
+    .code-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: 4px;
+    }
+    .code-instructions {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    /* Comandos Rápidos */
+    .commands-box {
+      background: #0d121c;
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 13px;
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+    .cmd-tag {
+      background: #1e293b;
+      color: var(--accent);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+    }
+
+    /* Terminal de Logs */
+    .logs-container {
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      padding: 16px;
+      height: 220px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #38bdf8;
+      line-height: 1.6;
+    }
+    .log-line { margin-bottom: 4px; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Cabecera con Avatar 1:1 -->
+    <div class="header">
+      <div class="brand">
+        <img src="cuycito_avatar.jpg" alt="CuycitoGo" class="brand-avatar" onerror="this.src='https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=100&h=100&fit=crop'">
+        <div>
+          <h1>Cuycito<span>Go</span> • Control</h1>
+          <p>Servidor de Agentes WhatsApp 24/7 &amp; Monitoreo en Tiempo Real</p>
+        </div>
+      </div>
+      <div id="statusBadge" class="status-badge">
+        <div class="pulse-dot"></div>
+        <span id="statusText">DETENIDO</span>
+      </div>
+    </div>
+
+    <!-- Panel de Diagnósticos de Conexión en Vivo -->
+    <div class="diag-grid">
+      <!-- Diagnóstico 1: Servidor API -->
+      <div class="diag-card">
+        <div class="diag-title">📡 Servidor API (5001)</div>
+        <div id="diagApiStatus" class="diag-status" style="color: var(--red);">🔴 Desconectado</div>
+        <div id="diagApiDetail" class="diag-detail">Proceso inactivo</div>
+      </div>
+
+      <!-- Diagnóstico 2: Pasarela WhatsApp -->
+      <div class="diag-card">
+        <div class="diag-title">💬 WhatsApp Baileys (5002)</div>
+        <div id="diagWspStatus" class="diag-status" style="color: var(--red);">🔴 Desconectado</div>
+        <div id="diagWspDetail" class="diag-detail">Sin sesión activa</div>
+      </div>
+
+      <!-- Diagnóstico 3: Base de Datos Firestore -->
+      <div class="diag-card">
+        <div class="diag-title">🔥 Base de Datos</div>
+        <div id="diagDbStatus" class="diag-status" style="color: var(--green);">🟢 Conectada</div>
+        <div class="diag-detail">cuycitogo-app (En la nube)</div>
+      </div>
+
+      <!-- Diagnóstico 4: Agentes Activos -->
+      <div class="diag-card">
+        <div class="diag-title">🤖 Agentes IA Activos</div>
+        <div id="diagAgentsStatus" class="diag-status" style="color: var(--green);">🟢 Listos</div>
+        <div class="diag-detail">@Atencionalcliente • @JefeCuy</div>
+      </div>
+    </div>
+
+    <!-- Panel Superior -->
+    <div class="grid-2">
+      <!-- Tarjeta 1: Encendido y Apagado -->
+      <div class="card">
+        <h2>⚡ Control de Operación</h2>
+        <div class="btn-group">
+          <button id="btnStart" class="btn btn-start" onclick="startBot()">
+            🟢 ENCENDER SERVIDOR Y BOT
+          </button>
+          <button id="btnStop" class="btn btn-stop" onclick="stopBot()">
+            🔴 APAGAR SERVIDOR Y BOT
+          </button>
+          <button class="btn btn-restart" onclick="restartBot()">
+            🔄 REINICIAR SERVICIOS
+          </button>
+        </div>
+
+        <div style="margin-top: 18px;" class="commands-box">
+          <b>💡 Comandos Clave en WhatsApp:</b><br>
+          • <span class="cmd-tag">@atencionalcliente /act</span> ➔ Actualizar credenciales de Cuenta Matriz y notificar masivamente a clientes.<br>
+          • <span class="cmd-tag">@jefecuy</span> ➔ Director General con IA.<br>
+          • <span class="cmd-tag">/saldos</span> ➔ Reporte de saldos de clientes.
+        </div>
+      </div>
+
+      <!-- Tarjeta 2: Enlace por Código a WhatsApp -->
+      <div class="card">
+        <h2>🔑 Vincular WhatsApp por Código</h2>
+        <div class="pairing-box">
+          <label style="font-size: 13px; color: var(--text-muted);">Número de teléfono de WhatsApp (con código de país):</label>
+          <input type="text" id="pairingPhone" class="input-field" placeholder="Ej: 51900000000">
+          <button class="btn btn-restart" style="background: #d97706; color: white; border: none;" onclick="requestPairingCode()">
+            📲 Generar Código de 8 Dígitos
+          </button>
+          
+          <div id="codeBox" class="code-display">
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Código de Vinculación</div>
+            <div id="codeText" class="code-number">---- ----</div>
+            <div class="code-instructions">
+              👉 En tu celular: <b>Ajustes ➔ Dispositivos vinculados ➔ Vincular con número de teléfono</b> y escribe el código de arriba.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Terminal de Logs -->
+    <div class="card">
+      <h2>📜 Registro de Actividad en Vivo</h2>
+      <div id="logsContainer" class="logs-container">
+        <div class="log-line">[SISTEMA] Panel de Control iniciado y listo.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function updateStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+
+        const badge = document.getElementById('statusBadge');
+        const text = document.getElementById('statusText');
+
+        // Estado general
+        if (data.isRunning) {
+          if (data.whatsappConnected) {
+            badge.className = 'status-badge online';
+            text.innerText = '🟢 EN LÍNEA (WHATSAPP ACTIVO)';
+          } else {
+            badge.className = 'status-badge warning';
+            text.innerText = '🟡 SERVIDOR ACTIVO (ESPERANDO WHATSAPP)';
+          }
+        } else {
+          badge.className = 'status-badge';
+          text.innerText = '🔴 DETENIDO';
+        }
+
+        // Diagnóstico API
+        const diagApiStatus = document.getElementById('diagApiStatus');
+        const diagApiDetail = document.getElementById('diagApiDetail');
+        if (data.apiOnline) {
+          diagApiStatus.innerText = '🟢 En Línea';
+          diagApiStatus.style.color = 'var(--green)';
+          diagApiDetail.innerText = `Puerto 5001 • Latencia: ${data.apiLatency || '1ms'}`;
+        } else if (data.apiProcessRunning) {
+          diagApiStatus.innerText = '🟡 Iniciando...';
+          diagApiStatus.style.color = 'var(--yellow)';
+          diagApiDetail.innerText = 'Cargando servidor API';
+        } else {
+          diagApiStatus.innerText = '🔴 Detenido';
+          diagApiStatus.style.color = 'var(--red)';
+          diagApiDetail.innerText = 'Proceso apagado';
+        }
+
+        // Diagnóstico WhatsApp
+        const diagWspStatus = document.getElementById('diagWspStatus');
+        const diagWspDetail = document.getElementById('diagWspDetail');
+        if (data.whatsappConnected) {
+          const userPhone = data.whatsappUser ? (data.whatsappUser.id || '').split(':')[0] : 'Conectado';
+          diagWspStatus.innerText = '🟢 Vinculado';
+          diagWspStatus.style.color = 'var(--green)';
+          diagWspDetail.innerText = `+${userPhone} • Ping: ${data.whatsappLatency || 'OK'}`;
+        } else if (data.whatsappProcessRunning) {
+          diagWspStatus.innerText = '🟡 Esperando Enlace';
+          diagWspStatus.style.color = 'var(--yellow)';
+          diagWspDetail.innerText = data.pairingCode ? 'Código generado listo' : 'Escanea QR o Código';
+        } else {
+          diagWspStatus.innerText = '🔴 Desconectado';
+          diagWspStatus.style.color = 'var(--red)';
+          diagWspDetail.innerText = 'Pasarela Baileys apagada';
+        }
+
+        // Código de emparejamiento
+        if (data.pairingCode) {
+          document.getElementById('codeBox').style.display = 'block';
+          document.getElementById('codeText').innerText = data.pairingCode;
+        }
+
+        // Logs en vivo
+        if (data.logs && data.logs.length > 0) {
+          const logsEl = document.getElementById('logsContainer');
+          logsEl.innerHTML = data.logs.map(l => `<div class="log-line">${l}</div>`).join('');
+          logsEl.scrollTop = logsEl.scrollHeight;
+        }
+      } catch (e) {}
+    }
+
+    async function startBot() {
+      await fetch('/api/start', { method: 'POST' });
+      updateStatus();
+    }
+
+    async function stopBot() {
+      await fetch('/api/stop', { method: 'POST' });
+      document.getElementById('codeBox').style.display = 'none';
+      updateStatus();
+    }
+
+    async function restartBot() {
+      await fetch('/api/restart', { method: 'POST' });
+      updateStatus();
+    }
+
+    async function requestPairingCode() {
+      const phone = document.getElementById('pairingPhone').value.trim();
+      if (!phone) return alert('Por favor ingresa tu número de WhatsApp.');
+
+      document.getElementById('codeBox').style.display = 'block';
+      document.getElementById('codeText').innerText = 'GENERANDO...';
+
+      const res = await fetch('/api/request-pairing-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone })
+      });
+      const data = await res.json();
+      if (data.code) {
+        document.getElementById('codeText').innerText = data.code;
+      }
+    }
+
+    setInterval(updateStatus, 2000);
+    updateStatus();
+  </script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1",
+  "name": "Agente 2 - Registro de Ventas en Firebase",
+  "description": "Flujo de registro de ventas con IA para CuycitoGO",
+  "pieces": [
+    "@activepieces/piece-webhook",
+    "@activepieces/piece-http"
+  ],
+  "template": {
+    "displayName": "Agente 2 - Registro de Ventas en Firebase",
+    "trigger": {
+      "name": "trigger",
+      "valid": true,
+      "displayName": "Capturar Webhook",
+      "type": "PIECE_TRIGGER",
+      "nextAction": {
+        "name": "procesar_venta_ia",
+        "displayName": "Procesar Venta con IA",
+        "type": "PIECE",
+        "valid": true,
+        "settings": {
+          "pieceName": "@activepieces/piece-http",
+          "pieceVersion": "0.5.1",
+          "actionName": "send_request",
+          "input": {
+            "method": "POST",
+            "url": "http://localhost:5001/api/agent/register-sale",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body_type": "JSON",
+            "body": {
+              "adminPhone": "51987654321",
+              "text": "Registrar cliente Mateo Torres 51955443322 Netflix 1 Perfil precio 15 vence 30/09/2026"
+            }
+          }
+        }
+      },
+      "settings": {
+        "pieceName": "@activepieces/piece-webhook",
+        "pieceVersion": "0.1.41",
+        "triggerName": "catch_webhook",
+        "input": {}
+      }
+    }
+  }
+}

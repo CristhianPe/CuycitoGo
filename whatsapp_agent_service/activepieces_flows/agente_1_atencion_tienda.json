@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1",
+  "name": "Agente 1 - Atención y Filtro de Tienda",
+  "description": "Flujo de atención al cliente con IA para CuycitoGO",
+  "pieces": [
+    "@activepieces/piece-webhook",
+    "@activepieces/piece-http"
+  ],
+  "template": {
+    "displayName": "Agente 1 - Atención y Filtro de Tienda",
+    "trigger": {
+      "name": "trigger",
+      "valid": true,
+      "displayName": "Capturar Webhook",
+      "type": "PIECE_TRIGGER",
+      "nextAction": {
+        "name": "enviar_a_agente_ia",
+        "displayName": "Enviar a Agente IA",
+        "type": "PIECE",
+        "valid": true,
+        "settings": {
+          "pieceName": "@activepieces/piece-http",
+          "pieceVersion": "0.5.1",
+          "actionName": "send_request",
+          "input": {
+            "method": "POST",
+            "url": "http://localhost:5001/api/agent/customer-support",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body_type": "JSON",
+            "body": {
+              "phoneNumber": "51987654321",
+              "messageText": "Hola cuánto me falta que venza mi suscripción?"
+            }
+          }
+        }
+      },
+      "settings": {
+        "pieceName": "@activepieces/piece-webhook",
+        "pieceVersion": "0.1.41",
+        "triggerName": "catch_webhook",
+        "input": {}
+      }
+    }
+  }
+}

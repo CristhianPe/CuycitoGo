@@ -1,0 +1,61 @@
+{
+  "hosting": {
+    "public": ".",
+    "cleanUrls": true,
+    "trailingSlash": false,
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      ".firebase/**",
+      ".git/**",
+      "whatsapp_agent_service/**",
+      "android-admin-app/**",
+      "backend/**",
+      "scripts/**",
+      "dist/**",
+      "build/**",
+      "**/*.exe",
+      "**/*.spec",
+      "**/*.bat",
+      "**/*.apk",
+      "**/*.txt",
+      "**/*.py",
+      "**/__pycache__/**",
+      "recharge_tab.png"
+    ],
+    "rewrites": [
+      {
+        "source": "/login",
+        "destination": "/login-cliente.html"
+      },
+      {
+        "source": "/registro",
+        "destination": "/login-cliente.html"
+      },
+      {
+        "source": "/perfil",
+        "destination": "/perfil.html"
+      },
+      {
+        "source": "/tienda",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/dashboard",
+        "destination": "/dashboard.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      }
+    ]
+  }
+}
